@@ -1,0 +1,148 @@
+/* approvals.css - VERSIÓN LIMPIA Y OPTIMIZADA */
+
+/* ========================================
+   ESTILOS GENERALES Y TÍTULO
+========================================= */
+.seccion-cabecera h2 {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #9ca3af;
+  font-size: 18px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 24px 0;
+}
+
+/* ========================================
+   TABLA PRINCIPAL - ESTILOS PERSONALIZADOS
+========================================= */
+.panel-tabla-scroll {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  border-radius: 8px; /* Redondeado de Bootstrap ya está, pero podemos mantenerlo */
+  margin-bottom: 16px;
+}
+
+.tabla-solicitudes {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+/* ENCABEZADOS DE LA TABLA */
+.tabla-solicitudes th {
+  background-color: #f9fafb;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* CELDAS DE LA TABLA */
+.tabla-solicitudes td {
+  padding: 16px 20px;
+  color: #374151;
+  font-size: 14px;
+  border-bottom: 1px solid #f3f4f6; /* Se mantiene para un estilo de linea sutil */
+}
+
+/* EFECTO HOVER PERSONALIZADO */
+.tabla-solicitudes tbody tr:hover {
+  background-color: rgba(90, 139, 129, 0.07);
+}
+
+.tabla-solicitudes tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ========================================
+   ANCHO DE COLUMNAS ESPECÍFICAS
+========================================= */
+.col-prioridad { width: 60px; }
+.col-tipo { width: 140px; font-weight: 500; }
+.col-id { width: 80px; text-align: center; font-weight: 500; }
+.col-fecha { width: 140px; color: #6b7280; }
+.col-usuario { width: 160px; font-weight: 500; }
+.col-cargo { width: 140px; color: #6b7280; }
+.col-ultima-actualizacion { width: 150px; color: #6b7280; }
+.col-aprobadores { width: 120px; text-align: center; }
+.col-estado { width: 120px; text-align: center; }
+.col-acciones { width: 140px; text-align: center; }
+
+/* ========================================
+   ELEMENTOS PERSONALIZADOS DENTRO DE LA TABLA
+========================================= */
+.sort-icon {
+  color: #9ca3af;
+  float: right;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.btn-gestionar {
+  background-color: #5A8B81;
+  color: white !important; /* Usamos !important para asegurar que sobreescriba a Bootstrap */
+  border-color: #5A8B81;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-gestionar:hover {
+  background-color: #496f68; /* Un tono más oscuro del original para el hover */
+  border-color: #496f68;
+}
+
+.icono-prioridad {
+  color: #ef4444;
+  font-weight: bold;
+  font-size: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========================================
+   APROBADORES
+========================================= */
+.aprobadores-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: -4px; /* Solapamiento de iconos */
+}
+
+.aprobador-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+  margin-left: -12px; /* Controla el solapamiento */
+  border: 2px solid white; /* Crea un borde entre los iconos */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  position: relative;
+}
+
+.aprobador-icono:first-child {
+  margin-left: 0;
+}
+
+.aprobador-icono:nth-child(1) { background-color: #8b5cf6; }
+.aprobador-icono:nth-child(2) { background-color: #ec4899; }
+.aprobador-icono:nth-child(3) { background-color: #f59e0b; }
+.aprobador-icono:nth-child(4) { background-color: #06b6d4; }

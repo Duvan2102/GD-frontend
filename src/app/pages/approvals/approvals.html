@@ -1,1 +1,91 @@
-<p>approvals works!</p>
+<div class="container-fluid p-4 bg-light">
+
+  <div class="seccion-cabecera">
+    <h2>APROBACIONES</h2>
+  </div>
+
+  <div class="row mb-3 align-items-center">
+    <div class="col-md-auto">
+      <div class="d-flex align-items-center gap-2">
+        <label for="mostrar" class="form-label mb-0 text-secondary">Mostrar</label>
+        <select id="mostrar" name="mostrar" class="form-select form-select-sm" style="width: 80px;">
+          <option>10</option>
+          <option>25</option>
+          <option>50</option>
+          <option>100</option>
+        </select>
+        <span class="text-secondary">Entradas</span>
+      </div>
+    </div>
+
+    <div class="col-md">
+      <div class="d-flex justify-content-end align-items-center gap-4">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" role="switch" id="toggleAprobados" (change)="onToggleAprobados($event)">
+          <label class="form-check-label" for="toggleAprobados">APROBADOS</label>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <label for="buscar" class="form-label mb-0 text-secondary">Buscar:</label>
+          <input type="text" id="buscar" class="form-control form-control-sm" style="width: 250px;" (input)="onBusquedaInput($event)">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-tabla-scroll bg-white rounded shadow-sm">
+    <table class="tabla-solicitudes table table-hover align-middle">
+      <thead class="sticky-top">
+        <tr>
+          <th class="col-prioridad"></th>
+          <th (click)="ordenarPor('tipo')">TIPO DE SOLICITUD <i class="bi" [ngClass]="{'bi-arrow-down': ordenActual === 'tipo' && ordenAscendente, 'bi-arrow-up': ordenActual === 'tipo' && !ordenAscendente, 'bi-arrow-down-up': ordenActual !== 'tipo'}"></i></th>
+          <th (click)="ordenarPor('id')">ID <i class="bi" [ngClass]="{'bi-arrow-down': ordenActual === 'id' && ordenAscendente, 'bi-arrow-up': ordenActual === 'id' && !ordenAscendente, 'bi-arrow-down-up': ordenActual !== 'id'}"></i></th>
+          <th (click)="ordenarPor('fechaCreacion')">FECHA CREACIÓN <i class="bi" [ngClass]="{'bi-arrow-down': ordenActual === 'fechaCreacion' && ordenAscendente, 'bi-arrow-up': ordenActual === 'fechaCreacion' && !ordenAscendente, 'bi-arrow-down-up': ordenActual !== 'fechaCreacion'}"></i></th>
+          <th (click)="ordenarPor('usuarioCreador')">USUARIO CREADOR <i class="bi" [ngClass]="{'bi-arrow-down': ordenActual === 'usuarioCreador' && ordenAscendente, 'bi-arrow-up': ordenActual === 'usuarioCreador' && !ordenAscendente, 'bi-arrow-down-up': ordenActual !== 'usuarioCreador'}"></i></th>
+          <th (click)="ordenarPor('cargo')">CARGO <i class="bi" [ngClass]="{'bi-arrow-down': ordenActual === 'cargo' && ordenAscendente, 'bi-arrow-up': ordenActual === 'cargo' && !ordenAscendente, 'bi-arrow-down-up': ordenActual !== 'cargo'}"></i></th>
+          <th (click)="ordenarPor('ultimaActualizacion')">ULTIMA ACTUALIZACION <i class="bi" [ngClass]="{'bi-arrow-down': ordenActual === 'ultimaActualizacion' && ordenAscendente, 'bi-arrow-up': ordenActual === 'ultimaActualizacion' && !ordenAscendente, 'bi-arrow-down-up': ordenActual !== 'ultimaActualizacion'}"></i></th>
+          <th (click)="ordenarPor('aprobadores')">APROBADORES <i class="bi" [ngClass]="{'bi-arrow-down': ordenActual === 'aprobadores' && ordenAscendente, 'bi-arrow-up': ordenActual === 'aprobadores' && !ordenAscendente, 'bi-arrow-down-up': ordenActual !== 'aprobadores'}"></i></th>
+          <th (click)="ordenarPor('estado')">ESTADO <i class="bi" [ngClass]="{'bi-arrow-down': ordenActual === 'estado' && ordenAscendente, 'bi-arrow-up': ordenActual === 'estado' && !ordenAscendente, 'bi-arrow-down-up': ordenActual !== 'estado'}"></i></th>
+          <th class="col-acciones"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let solicitud of solicitudesMostradas">
+          <td class="text-center"><div *ngIf="solicitud.prioridad" class="icono-prioridad"><i class="bi bi-exclamation-lg"></i></div></td>
+          <td>{{ solicitud.tipo }}</td>
+          <td>{{ solicitud.id }}</td>
+          <td>{{ solicitud.fechaCreacion }}</td>
+          <td>{{ solicitud.usuarioCreador }}</td>
+          <td>{{ solicitud.cargo }}</td>
+          <td>{{ solicitud.ultimaActualizacion }}</td>
+          <td>
+            <div class="aprobadores-container">
+                <span *ngFor="let iniciales of solicitud.aprobadores" class="aprobador-icono">
+                    {{ iniciales }}
+                </span>
+            </div>
+          </td>
+          <td>{{ solicitud.estado }}</td>
+          <td class="col-acciones text-center">
+            <button class="btn btn-sm btn-gestionar" (click)="onGestionar(solicitud.id)">GESTIONAR</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="row mt-3 align-items-center">
+    <div class="col-md-6">
+      <span class="text-secondary">Mostrando {{ solicitudesMostradas.length }} entradas</span>
+    </div>
+    <div class="col-md-6">
+      <nav>
+        <ul class="pagination pagination-sm justify-content-end mb-0">
+          <li class="page-item disabled"><a class="page-link" href="#">Anterior</a></li>
+          <li class="page-item active"><a class="page-link" href="#">1</a></li>
+          <li class="page-item"><a class="page-link" href="#">Siguiente</a></li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+
+</div>

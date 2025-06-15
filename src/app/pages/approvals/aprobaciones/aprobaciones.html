@@ -1,0 +1,29 @@
+<div class="container-fluid p-4 bg-light">
+
+  <div class="seccion-cabecera">
+    <h2>APROBACIONES</h2>
+  </div>
+
+  <app-controles
+    (cantidadChange)="onCantidadChange($event)"
+    (toggleAprobadosChange)="onToggleAprobados($event)"
+    (busquedaChange)="onBusquedaChange($event)">
+  </app-controles>
+
+  <app-tabla-solicitudes
+    [solicitudes]="solicitudesMostradas"
+    [totalItems]="totalFiltrado"
+    [ordenActual]="ordenActual"
+    [ordenAscendente]="ordenAscendente"
+    (ordenar)="ordenarPor($event)"
+    (gestionar)="onGestionar($event)">
+  </app-tabla-solicitudes>
+
+  <app-controles-pie-de-pagina
+    [totalItems]="totalFiltrado"
+    [itemsPorPagina]="cantidadAMostrar"
+    [paginaActual]="paginaActual"
+    (cambiarPagina)="onCambiarPagina($event)"
+  ></app-controles-pie-de-pagina>
+
+</div>
