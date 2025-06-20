@@ -1,0 +1,69 @@
+.footer-tabla {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(90, 139, 129, 0.8);
+  font-size: 14px;
+  color: #6b7280;
+  position: sticky;
+  z-index: 5;
+  margin-top: 1rem;
+}
+
+.info-registros {
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.controles-paginacion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.controles-paginacion button {
+  padding: 8px 12px;
+  border: none;
+  background-color:rgb(156, 163, 175, 0.5);
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  min-width: 40px;
+  text-align: center;
+}
+
+.controles-paginacion button:hover {
+  background-color: rgba(90, 139, 129, 0.8);
+  color: #ffffff;
+}
+
+.controles-paginacion .numero-pagina.actual {
+  background-color: rgb(90, 139, 129);
+  color: white;
+  cursor: default;
+}
+
+.controles-paginacion .numero-pagina.actual:hover {
+  background-color: #5A8B81;
+  color: #ffffff;
+}
+
+.controles-paginacion button:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+  color: #9ca3af;
+}
+
+.controles-paginacion button:disabled:hover {
+  background-color: transparent;
+}

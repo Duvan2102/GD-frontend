@@ -1,0 +1,68 @@
+<div class="panel-tabla-scroll bg-white rounded">
+  <table class="tabla-solicitudes">
+    <thead class="sticky-top">
+      <tr>
+        <th></th>
+        <th (click)="ordenar.emit('tipo')">TIPO <i class="bi" [ngClass]="getSortIcon('tipo')"></i></th>
+        <th (click)="ordenar.emit('id')">ID <i class="bi" [ngClass]="getSortIcon('id')"></i></th>
+        <th (click)="ordenar.emit('fechaCreacion')">FECHA <i class="bi" [ngClass]="getSortIcon('fechaCreacion')"></i></th>
+        <th (click)="ordenar.emit('usuarioCreador')">USUARIO <i class="bi" [ngClass]="getSortIcon('usuarioCreador')"></i></th>
+        <th>CARGO</th>
+        <th>ULT. ACTUALIZACIÓN</th>
+        <th>APROBADORES</th>
+        <th (click)="ordenar.emit('estado')">ESTADO <i class="bi" [ngClass]="getSortIcon('estado')"></i></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let solicitud of solicitudes">
+        
+        <td class="text-center">
+          <div *ngIf="solicitud.prioridad" class="icono-prioridad"><i class="bi bi-exclamation-lg"></i></div>
+        </td>
+
+        <td>{{ solicitud.tipo }}</td>
+        <td>{{ solicitud.id }}</td>
+        
+        <td>
+            <span *ngIf="solicitud.fechaCreacion">{{ solicitud.fechaCreacion | date:'dd/MM/yyyy HH:mm' }}</span>
+        </td>
+        <td>
+            <span *ngIf="solicitud.usuarioCreador">{{ solicitud.usuarioCreador }}</span>
+        </td>
+        <td>
+            <span *ngIf="solicitud.cargo">{{ solicitud.cargo }}</span>
+        </td>
+        <td>
+            <span *ngIf="solicitud.ultimaActualizacion">{{ solicitud.ultimaActualizacion | date:'dd/MM/yyyy HH:mm' }}</span>
+        </td>
+        
+        <td>
+          <div *ngIf="solicitud.aprobadores?.length > 0" class="aprobadores-container">
+            <span *ngFor="let iniciales of solicitud.aprobadores" class="aprobador-icono">
+                {{ iniciales }}
+            </span>
+          </div>
+        </td>
+
+        <td>
+          <span *ngIf="solicitud.estado" class="badge rounded-pill" [ngClass]="{
+             'text-bg-success': solicitud.estado === 'APROBADOS',
+             'text-bg-warning': solicitud.estado === 'PENDIENTE',
+             'text-bg-danger': solicitud.estado === 'RECHAZADO'
+           }">{{ solicitud.estado }}</span>
+        </td>
+        
+        <td class="text-center">
+          <button class="btn btn-sm btn-gestionar" (click)="gestionar.emit(solicitud.id)">GESTIONAR</button>
+        </td>
+
+      </tr>
+      <tr *ngIf="solicitudes.length === 0">
+        <td colspan="10" class="text-center py-5">No se encontraron resultados.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<div class="row mt-3 align-items-center">
+    </div>

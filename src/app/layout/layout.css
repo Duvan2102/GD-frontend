@@ -1,0 +1,9 @@
+nav ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+nav li {
+  margin: 8px 0;
+  font-weight: 500;
+}

@@ -1,0 +1,27 @@
+<div class="footer-tabla" *ngIf="totalItems > 0">
+  <div class="info-registros">
+    Mostrando {{ inicioRegistro }} a {{ finRegistro }} de {{ totalItems }} entradas
+  </div>
+
+  <div class="controles-paginacion" *ngIf="totalPaginas > 1">
+    <button 
+      (click)="cambiarAPagina(paginaActual - 1)" 
+      [disabled]="paginaActual === 1">
+      &laquo; Anterior
+    </button>
+
+    <button 
+      *ngFor="let p of paginas" 
+      [ngClass]="{ 'numero-pagina actual': p === paginaActual }"
+      [disabled]="p === paginaActual"
+      (click)="cambiarAPagina(p)">
+      {{ p }}
+    </button>
+
+    <button 
+      (click)="cambiarAPagina(paginaActual + 1)" 
+      [disabled]="paginaActual === totalPaginas">
+      Siguiente &raquo;
+    </button>
+  </div>
+</div>

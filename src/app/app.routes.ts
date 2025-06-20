@@ -1,13 +1,16 @@
 import { Routes } from '@angular/router';
-import { Sidebar } from './layout/sidebar/sidebar';
-import { Layout } from './layout/layout';
+import { SidebarComponent } from './layout/sidebar/sidebar';
+import { LayoutComponent } from './layout/layout';
+import { Aprobaciones } from './pages/approvals/aprobaciones/aprobaciones';
+
 
 export const routes: Routes = [
   {
     path: '',
-    component: Layout,
+    component: LayoutComponent,
     children: [
       { path: '', redirectTo: 'aprobaciones', pathMatch: 'full' },
+      { path: 'aprobaciones', component: Aprobaciones }
     ]
   },
   // opcional: una ruta “catch-all” para redirectTo o página 404
