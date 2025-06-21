@@ -1,3 +1,35 @@
+.container-fluid {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.seccion-cabecera {
+  flex-shrink: 0;
+}
+
+app-controles {
+  flex-shrink: 0;
+}
+
+app-tabla-solicitudes {
+  flex-grow: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-tabla-scroll {
+  flex: 1;
+  overflow: auto;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+app-controles-pie-de-pagina {
+  flex-shrink: 0;
+}
+
 .seccion-cabecera h2 {
   font-family: 'Segoe UI', Tahoma, 'Geneva', Verdana, sans-serif;
   color: #9ca3af;

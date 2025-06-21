@@ -47,14 +47,14 @@
 
         <td>
           <span *ngIf="solicitud.estado" class="badge rounded-pill" [ngClass]="{
-             'text-bg-success': solicitud.estado === 'APROBADOS',
+             'text-bg-success': solicitud.estado === 'APROBADO',
              'text-bg-warning': solicitud.estado === 'PENDIENTE',
              'text-bg-danger': solicitud.estado === 'RECHAZADO'
            }">{{ solicitud.estado }}</span>
         </td>
         
         <td class="text-center">
-          <button class="btn btn-sm btn-gestionar" (click)="gestionar.emit(solicitud.id)">GESTIONAR</button>
+          <button class="btn btn-sm btn-gestionar" (click)="gestionar.emit(solicitud.id)">GESTIONAR <br>SOLICITUD</button>
         </td>
 
       </tr>

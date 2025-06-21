@@ -31,7 +31,7 @@
 .controles-paginacion button {
   padding: 8px 12px;
   border: none;
-  background-color:rgb(156, 163, 175, 0.5);
+  background-color: rgba(156, 163, 175, 0.5);
   cursor: pointer;
   border-radius: 6px;
   font-size: 14px;
@@ -42,28 +42,35 @@
   text-align: center;
 }
 
-.controles-paginacion button:hover {
+.controles-paginacion button:hover:not(:disabled),
+.controles-paginacion .navegacion:hover:not(:disabled) {
   background-color: rgba(90, 139, 129, 0.8);
   color: #ffffff;
 }
 
 .controles-paginacion .numero-pagina.actual {
-  background-color: rgb(90, 139, 129);
-  color: white;
-  cursor: default;
+  background-color: rgb(156, 163, 175, 0.3);
+  border: black 1px solid;
+  color: black;
 }
 
 .controles-paginacion .numero-pagina.actual:hover {
-  background-color: #5A8B81;
-  color: #ffffff;
+  background-color: white;
+  border: #5A8B81 1px solid;
+  color: black;
+  cursor: not-allowed;
+}
+
+.controles-paginacion .navegacion {
+  padding: 8px 16px;
+  background-color: transparent;
+  color: #374151;
+  min-width: auto;
 }
 
 .controles-paginacion button:disabled {
-  opacity: 1;
+  opacity: 0.6;
   cursor: not-allowed;
   color: #9ca3af;
-}
-
-.controles-paginacion button:disabled:hover {
   background-color: transparent;
 }

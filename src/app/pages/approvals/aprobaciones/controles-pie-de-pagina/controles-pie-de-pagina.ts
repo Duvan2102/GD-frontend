@@ -16,12 +16,15 @@ export class ControlesPieDePagina {
 
   @Output() cambiarPagina = new EventEmitter<number>();
 
+  mostrarDropdown = false;
+  timeoutId: any = null;
+
   get totalPaginas(): number {
     if (!this.totalItems || !this.itemsPorPagina) return 1;
     return Math.ceil(this.totalItems / this.itemsPorPagina);
   }
 
-  get paginas(): number[] {
+  get todasLasPaginas(): number[] {
     return Array.from({ length: this.totalPaginas }, (_, i) => i + 1);
   }
 
@@ -38,6 +41,24 @@ export class ControlesPieDePagina {
   cambiarAPagina(pagina: number): void {
     if (pagina >= 1 && pagina <= this.totalPaginas && pagina !== this.paginaActual) {
       this.cambiarPagina.emit(pagina);
+    }
+  }
+
+  seleccionarPagina(pagina: number): void {
+    this.mostrarDropdown = false;
+    this.cambiarAPagina(pagina);
+  }
+
+  ocultarDropdownConDelay(): void {
+    this.timeoutId = setTimeout(() => {
+      this.mostrarDropdown = false;
+    }, 300);
+  }
+
+  cancelarOcultarDropdown(): void {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
     }
   }
 }

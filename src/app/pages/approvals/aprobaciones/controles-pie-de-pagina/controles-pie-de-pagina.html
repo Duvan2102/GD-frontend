@@ -5,23 +5,40 @@
 
   <div class="controles-paginacion" *ngIf="totalPaginas > 1">
     <button 
+      class="navegacion"
+      (click)="cambiarAPagina(1)" 
+      [disabled]="paginaActual === 1">
+      Primero
+    </button>
+
+    <button 
+      class="navegacion"
       (click)="cambiarAPagina(paginaActual - 1)" 
       [disabled]="paginaActual === 1">
-      &laquo; Anterior
+      Anterior
     </button>
 
-    <button 
-      *ngFor="let p of paginas" 
-      [ngClass]="{ 'numero-pagina actual': p === paginaActual }"
-      [disabled]="p === paginaActual"
-      (click)="cambiarAPagina(p)">
-      {{ p }}
-    </button>
+    <div class="pagina-actual-container">
+      <button 
+        class="numero-pagina actual"
+        (mouseenter)="mostrarDropdown = true"
+        (mouseleave)="ocultarDropdownConDelay()">
+        {{ paginaActual }}
+      </button>
+    </div>
 
     <button 
+      class="navegacion"
       (click)="cambiarAPagina(paginaActual + 1)" 
       [disabled]="paginaActual === totalPaginas">
-      Siguiente &raquo;
+      Siguiente
+    </button>
+
+    <button 
+      class="navegacion"
+      (click)="cambiarAPagina(totalPaginas)" 
+      [disabled]="paginaActual === totalPaginas">
+      Último
     </button>
   </div>
 </div>
