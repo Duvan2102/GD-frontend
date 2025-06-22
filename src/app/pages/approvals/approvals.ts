@@ -1,219 +1,135 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+
+import { Controls } from './controls/controls';
+import { RequestsTable } from './requests-table/requests-table';
+import { FooterControls } from './footer-controls/footer-controls';
 
 @Component({
   selector: 'app-approvals',
   standalone: true,
-  imports: [CommonModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    Controls,
+    RequestsTable,
+    FooterControls
+  ],
   templateUrl: './approvals.html',
-  styleUrl: './approvals.css'
+  styleUrls: ['./approvals.css']
 })
 export class Approvals implements OnInit {
-  onGestionar(id: string) {
-    console.log('Gestionando solicitud con ID:', id);
-  }
-  ListaDeAprobaciones = [
+  approvalsList = [
+    { type: 'VIATICOS', id: '001', creationDate: '2025-03-26T12:00:00', creatorUser: 'USUARIO.HELISA', position: 'EMPLEADO', lastUpdate: '2025-03-27T13:00:00', status: 'APROBADO', approvers: ['AS'], priority: true },
+    { type: 'VIATICOS', id: '002', creationDate: '2025-03-26T12:00:00', creatorUser: 'USUARIO.HELISA', position: 'EMPLEADO', lastUpdate: '2025-03-27T13:00:00', status: 'APROBADO', approvers: ['LC', 'JS'], priority: true },
+    { type: 'REQUISICIONES', id: '003', creationDate: '2025-03-26T12:00:00', creatorUser: 'USUARIO.HELISA', position: 'EMPLEADO', lastUpdate: '2025-03-27T13:00:00', status: 'APROBADO', approvers: ['LC', 'JS'], priority: false },
+    { type: 'VIATICOS', id: '004', creationDate: '2025-03-27T08:30:00', creatorUser: 'ANA.ROJAS', position: 'ANALISTA', lastUpdate: '2025-03-28T10:00:00', status: 'PENDIENTE', approvers: ['LC'], priority: false },
+    { type: 'REQUISICIONES', id: '005', creationDate: '2025-03-26T09:45:00', creatorUser: 'CARLOS.DIAZ', position: 'JEFE DE ÁREA', lastUpdate: '2025-03-27T14:30:00', status: 'APROBADO', approvers: ['LC', 'JS'], priority: true },
+    { type: 'VIATICOS', id: '006', creationDate: '2025-03-27T11:20:00', creatorUser: 'MARIA.GOMEZ', position: 'EMPLEADO', lastUpdate: '2025-03-28T08:00:00', status: 'RECHAZADO', approvers: ['AS'], priority: false },
+    { type: 'REQUISICIONES', id: '007', creationDate: '2025-03-28T13:00:00', creatorUser: 'JUAN.PEREZ', position: 'COORDINADOR', lastUpdate: '2025-03-29T16:00:00', status: 'PENDIENTE', approvers: ['LC', 'AS'], priority: true },
+    { type: 'VIATICOS', id: '008', creationDate: '2025-03-29T15:30:00', creatorUser: 'LUISA.MORA', position: 'SUPERVISOR', lastUpdate: '2025-03-30T09:00:00', status: 'APROBADO', approvers: ['JS'], priority: false },
+    { type: 'REQUISICIONES', id: '009', creationDate: '2025-03-30T07:50:00', creatorUser: 'FERNANDO.TORO', position: 'JEFE DE ÁREA', lastUpdate: '2025-03-30T17:00:00', status: 'APROBADO', approvers: ['JS', 'LC'], priority: true },
+    { type: 'VIATICOS', id: '010', creationDate: '2025-04-01T10:15:00', creatorUser: 'CLAUDIA.VERA', position: 'EMPLEADO', lastUpdate: '2025-04-01T14:00:00', status: 'RECHAZADO', approvers: ['LC'], priority: false },
+    { type: 'REQUISICIONES', id: '011', creationDate: '2025-04-02T08:10:00', creatorUser: 'MARIO.SOSA', position: 'ANALISTA', lastUpdate: '2025-04-02T16:30:00', status: 'PENDIENTE', approvers: ['JS'], priority: true },
+    { type: 'VIATICOS', id: '012', creationDate: '2025-04-03T09:20:00', creatorUser: 'PATRICIA.OLIVER', position: 'SUPERVISOR', lastUpdate: '2025-04-04T10:00:00', status: 'APROBADO', approvers: ['LC'], priority: false },
+    { type: 'REQUISICIONES', id: '013', creationDate: '2025-04-04T14:30:00', creatorUser: 'GABRIELA.MENDEZ', position: 'JEFE DE ÁREA', lastUpdate: '2025-04-05T11:00:00', status: 'RECHAZADO', approvers: ['AS'], priority: false },
+    { type: 'VIATICOS', id: '014', creationDate: '2025-03-26T12:00:00', creatorUser: 'USUARIO.HELISA', position: 'EMPLEADO', lastUpdate: '2025-03-27T13:00:00', status: 'APROBADO', approvers: ['AS'], priority: true },
+    { type: 'VIATICOS', id: '015', creationDate: '2025-03-26T12:00:00', creatorUser: 'USUARIO.HELISA', position: 'EMPLEADO', lastUpdate: '2025-03-27T13:00:00', status: 'APROBADO', approvers: ['LC', 'JS'], priority: true },
+    { type: 'REQUISICIONES', id: '016', creationDate: '2025-03-26T12:00:00', creatorUser: 'USUARIO.HELISA', position: 'EMPLEADO', lastUpdate: '2025-03-27T13:00:00', status: 'APROBADO', approvers: ['LC', 'JS'], priority: false },
+    { type: 'VIATICOS', id: '017', creationDate: '2025-03-27T08:30:00', creatorUser: 'ANA.ROJAS', position: 'ANALISTA', lastUpdate: '2025-03-28T10:00:00', status: 'PENDIENTE', approvers: ['LC'], priority: false },
+    { type: 'REQUISICIONES', id: '018', creationDate: '2025-03-26T09:45:00', creatorUser: 'CARLOS.DIAZ', position: 'JEFE DE ÁREA', lastUpdate: '2025-03-27T14:30:00', status: 'APROBADO', approvers: ['LC', 'JS'], priority: true },
+    { type: 'VIATICOS', id: '019', creationDate: '2025-03-27T11:20:00', creatorUser: 'MARIA.GOMEZ', position: 'EMPLEADO', lastUpdate: '2025-03-28T08:00:00', status: 'RECHAZADO', approvers: ['AS'], priority: false },
+    { type: 'REQUISICIONES', id: '020', creationDate: '2025-03-28T13:00:00', creatorUser: 'JUAN.PEREZ', position: 'COORDINADOR', lastUpdate: '2025-03-29T16:00:00', status: 'PENDIENTE', approvers: ['LC', 'AS'], priority: true },
+    { type: 'VIATICOS', id: '021', creationDate: '2025-03-29T15:30:00', creatorUser: 'LUISA.MORA', position: 'SUPERVISOR', lastUpdate: '2025-03-30T09:00:00', status: 'APROBADO', approvers: ['JS'], priority: false },
+    { type: 'REQUISICIONES', id: '022', creationDate: '2025-03-30T07:50:00', creatorUser: 'FERNANDO.TORO', position: 'JEFE DE ÁREA', lastUpdate: '2025-03-30T17:00:00', status: 'APROBADO', approvers: ['JS', 'LC'], priority: true },
+    { type: 'VIATICOS', id: '023', creationDate: '2025-04-01T10:15:00', creatorUser: 'CLAUDIA.VERA', position: 'EMPLEADO', lastUpdate: '2025-04-01T14:00:00', status: 'RECHAZADO', approvers: ['LC'], priority: false },
+    { type: 'REQUISICIONES', id: '024', creationDate: '2025-04-02T08:10:00', creatorUser: 'MARIO.SOSA', position: 'ANALISTA', lastUpdate: '2025-04-02T16:30:00', status: 'PENDIENTE', approvers: ['JS'], priority: true },
+    { type: 'VIATICOS', id: '025', creationDate: '2025-04-03T09:20:00', creatorUser: 'PATRICIA.OLIVER', position: 'SUPERVISOR', lastUpdate: '2025-04-04T10:00:00', status: 'APROBADO', approvers: ['LC'], priority: false },
+    { type: 'REQUISICIONES', id: '026', creationDate: '2025-04-04T14:30:00', creatorUser: 'GABRIELA.MENDEZ', position: 'JEFE DE ÁREA', lastUpdate: '2025-04-05T11:00:00', status: 'RECHAZADO', approvers: ['AS'], priority: false }
+  ];
 
-     {
-      tipo: 'VIATICOS',
-      id: '001',
-      fechaCreacion: '26/03/2025 12:00:00',
-      usuarioCreador: 'USUARIO.HELISA',
-      cargo: 'EMPLEADO',
-      ultimaActualizacion: '27/03/2025 13:00:00',
-      estado: 'APROBADOS',
-      aprobadores: ['AS'], 
-      prioridad: true 
-    },
-    {
-      tipo: 'VIATICOS',
-      id: '002',
-      fechaCreacion: '26/03/2025 12:00:00',
-      usuarioCreador: 'USUARIO.HELISA',
-      cargo: 'EMPLEADO',
-      ultimaActualizacion: '27/03/2025 13:00:00',
-      estado: 'APROBADOS',
-      aprobadores: ['LC', 'JS'],
-      prioridad: true
-    },
-    {
-      tipo: 'REQUISICIONES',
-      id: '003',
-      fechaCreacion: '26/03/2025 12:00:00',
-      usuarioCreador: 'USUARIO.HELISA',
-      cargo: 'EMPLEADO',
-      ultimaActualizacion: '27/03/2025 13:00:00',
-      estado: 'APROBADOS',
-      aprobadores: ['LC', 'JS'],
-      prioridad: false
-    },
-    {
-    tipo: 'VIATICOS',
-    id: '004',
-    fechaCreacion: '27/03/2025 08:30:00',
-    usuarioCreador: 'ANA.ROJAS',
-    cargo: 'ANALISTA',
-    ultimaActualizacion: '28/03/2025 10:00:00',
-    estado: 'PENDIENTE',
-    aprobadores: ['LC'],
-    prioridad: false
-  },
-  {
-    tipo: 'REQUISICIONES',
-    id: '005',
-    fechaCreacion: '26/03/2025 09:45:00',
-    usuarioCreador: 'CARLOS.DIAZ',
-    cargo: 'JEFE DE ÁREA',
-    ultimaActualizacion: '27/03/2025 14:30:00',
-    estado: 'APROBADOS',
-    aprobadores: ['LC', 'JS'],
-    prioridad: true
-  },
-  {
-    tipo: 'VIATICOS',
-    id: '006',
-    fechaCreacion: '27/03/2025 11:20:00',
-    usuarioCreador: 'MARIA.GOMEZ',
-    cargo: 'EMPLEADO',
-    ultimaActualizacion: '28/03/2025 08:00:00',
-    estado: 'RECHAZADO',
-    aprobadores: ['AS'],
-    prioridad: false
-  },
-  {
-    tipo: 'REQUISICIONES',
-    id: '007',
-    fechaCreacion: '28/03/2025 13:00:00',
-    usuarioCreador: 'JUAN.PEREZ',
-    cargo: 'COORDINADOR',
-    ultimaActualizacion: '29/03/2025 16:00:00',
-    estado: 'PENDIENTE',
-    aprobadores: ['LC', 'AS'],
-    prioridad: true
-  },
-  {
-    tipo: 'VIATICOS',
-    id: '008',
-    fechaCreacion: '29/03/2025 15:30:00',
-    usuarioCreador: 'LUISA.MORA',
-    cargo: 'SUPERVISOR',
-    ultimaActualizacion: '30/03/2025 09:00:00',
-    estado: 'APROBADOS',
-    aprobadores: ['JS'],
-    prioridad: false
-  },
-  {
-    tipo: 'REQUISICIONES',
-    id: '009',
-    fechaCreacion: '30/03/2025 07:50:00',
-    usuarioCreador: 'FERNANDO.TORO',
-    cargo: 'JEFE DE ÁREA',
-    ultimaActualizacion: '30/03/2025 17:00:00',
-    estado: 'APROBADOS',
-    aprobadores: ['JS', 'LC'],
-    prioridad: true
-  },
-  {
-    tipo: 'VIATICOS',
-    id: '010',
-    fechaCreacion: '01/04/2025 10:15:00',
-    usuarioCreador: 'CLAUDIA.VERA',
-    cargo: 'EMPLEADO',
-    ultimaActualizacion: '01/04/2025 14:00:00',
-    estado: 'RECHAZADO',
-    aprobadores: ['LC'],
-    prioridad: false
-  },
-  {
-    tipo: 'REQUISICIONES',
-    id: '011',
-    fechaCreacion: '02/04/2025 08:10:00',
-    usuarioCreador: 'MARIO.SOSA',
-    cargo: 'ANALISTA',
-    ultimaActualizacion: '02/04/2025 16:30:00',
-    estado: 'PENDIENTE',
-    aprobadores: ['JS'],
-    prioridad: true
-  },
-  {
-    tipo: 'VIATICOS',
-    id: '012',
-    fechaCreacion: '03/04/2025 09:20:00',
-    usuarioCreador: 'PATRICIA.OLIVER',
-    cargo: 'SUPERVISOR',
-    ultimaActualizacion: '04/04/2025 10:00:00',
-    estado: 'APROBADOS',
-    aprobadores: ['LC'],
-    prioridad: false
-  },
-  {
-    tipo: 'REQUISICIONES',
-    id: '013',
-    fechaCreacion: '04/04/2025 14:30:00',
-    usuarioCreador: 'GABRIELA.MENDEZ',
-    cargo: 'JEFE DE ÁREA',
-    ultimaActualizacion: '05/04/2025 11:00:00',
-    estado: 'RECHAZADO',
-    aprobadores: ['AS'],
-    prioridad: false
-  }
-  ]
-  solicitudesMostradas: any[] = [];
+  displayedRequests: any[] = [];
+  private filteredRequests: any[] = [];
+  totalFiltered: number = 0;
 
-  terminoBusqueda: string = '';
-  mostrarSoloAprobados: boolean = false;
-  
-  constructor() { }
+  searchTerm: string = '';
+  showOnlyApproved: boolean = false;
+  currentPage: number = 1;
+  itemsPerPage: number = 10;
+  currentOrder: string = 'creationDate';
+  ascendingOrder: boolean = false;
 
   ngOnInit(): void {
-    this.aplicarFiltros();
-  }
-  ordenActual: string = '';
-  ordenAscendente: boolean = true;
-
-  ordenarPor(campo: string): void {
-    if (this.ordenActual === campo) {
-      this.ordenAscendente = !this.ordenAscendente;
-    } else {
-      this.ordenActual = campo;
-      this.ordenAscendente = true;
-    }
-
-    this.solicitudesMostradas.sort((a, b) => {
-      const valorA = a[campo];
-      const valorB = b[campo];
-
-      if (valorA < valorB) return this.ordenAscendente ? -1 : 1;
-      if (valorA > valorB) return this.ordenAscendente ? 1 : -1;
-      return 0;
-    });
+    this.applyViewLogic();
   }
 
-  aplicarFiltros(): void {
-    let solicitudesFiltradas = [...this.ListaDeAprobaciones];
-
-    if (this.mostrarSoloAprobados) {
-      solicitudesFiltradas = solicitudesFiltradas.filter(sol => sol.estado === 'APROBADOS');
+  applyViewLogic(): void {
+    let result = [...this.approvalsList];
+    if (this.showOnlyApproved) {
+      result = result.filter(req => req.status === 'APROBADO');
     }
-
-    if (this.terminoBusqueda) {
-      const busqueda = this.terminoBusqueda.toLowerCase();
-      solicitudesFiltradas = solicitudesFiltradas.filter(sol => 
-        sol.tipo.toLowerCase().includes(busqueda) ||
-        sol.usuarioCreador.toLowerCase().includes(busqueda)
+    if (this.searchTerm) {
+      const search = this.searchTerm.toLowerCase();
+      result = result.filter(req =>
+        req.type.toLowerCase().includes(search) ||
+        req.creatorUser.toLowerCase().includes(search) ||
+        req.id.toLowerCase().includes(search)
       );
     }
+    this.filteredRequests = result;
+    this.totalFiltered = this.filteredRequests.length;
 
-    this.solicitudesMostradas = solicitudesFiltradas;
+    if (this.currentOrder) {
+      this.filteredRequests.sort((a, b) => {
+        const valueA = (a as any)[this.currentOrder];
+        const valueB = (b as any)[this.currentOrder];
+        if (valueA < valueB) return this.ascendingOrder ? -1 : 1;
+        if (valueA > valueB) return this.ascendingOrder ? 1 : -1;
+        return 0;
+      });
+    }
+
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    this.displayedRequests = this.filteredRequests.slice(start, start + this.itemsPerPage);
   }
 
-  onToggleAprobados(event: any): void {
-    this.mostrarSoloAprobados = event.target.checked;
-    this.aplicarFiltros();
+  onToggleApproved(value: boolean): void {
+    this.showOnlyApproved = value;
+    this.currentPage = 1;
+    this.applyViewLogic();
   }
 
-  onBusquedaInput(event: any): void {
-    this.terminoBusqueda = event.target.value;
-    this.aplicarFiltros();
+  onQuantityChange(quantity: number): void {
+    this.itemsPerPage = Number(quantity);
+    this.currentPage = 1;
+    this.applyViewLogic();
+  }
+
+  onSearchChange(term: string): void {
+    this.searchTerm = term;
+    this.currentPage = 1;
+    this.applyViewLogic();
+  }
+
+  onChangePage(newPage: number): void {
+    this.currentPage = newPage;
+    this.applyViewLogic();
+  }
+
+  sortBy(field: string): void {
+    if (this.currentOrder === field) {
+      this.ascendingOrder = !this.ascendingOrder;
+    } else {
+      this.currentOrder = field;
+      this.ascendingOrder = true;
+    }
+    this.applyViewLogic();
+  }
+
+  onManage(id: string): void {
+    console.log('Managing request with ID from parent:', id);
   }
 }

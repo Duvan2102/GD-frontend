@@ -2,7 +2,7 @@
   <div class="col-md-auto">
     <div class="d-flex align-items-center gap-2" style="height: 100px;">
       <label for="mostrar" class="form-label mb-0 text-secondary">Mostrar</label>
-      <select id="mostrar" class="form-select form-select-sm" style="width: 80px;" (change)="cantidadChange.emit($any($event.target).value)">
+      <select id="mostrar" class="form-select form-select-sm" style="width: 80px;" (change)="quantityChange.emit($any($event.target).value)">
         <option>10</option>
         <option>25</option>
         <option>50</option>
@@ -17,12 +17,12 @@
         <label for="toggleAprobados" class="form-label mb-0 text-secondary">APROBADOS</label>
         <label class="switch">
         <input type="checkbox" id="toggleAprobados"
-               (change)="toggleAprobadosChange.emit($any($event.target).checked)">
+               (change)="toggleApprovedChange.emit($any($event.target).checked)">
         <span class="slider"></span>
       </label>
 </div>
       <div class="d-flex align-items-center gap-3">
         <label for="buscar" class="form-label mb-0 text-secondary">Buscar:</label>
-        <input type="text" id="buscar" class="form-control form-control-sm" style="width: 300px;" (input)="busquedaChange.emit($any($event.target).value)">
+        <input type="text" id="buscar" class="form-control form-control-sm" style="width: 300px;" (input)="searchChange.emit($any($event.target).value)">
       </div>
 </div>

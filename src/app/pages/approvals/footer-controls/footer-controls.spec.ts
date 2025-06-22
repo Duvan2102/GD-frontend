@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ApprovalRequest } from './approval-request';
+import { FooterControls} from './footer-controls';
 
-describe('ApprovalRequest', () => {
-  let component: ApprovalRequest;
-  let fixture: ComponentFixture<ApprovalRequest>;
+describe('FooterControls', () => {
+  let component: FooterControls;
+  let fixture: ComponentFixture<FooterControls>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ApprovalRequest]
+      imports: [FooterControls]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(ApprovalRequest);
+    fixture = TestBed.createComponent(FooterControls);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

@@ -1,12 +1,47 @@
-/* approvals.css - VERSIÓN LIMPIA Y OPTIMIZADA */
+.aprobaciones-wrapper {
+  box-shadow: 0 4px 8px rgba(90, 139, 129, 0.5); 
+  border-radius: 8px; 
+  padding: 10px; 
+  background-color: #ffffff; 
+  margin: 20px; 
+}
 
-/* ========================================
-   ESTILOS GENERALES Y TÍTULO
-========================================= */
+.container-fluid {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.seccion-cabecera {
+  flex-shrink: 0;
+}
+
+app-controls {
+  flex-shrink: 0;
+}
+
+app-requests-table {
+  flex-grow: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-tabla-scroll {
+  flex: 1;
+  overflow: auto;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+app-footer-controls {
+  flex-shrink: 0;
+}
+
 .seccion-cabecera h2 {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Segoe UI', Tahoma, 'Geneva', Verdana, sans-serif;
   color: #9ca3af;
-  font-size: 18px;
+  font-size: 36px;
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 1px;
