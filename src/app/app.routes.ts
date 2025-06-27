@@ -1,13 +1,13 @@
 import { Routes } from '@angular/router';
-import { SidebarComponent } from './layout/sidebar/sidebar';
-import { LayoutComponent } from './layout/layout';
+import { Sidebar } from './layout/sidebar/sidebar';
+import { Layout} from './layout/layout';
 import { Approvals } from './pages/approvals/approvals';
 
 
 export const routes: Routes = [
   {
     path: '',
-    component: LayoutComponent,
+    component: Layout,
     children: [
       { path: '', component: Approvals, pathMatch: 'full' },
     ]

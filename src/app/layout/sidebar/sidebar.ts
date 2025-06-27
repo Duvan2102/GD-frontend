@@ -8,6 +8,6 @@ import { CommonModule } from '@angular/common';
   templateUrl: './sidebar.html',
   styleUrls: ['./sidebar.css']
 })
-export class SidebarComponent {
+export class Sidebar {
 
 }
