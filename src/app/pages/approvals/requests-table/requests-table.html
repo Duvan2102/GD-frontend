@@ -1,0 +1,68 @@
+<div class="panel-tabla-scroll bg-white rounded">
+  <table class="tabla-solicitudes">
+    <thead class="sticky-top">
+      <tr>
+        <th></th>
+        <th (click)="sort.emit('type')">TIPO <i class="bi" [ngClass]="getSortIcon('type')"></i></th>
+        <th (click)="sort.emit('id')">ID <i class="bi" [ngClass]="getSortIcon('id')"></i></th>
+        <th (click)="sort.emit('creationDate')">FECHA <i class="bi" [ngClass]="getSortIcon('creationDate')"></i></th>
+        <th (click)="sort.emit('creatorUser')">USUARIO <i class="bi" [ngClass]="getSortIcon('creatorUser')"></i></th>
+        <th>CARGO</th>
+        <th>ULT. ACTUALIZACIÓN</th>
+        <th>APROBADORES</th>
+        <th (click)="sort.emit('status')">ESTADO <i class="bi" [ngClass]="getSortIcon('status')"></i></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let request of requests">
+        
+        <td class="text-center">
+          <div *ngIf="request.priority" class="icono-prioridad"><i class="bi bi-exclamation-lg"></i></div>
+        </td>
+
+        <td>{{ request.type }}</td>
+        <td>{{ request.id }}</td>
+        
+        <td>
+            <span *ngIf="request.creationDate">{{ request.creationDate | date:'dd/MM/yyyy HH:mm' }}</span>
+        </td>
+        <td>
+            <span *ngIf="request.creatorUser">{{ request.creatorUser }}</span>
+        </td>
+        <td>
+            <span *ngIf="request.position">{{ request.position }}</span>
+        </td>
+        <td>
+            <span *ngIf="request.lastUpdate">{{ request.lastUpdate | date:'dd/MM/yyyy HH:mm' }}</span>
+        </td>
+        
+        <td>
+          <div *ngIf="request.approvers?.length > 0" class="aprobadores-container">
+            <span *ngFor="let initials of request.approvers" class="aprobador-icono">
+                {{ initials }}
+            </span>
+          </div>
+        </td>
+
+        <td>
+          <span *ngIf="request.status" class="badge rounded-pill" [ngClass]="{
+             'text-bg-success': request.status === 'APROBADO',
+             'text-bg-warning': request.status === 'PENDIENTE',
+             'text-bg-danger': request.status === 'RECHAZADO'
+           }">{{ request.status }}</span>
+        </td>
+        
+        <td class="text-center">
+          <button class="btn btn-sm btn-gestionar" (click)="manage.emit(request.id)">GESTIONAR <br>SOLICITUD</button>
+        </td>
+
+      </tr>
+      <tr *ngIf="requests.length === 0">
+        <td colspan="10" class="text-center py-5">No se encontraron resultados.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<div class="row mt-3 align-items-center">
+    </div>

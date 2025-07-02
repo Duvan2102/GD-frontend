@@ -1,0 +1,44 @@
+<div class="footer-tabla" *ngIf="totalItems > 0">
+  <div class="info-registros">
+    Mostrando {{ startRecord }} a {{ endRecord }} de {{ totalItems }} entradas
+  </div>
+
+  <div class="controles-paginacion" *ngIf="totalPages > 1">
+    <button 
+      class="navegacion"
+      (click)="changeToPage(1)" 
+      [disabled]="currentPage === 1">
+      Primero
+    </button>
+
+    <button 
+      class="navegacion"
+      (click)="changeToPage(currentPage - 1)" 
+      [disabled]="currentPage === 1">
+      Anterior
+    </button>
+
+    <div class="pagina-actual-container">
+      <button 
+        class="numero-pagina actual"
+        (mouseenter)="showDropdown = true"
+        (mouseleave)="hideDropdownWithDelay()">
+        {{ currentPage }}
+      </button>
+    </div>
+
+    <button 
+      class="navegacion"
+      (click)="changeToPage(currentPage + 1)" 
+      [disabled]="currentPage === totalPages">
+      Siguiente
+    </button>
+
+    <button 
+      class="navegacion"
+      (click)="changeToPage(totalPages)" 
+      [disabled]="currentPage === totalPages">
+      Último
+    </button>
+  </div>
+</div>

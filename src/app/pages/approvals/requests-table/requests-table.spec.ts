@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ApprovalRequest } from './approval-request';
+import { RequestsTable } from './requests-table';
 
-describe('ApprovalRequest', () => {
-  let component: ApprovalRequest;
-  let fixture: ComponentFixture<ApprovalRequest>;
+describe('RequestsTable', () => {
+  let component: RequestsTable;
+  let fixture: ComponentFixture<RequestsTable>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ApprovalRequest]
+      imports: [RequestsTable]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(ApprovalRequest);
+    fixture = TestBed.createComponent(RequestsTable);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
