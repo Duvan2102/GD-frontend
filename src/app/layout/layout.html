@@ -1,6 +1,29 @@
-<div class="layout-container">
-  <app-sidebar></app-sidebar> 
-  <main class="main-content">
-    <router-outlet></router-outlet>
-  </main>
+<div class="d-flex flex-column vh-100">
+  <header class="d-flex justify-content-between align-items-center bg-light px-3 py-2">
+    <div class="header-left">
+      <h1 class="h4 mb-0" style="font-family: cursive;">Gestor Documental</h1>
+    </div>
+    <div class="d-flex align-items-center">
+      <div class="text-end me-3 small">
+        <div>PROASISTEMAS S.A.</div>
+        <div>Usuario Helisa</div>
+        <div>usuariohelisahelisa.com</div>
+      </div>
+      <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+           style="width:40px; height:40px;">
+        UH
+      </div>
+    </div>
+  </header>
+  <div class="d-flex flex-grow-1 overflow-hidden">
+    <aside class="text-white ms-3 flex-shrink-0" style="width:16.6667%;">
+      <app-sidebar></app-sidebar>
+    </aside>
+    <main class="flex-grow-1 bg-white p-3 me-3 overflow-auto">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+  <footer class="bg-light shadow-sm text-end px-3 py-2">
+    © 2025 PROAsistemas S.A.
+  </footer>
 </div>

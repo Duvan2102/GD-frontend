@@ -1,9 +1,69 @@
-nav ul {
-  list-style-type: none;
+html, body {
+  margin: 0;
   padding: 0;
+  height: 100%;
 }
 
-nav li {
-  margin: 8px 0;
-  font-weight: 500;
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.header {
+  flex: 0 0 70px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1rem;
+  background: #f5f5f5;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.header-left h1 {
+  margin: 0;
+  font-family: cursive;
+  font-size: 1.5rem;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.header-right .user-info {
+  text-align: right;
+  font-size: 0.85rem;
+}
+.header-right .user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: purple;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+.top-content {
+  flex: 1;
+  display: flex;
+}
+
+app-sidebar {
+  flex: 0 0 16%;
+  max-width: 16%;
+}
+
+.main-content {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  background: #fff;
+}
+.footer {
+  flex: 0 0 50px;
+  text-align: right;
+  padding: 0.5rem 1rem;
+  background: #f5f5f5;
+  box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
 }

@@ -1,16 +1,18 @@
 import { Routes } from '@angular/router';
 import { Sidebar } from './layout/sidebar/sidebar';
-import { Layout} from './layout/layout';
+import { Layout } from './layout/layout';
 import { Approvals } from './pages/approvals/approvals';
-
+import { Administration } from './pages/administration/administration';
 
 export const routes: Routes = [
   {
     path: '',
     component: Layout,
     children: [
-      { path: '', component: Approvals, pathMatch: 'full' },
-    ]
+      { path: '', redirectTo: 'aprobaciones', pathMatch: 'full' },
+      { path: 'aprobaciones', component: Approvals },
+      { path: 'administration', component: Administration },
+    ],
   },
-  { path: '**', redirectTo: '' }
+  { path: '**', redirectTo: '' },
 ];

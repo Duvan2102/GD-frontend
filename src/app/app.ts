@@ -6,7 +6,7 @@ import { Approvals } from "./pages/approvals/approvals";
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [ Layout,],
+  imports: [ RouterOutlet,],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })

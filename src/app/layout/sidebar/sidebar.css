@@ -1,12 +1,8 @@
 .sidebar {
   background-color: #3d6b63;
-  width: 370px;
-  height: 57%;
-  padding: 100px 10px;
-  margin-top: 10%;
+  margin: 1rem;
   border-radius: 15px;
-  box-shadow: 10px 0 5px 10px rgba(0,0,0,0.1);
-  position: fixed;
+  box-shadow: 0 4px 8px rgba(90, 139, 129, 0.5);
 }
 
 .sidebar ul {
@@ -14,7 +10,7 @@ padding: 0;
 }
 
 .sidebar li {
-  margin-bottom: 10%;
+  margin: 5%;
 }
 
 .sidebar a {
@@ -24,16 +20,11 @@ padding: 0;
   text-decoration: none;
   border-radius: 6px;
   transition: background-color 0.3s;
-  font-size: 170%;
-}
-
-.sidebar a:hover,
-.sidebar a.active {
-  background-color: rgba(255, 255, 255, 0.2);
+  font-size: 16px;
 }
 
 .sidebar i {
-  font-size: 250%;
-  width: 20px;
+  font-size: 200%;
+  width: 15px;
   text-align: center;
 }
