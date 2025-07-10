@@ -1,1 +1,171 @@
-<p>administration works!</p>
+<div class="container-fluid p-4">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h3 class="card-title text-muted mb-4">Administración</h3>
+
+      <!-- Tipologías -->
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded cursor-pointer"
+             (click)="toggleTypologies()">
+          <span class="fw-medium">Tipologías</span>
+          <i class="bi" [ngClass]="typologiesExpanded ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
+        </div>
+
+        <div *ngIf="typologiesExpanded" class="mt-3">
+          <div class="d-flex justify-content-end mb-3">
+            <button class="btn btn-primary"
+                    (click)="openTypologyCreateModal()"
+                    title="Agregar Tipología">
+              <i class="bi bi-plus-circle-dotted"></i>
+            </button>
+          </div>
+
+          <div class="list-group">
+            <div *ngFor="let typology of typologies"
+                 class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <strong>{{ typology.name }}</strong>
+                <div class="text-muted small">
+                  {{ typology.department }} > {{ typology.area }} > {{ typology.position }}
+                </div>
+              </div>
+              <div class="btn-group" role="group">
+                <button class="btn-edit"
+                        (click)="openTypologyUpdateModal(typology)"
+                        title="Editar">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn-delete"
+                        (click)="openTypologyDeleteConfirmModal(typology)"
+                        title="Eliminar">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Departamentos -->
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded cursor-pointer"
+             (click)="toggleDepartments()">
+          <span class="fw-medium">Departamentos</span>
+          <i class="bi" [ngClass]="departmentsExpanded ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
+        </div>
+        <div *ngIf="departmentsExpanded" class="mt-3">
+          <div class="d-flex justify-content-end mb-3">
+            <button class="btn btn-primary"
+                    (click)="openDepartmentCreateModal()"
+                    title="Agregar Departamento">
+              <i class="bi bi-plus-circle-dotted"></i>
+            </button>
+          </div>
+          <div class="list-group">
+            <div *ngFor="let department of departments"
+                 class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <strong>{{ department.name }}</strong>
+              </div>
+              <div class="btn-group" role="group">
+                <button class="btn-edit"
+                        (click)="openDepartmentUpdateModal(department)"
+                        title="Editar">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn-delete"
+                        (click)="openDepartmentDeleteConfirmModal(department)"
+                        title="Eliminar">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Áreas -->
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded cursor-pointer"
+             (click)="toggleAreas()">
+          <span class="fw-medium">Áreas</span>
+          <i class="bi" [ngClass]="areasExpanded ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
+        </div>
+        <div *ngIf="areasExpanded" class="mt-3">
+          <div class="d-flex justify-content-end mb-3">
+            <button class="btn btn-primary"
+                    (click)="openAreaCreateModal()"
+                    title="Agregar Área">
+              <i class="bi bi-plus-circle-dotted"></i>
+            </button>
+          </div>
+          <div class="list-group">
+            <div *ngFor="let area of areas"
+                 class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <strong>{{ area.name }}</strong>
+                <div class="text-muted small">
+                  {{ getAssociatedName(area.departmentId, departments, 'name') }}
+                </div>
+              </div>
+              <div class="btn-group" role="group">
+                <button class="btn-edit"
+                        (click)="openAreaUpdateModal(area)"
+                        title="Editar">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn-delete"
+                        (click)="openAreaDeleteConfirmModal(area)"
+                        title="Eliminar">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cargos -->
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded cursor-pointer"
+             (click)="togglePositions()">
+          <span class="fw-medium">Cargos</span>
+          <i class="bi" [ngClass]="positionsExpanded ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
+        </div>
+        <div *ngIf="positionsExpanded" class="mt-3">
+          <div class="d-flex justify-content-end mb-3">
+            <button class="btn btn-primary"
+                    (click)="openPositionCreateModal()"
+                    title="Agregar Cargo">
+              <i class="bi bi-plus-circle-dotted"></i>
+            </button>
+          </div>
+          <div class="list-group">
+            <div *ngFor="let position of positions"
+                 class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <strong>{{ position.name }}</strong>
+                <div class="text-muted small">
+                  {{ getAssociatedName(position.areaId, areas, 'name') }}
+                </div>
+              </div>
+              <div class="btn-group" role="group">
+                <button class="btn-edit"
+                        (click)="openPositionUpdateModal(position)"
+                        title="Editar">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn-delete"
+                        (click)="openPositionDeleteConfirmModal(position)"
+                        title="Eliminar">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

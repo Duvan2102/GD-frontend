@@ -1,28 +1,34 @@
 <div class="row mb-3 align-items-center">
   <div class="col-md-auto">
     <div class="d-flex align-items-center gap-2" style="height: 100px;">
-      <label for="mostrar" class="form-label mb-0 text-secondary">Mostrar</label>
-      <select id="mostrar" class="form-select form-select-sm" style="width: 80px;" (change)="quantityChange.emit($any($event.target).value)">
+      <label for="mostrar" class="form-label mb-0 text-secondary">{{ labelMostrar }}</label>
+      <select id="mostrar" class="form-select form-select-sm" style="width: 80px;"
+        (change)="quantityChange.emit($any($event.target).value)">
         <option>10</option>
         <option>25</option>
         <option>50</option>
         <option>100</option>
       </select>
-      <span class="text-secondary">Entradas</span>
+      <span class="text-secondary">{{ textoEntradas }}</span>
     </div>
   </div>
   <div class="col-md">
     <div class="d-flex flex-column align-items-end gap-3">
       <div class="form-check form-switch">
-        <label for="toggleAprobados" class="form-label mb-0 text-secondary">APROBADOS</label>
+        <label for="toggleAprobados" class="form-label mb-0 text-secondary">{{ labelAprobados }}</label>
         <label class="switch">
-        <input type="checkbox" id="toggleAprobados"
-               (change)="toggleApprovedChange.emit($any($event.target).checked)">
-        <span class="slider"></span>
-      </label>
-</div>
-      <div class="d-flex align-items-center gap-3">
-        <label for="buscar" class="form-label mb-0 text-secondary">Buscar:</label>
-        <input type="text" id="buscar" class="form-control form-control-sm" style="width: 300px;" (input)="searchChange.emit($any($event.target).value)">
+          <input type="checkbox" id="toggleAprobados"
+                 (change)="toggleApprovedChange.emit($any($event.target).checked)">
+          <span class="slider"></span>
+        </label>
       </div>
+      <div class="d-flex align-items-center gap-3">
+        <label for="buscar" class="form-label mb-0 text-secondary">{{ labelBuscar }}</label>
+        <input type="text" id="buscar" class="form-control form-control-sm"
+          style="width: 300px;"
+          [placeholder]="placeholderBuscar"
+          (input)="searchChange.emit($any($event.target).value)">
+      </div>
+    </div>
+  </div>
 </div>

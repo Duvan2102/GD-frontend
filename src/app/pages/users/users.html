@@ -1,1 +1,74 @@
-<p>users works!</p>
+<div class="usuarios-container">
+  <!-- CABECERA -->
+  <div class="seccion-cabecera mb-4">
+    <h2>USUARIOS</h2>
+    <button class="btn-crear-usuario btn" data-bs-toggle="modal" data-bs-target="#crearUsuarioModal">
+      <i class="bi bi-plus-circle-dotted"></i>
+      Crear usuario
+    </button>
+  </div>
+
+  <!-- CONTROLES (buscador, toggle activos, cantidad) -->
+  <app-controls
+    [textoboton]="'Crear usuario'"
+    [labelAprobados]="'ACTIVOS'"
+    [quantity]="itemsPerPage"
+    [toggleApproved]="activos"
+    [search]="searchTerm"
+    (quantityChange)="onChangeCantidad($event)"
+    (toggleApprovedChange)="onToggleActivos($event)"
+    (searchChange)="onBuscar($event)">
+  </app-controls>
+
+  <!-- TABLA -->
+  <div class="tabla-scroll">
+    <table class="usuarios-tabla">
+      <thead>
+        <tr>
+          <th>No Usuario</th><th>Identificación</th><th>Nombres</th>
+          <th>Apellidos</th><th>Usuario</th><th>Estado</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let u of usuariosFiltrados; let i = index">
+          <tr>
+            <td>{{ u.noUsuario }}</td>
+            <td>{{ u.identificacion }}</td>
+            <td>{{ u.nombres }}</td>
+            <td>{{ u.apellidos }}</td>
+            <td>{{ u.usuario }}</td>
+            <td>{{ u.estado }}</td>
+            <td>
+              <button class="usuarios-ver" (click)="toggleDesplegable(i)">
+                <i *ngIf="filaDesplegada===i; else right" class="bi bi-chevron-down"></i>
+                <ng-template #right><i class="bi bi-chevron-right"></i></ng-template>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="filaDesplegada===i" class="desplegable-row">
+            <td colspan="7">
+              <div class="desplegable-contenido">
+                <div><b>Perfil</b><br> Funcionario</div>
+                <div class="acciones-usuario">
+                  <a href="#" (click)="accion('inactivar',u,$event)">+ Inactivar usuario</a>
+                   &gt;
+                  <a href="#" (click)="accion('editar',u,$event)">Editar usuario</a> •
+                  <a href="#" (click)="accion('cambiarContraseña',u,$event)">Cambiar contraseña</a> •
+                  <a href="#" (click)="accion('eliminarQR',u,$event)">Eliminar QR</a>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FOOTER: paginación reutilizable -->
+  <app-footer-controls
+    [totalItems]="usuariosFiltradosLength"
+    [itemsPerPage]="itemsPerPage"
+    [currentPage]="paginaActual"
+    (changePage)="onChangePage($event)">
+  </app-footer-controls>
+</div>

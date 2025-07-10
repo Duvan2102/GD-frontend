@@ -1,0 +1,39 @@
+<div class="create-request-wrapper">
+  <div class="container-fluid p-4">
+
+    <div class="seccion-cabecera mb-4">
+      <h2 class="mb-2">SOLICITUDES CREADAS</h2>
+      <button
+    class="btn-crear-solicitud btn"
+    data-bs-toggle="modal"
+    data-bs-target="#crearSolicitudModal">
+    <i class="bi bi-plus-circle-dotted"></i>
+    Crear solicitud
+  </button>
+    </div>
+
+    <app-controls
+      (quantityChange)="onQuantityChange($event)"
+      (toggleApprovedChange)="onToggleApproved($event)"
+      (searchChange)="onSearchChange($event)">
+    </app-controls>
+
+    <app-requests-table
+      [requests]="displayedRequests"
+      [totalItems]="totalFiltered"
+      [currentOrder]="currentOrder"
+      [ascendingOrder]="ascendingOrder"
+      textoboton="VISUALIZAR <br> SOLICITUD"
+      (sort)="sortBy($event)"
+      (manage)="onManage($event)">
+    </app-requests-table>
+
+    <app-footer-controls
+      [totalItems]="totalFiltered"
+      [itemsPerPage]="itemsPerPage"
+      [currentPage]="currentPage"
+      (changePage)="onChangePage($event)"
+    ></app-footer-controls>
+
+  </div>
+</div>

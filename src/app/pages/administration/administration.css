@@ -1,0 +1,235 @@
+.container-fluid.p-4 {
+  padding: 2rem ;
+}
+
+.btn-primary {
+  font-size: 1.2rem;
+  padding: 1rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  border-color: transparent;
+  color: #000;
+  background-color: transparent;
+}
+
+.btn-primary:hover {
+  background-color: transparent;
+  color: #5a8b81;
+  border-color: transparent;
+}
+
+.btn-primary i {
+  font-size: 2rem;
+}
+
+.btn-edit,
+.btn-delete {
+  font-size: 0.5rem;
+  padding: 0.5rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  border-color: transparent;
+  color: #000;
+  background-color: transparent;
+}
+
+.btn-edit:hover,
+.btn-delete:hover {
+  background-color: transparent;
+  color: #5a8b81;
+  border-color: transparent;
+}
+
+.btn-edit i,
+.btn-delete i {
+  font-size: 1.3rem;
+}
+
+.card.shadow-sm {
+  border-radius: 0.5rem;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) ;
+  background-color: #ffffff;
+}
+
+.card-body {
+  padding: 2rem;
+}
+
+.card-title.text-muted.mb-4 {
+  color:black;
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem ;
+}
+
+.d-flex.justify-content-between.align-items-center.p-3.bg-light.rounded.cursor-pointer {
+  background-color: #f8f9fa ;
+  border-radius: 0.3rem ;
+  cursor: pointer;
+  padding: 1rem ;
+  border: 1px solid #dee2e6;
+  transition: background-color 0.2s ease;
+}
+
+.d-flex.justify-content-between.align-items-center.p-3.bg-light.rounded.cursor-pointer:hover {
+  background-color: #e2e6ea ;
+}
+
+.fw-medium {
+  font-weight: 500 ;
+  color: #343a40;
+}
+
+.list-group-item {
+  border: 1px solid rgba(0, 0, 0, 0.125);
+  margin-bottom: -1px;
+  background-color: #fff;
+  padding: 0.75rem 1.25rem;
+}
+
+.list-group-item:first-child {
+  border-top-left-radius: 0.25rem;
+  border-top-right-radius: 0.25rem;
+}
+
+.list-group-item:last-child {
+  margin-bottom: 0;
+  border-bottom-right-radius: 0.25rem;
+  border-bottom-left-radius: 0.25rem;
+}
+
+.list-group-item strong {
+  color: #333;
+}
+
+.list-group-item .text-muted.small {
+  font-size: 0.85em;
+  color: #6c757d ;
+}
+
+.modal.fade.show {
+  display: block;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-dialog.modal-dialog-centered {
+  min-height: calc(100vh - 1rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  background-color: #f8f9fa;
+}
+
+.modal-header.bg-success {
+  background-color: #5a8b81 ;
+  color: white;
+  border-bottom: none;
+  padding: 1rem 1.5rem;
+}
+
+.modal-header .btn-close-white {
+  filter: brightness(0) invert(1);
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.form-label {
+  font-weight: 500;
+  color: #495057;
+}
+
+.form-control,
+.form-select {
+  border-radius: 0.25rem;
+  border: 1px solid #ced4da;
+  padding: 0.6rem 0.75rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #5a8b81;
+  box-shadow: 0 0 0 0.25rem rgba(90, 139, 129, 0.25);
+}
+
+.modal-footer {
+  border-top: none;
+  padding: 1rem 1.5rem;
+  justify-content: center;
+}
+
+.btn.btn-success.px-4 {
+  background-color: #5a8b81;
+  border-color: #5a8b81;
+  font-weight: 500;
+  padding: 0.5rem 1.5rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn.btn-success.px-4:hover {
+  background-color: #496f68;
+  border-color: #496f68;
+}
+
+.btn.btn-success.px-4:disabled {
+  background-color: #a7d3cd;
+  border-color: #a7d3cd;
+  cursor: not-allowed;
+}
+
+.modal-body.text-center.p-4 {
+  padding: 2rem ;
+}
+
+.text-warning {
+  color: #ffc107 ;
+}
+
+.fa-exclamation-triangle {
+  color: #ffc107;
+}
+
+.modal-body h6.mb-3 {
+  font-size: 1.2rem;
+  color: #343a40;
+}
+
+.modal-body p.mb-3 {
+  font-size: 1rem;
+  color: #6c757d;
+}
+
+.d-flex.gap-2.justify-content-center {
+  gap: 0.5rem ;
+}
+
+.btn.btn-danger.px-4 {
+  background-color: #dc3545;
+  border-color: #dc3545;
+  font-weight: 500;
+  padding: 0.5rem 1.5rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn.btn-danger.px-4:hover {
+  background-color: #c82333;
+  border-color: #bd2130;
+}
+
+.modal-backdrop.fade.show {
+  opacity: 0.5;
+  background-color: #000;
+}
