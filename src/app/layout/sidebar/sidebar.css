@@ -8,27 +8,26 @@
 }
 
 .sidebar ul {
-  list-style: none;
-  padding: 0;
+  padding: 1%;
   margin: 0;
 }
 
 .sidebar li {
-  margin: 15% 2% 10% 5%;
+  display: flex;
+  margin: 8% 0 8% 3%;
 }
 
 .sidebar a {
-  padding: 1%;
+  padding: 0 15% 0 13%;
   color: white;
   text-decoration: none;
   border-radius: 6px;
   transition: background-color 0.3s;
-  font-size: 180%
+  font-size: 160%
 }
 
 .sidebar i {
   font-size: 200%;
   width: 1%;
   height: 1%;
-  text-align: center;
 }
