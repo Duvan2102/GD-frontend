@@ -1,0 +1,65 @@
+<div class="modal-container">
+  <h2>Agregar / Editar Usuario <span class="close" (click)="cerrarModal()">×</span></h2>
+
+  <form class="formulario">
+    <div class="row">
+      <label>Identificación</label>
+      <input type="text" placeholder="123456" />
+    </div>
+
+    <div class="row">
+      <label>Nombres</label>
+      <input type="text" placeholder="Nombre" />
+      <label>Apellidos</label>
+      <input type="text" placeholder="Apellidos" />
+    </div>
+
+    <div class="row">
+      <label>Usuario</label>
+      <input type="text" placeholder="Usuario" />
+      <label>Cargo</label>
+      <select>
+        <option>Cargo</option>
+        <!-- más opciones -->
+      </select>
+    </div>
+
+    <div class="row">
+      <label>Correo empresarial</label>
+      <input type="email" placeholder="Correoempresarial@helisa.com" />
+      <label>Correo personal</label>
+      <input type="email" placeholder="Correopersonal@algo.com" />
+    </div>
+
+    <div class="row">
+      <label>Teléfono móvil</label>
+      <input type="text" placeholder="300555666677" />
+      <label>Teléfono</label>
+      <input type="text" placeholder="30055666777" />
+    </div>
+
+    <div class="row">
+      <label>Sede</label>
+      <input type="text" placeholder="calle 45 # 22–18" />
+      <label>Doble Autenticación</label>
+      <select>
+        <option>Google Authenticator</option>
+        <option>Token de Seguridad</option>
+      </select>
+    </div>
+
+    <div class="row perfiles">
+      <label>Perfiles</label>
+      <div>
+        <label><input type="checkbox" /> ADMINISTRADOR</label>
+        <label><input type="checkbox" /> FUNCIONARIO (creador)</label>
+        <label><input type="checkbox" checked /> FUNCIONARIOS</label>
+      </div>
+    </div>
+
+    <div class="acciones">
+      <button type="button" class="cancelar" (click)="cerrarModal()">Cancelar</button>
+      <button type="submit" class="guardar">Guardar</button>
+    </div>
+  </form>
+</div>
