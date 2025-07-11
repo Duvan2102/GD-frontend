@@ -1,0 +1,74 @@
+.modal-container {
+  background: white;
+  padding: 24px;
+  border-radius: 10px;
+  width: 600px;
+  max-width: 100%;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+  position: relative;
+  font-family: sans-serif;
+}
+
+.close {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+h2 {
+  margin-bottom: 20px;
+  color: #1b5e20;
+}
+
+.formulario .row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  gap: 10px;
+}
+
+.formulario .row label {
+  width: 100%;
+  font-weight: bold;
+}
+
+.formulario input,
+.formulario select {
+  flex: 1;
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  min-width: 200px;
+}
+
+.perfiles div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.acciones {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.cancelar,
+.guardar {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.cancelar {
+  background-color: #ccc;
+}
+
+.guardar {
+  background-color: #2e7d32;
+  color: white;
+}
