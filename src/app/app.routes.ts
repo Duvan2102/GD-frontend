@@ -14,6 +14,7 @@ export const routes: Routes = [
     path: '',
     component: Layout,
     children: [
+      { path: '', redirectTo: 'approvals', pathMatch: 'full' },
       { path: 'approvals', component: Approvals },
       { path: 'administration', component: Administration },
       { path: 'reports-audits', component: ReportsAudits },
