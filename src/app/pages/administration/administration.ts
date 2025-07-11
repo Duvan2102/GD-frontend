@@ -38,7 +38,7 @@ export interface Position {
   ]
 })
 export class Administration implements OnInit {
-  typologiesExpanded = true;
+  typologiesExpanded = false;
   departmentsExpanded = false;
   areasExpanded = false;
   positionsExpanded = false;

@@ -1,12 +1,17 @@
-<div class="usuarios-container">
-  <!-- CABECERA -->
-  <div class="seccion-cabecera mb-4">
-    <h2>USUARIOS</h2>
-    <button class="btn-crear-usuario btn" data-bs-toggle="modal" data-bs-target="#crearUsuarioModal">
-      <i class="bi bi-plus-circle-dotted"></i>
-      Crear usuario
-    </button>
-  </div>
+<div class="principal-wrapper">
+  <div class="container-fluid p-4">
+
+    <!-- CABECERA -->
+  <div class="seccion-cabecera">
+      <h2 class="mb-2">USUARIOS</h2>
+      <button
+    class="btn-crear"
+    data-bs-toggle="modal"
+    data-bs-target="#crearUsuarioModal">
+    <i class="bi bi-plus-circle-dotted"></i>
+    Crear usuario
+  </button>
+    </div>
 
   <!-- CONTROLES (buscador, toggle activos, cantidad) -->
   <app-controls
@@ -21,7 +26,7 @@
   </app-controls>
 
   <!-- TABLA -->
-  <div class="tabla-scroll">
+  <div class="panel-tabla-scroll">
     <table class="usuarios-tabla">
       <thead>
         <tr>
@@ -72,3 +77,4 @@
     (changePage)="onChangePage($event)">
   </app-footer-controls>
 </div>
+

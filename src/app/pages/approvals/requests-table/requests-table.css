@@ -1,11 +1,3 @@
-.panel-tabla-scroll {
-  flex: 1;
-  overflow-x: auto;
-  overflow-y: auto;
-  border-radius: 8px;
-  margin-bottom: 16px;
-}
-
 .tabla-solicitudes {
   width: 100%;
   border-collapse: collapse;

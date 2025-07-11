@@ -1,1 +1,69 @@
 @import 'bootstrap-icons/font/bootstrap-icons.css';
+.principal-wrapper {
+  box-shadow: 0 4px 8px rgba(90, 139, 129, 0.5);
+  border-radius: 15px;
+  background-color: #ffffff;
+  border: 1px solid #bed6cd;
+  border-radius: 20px;
+  padding: 20px;
+  margin: auto;
+  background: #f8faf9;
+  font-family: 'Segoe UI', sans-serif;
+  position: relative;
+}
+.seccion-cabecera h2 {
+  font-family: 'Segoe UI', Tahoma, 'Geneva', Verdana, sans-serif;
+  color: #9ca3af;
+  font-size: 36px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 24px 0;
+}
+.btn-crear {
+  font-size: 1rem;
+  padding: 0.2rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  border-color: #5A8B81;
+  color: white;
+  background-color: #5A8B81;
+}
+.btn-crear:hover {
+  background-color: #3fb49f;
+  color: white;
+  border-color: transparent;
+}
+.btn-crear i {
+  font-size: 2rem;
+}
+.panel-tabla-scroll {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+.container-fluid {
+  display: flex;
+  flex-direction: column;
+  height: 80vh;
+}
+
+.seccion-cabecera {
+  flex-shrink: 0;
+}
+
+app-controls {
+  flex-shrink: 0;
+}
+
+app-requests-table {
+  flex-grow: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
