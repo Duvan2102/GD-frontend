@@ -1,0 +1,16 @@
+<div class="modal fade show custom-backdrop"
+     tabindex="-1"
+     *ngIf="visible"
+     style="display: block;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content modal-content-custom">
+      <div class="modal-body text-center">
+        <h2 class="modal-title-custom">{{ mensaje }}</h2>
+        <button class="btn btn-success btn-lg custom-btn-accept"
+                (click)="aceptar.emit()">
+          {{ textoBtn || 'Aceptar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

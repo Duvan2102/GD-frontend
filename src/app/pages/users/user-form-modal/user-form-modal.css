@@ -1,0 +1,82 @@
+.modal-content.user-form-modal .btn-primary-custom {
+  background: #639382;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.62rem 2.2rem;
+  font-weight: bold;
+  font-size: 1.09rem;
+  border: none;
+  box-shadow: 0 2px 6px rgba(76, 114, 103, 0.11);
+  transition: background 0.2s;
+}
+.modal-content.user-form-modal .btn-primary-custom:hover:not(:disabled) {
+  background: #46655a;
+}
+.modal-content.user-form-modal .btn-secondary {
+  background: #c7cbcc;
+  color: #46655a;
+  border-radius: 8px;
+  font-weight: bold;
+  border: none;
+  padding: 0.62rem 2.2rem;
+  font-size: 1.09rem;
+  transition: background 0.2s;
+}
+.modal-content.user-form-modal .btn-secondary:hover:not(:disabled) {
+  background: #b0b4b5;
+}
+
+/* Inputs y selects */
+.modal-content.user-form-modal .form-control,
+.modal-content.user-form-modal .form-select {
+  border: 1.2px solid #bed6cd;
+  border-radius: 7px;
+  font-size: 1.07rem;
+  background: #fafcfc;
+  color: #355345;
+  padding: 9px 11px;
+  transition: border 0.18s;
+}
+.modal-content.user-form-modal .form-control:focus,
+.modal-content.user-form-modal .form-select:focus {
+  border-color: #639382;
+  box-shadow: 0 0 0 0.07rem #63938221;
+}
+.modal-content.user-form-modal .form-control.is-invalid {
+  border-color: #c23e3e;
+  background: #fff6f6;
+}
+.modal-content.user-form-modal .form-label {
+  font-weight: 500;
+  color: #46655a;
+  font-size: 1.02rem;
+  margin-bottom: 4px;
+}
+
+/* Perfiles (checkboxes) */
+.modal-content.user-form-modal .form-check-input[type="checkbox"] {
+  accent-color: #639382;
+}
+.modal-content.user-form-modal .form-check-label {
+  font-size: 1rem;
+  color: #344d3b;
+  font-weight: 400;
+}
+
+/* Titulos y subtitulos */
+.modal-content.user-form-modal h6.mb-3 {
+  font-size: 1.07rem;
+  color: #46655a;
+  font-weight: bold;
+}
+
+/* Separador visual para el modal */
+.modal-content.user-form-modal hr.my-4 {
+  border-top: 1.2px solid #bed6cd;
+  opacity: 0.7;
+}
+
+/* Espacios en la modal */
+.modal-content.user-form-modal .modal-body .row {
+  margin-bottom: 0.5rem;
+}
