@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http
 import { Observable, throwError } from 'rxjs';
 import { catchError, retry, tap } from 'rxjs/operators';
 import { Usuario } from '../pages/users/users';
+import { environment } from '../environments/environment.prod';
 
 export interface UsuarioRequest {
   identificacion: string;
@@ -30,7 +31,7 @@ export interface ApiResponse<T = any> {
   providedIn: 'root'
 })
 export class UserService {
-  private readonly apiUrl = 'http://200.7.99.74:8080/api/usuarios';  
+  private readonly apiUrl = environment.apiUrl;  
   private readonly cargosMap: { [key: string]: number } = {
     'Gerente': 1,
     'Analista': 2,
