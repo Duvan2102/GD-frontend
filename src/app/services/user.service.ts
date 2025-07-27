@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
-// import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError, retry, tap } from 'rxjs/operators';
 import { Usuario } from '../pages/users/users';
 
 export interface UsuarioRequest {
@@ -19,112 +20,170 @@ export interface UsuarioRequest {
   dobleAutenticacion: boolean;
 }
 
-// Esta interfaz define la respuesta que esperas del servidor
-export interface ApiResponse {
+export interface ApiResponse<T = any> {
   success: boolean;
   message: string;
-  data?: any;
+  data?: T;
 }
 
 @Injectable({
-  providedIn: 'root' // Esto hace que el servicio esté disponible en toda la aplicación
+  providedIn: 'root'
 })
 export class UserService {
-  
-  
-  /*private apiUrl = '/api/usuarios';
-  
-  // HttpClient es la herramienta que Angular usa para hacer peticiones HTTP
-  //constructor(private http: HttpClient) {}
-
-  
-  crearUsuario(usuario: Usuario): Observable<ApiResponse> {
-    // Transformamos los datos del formulario al formato del JSON requerido
-    const usuarioRequest: UsuarioRequest = this.transformarUsuarioParaApi(usuario);
-    
-    // Configuramos los headers (encabezados) de la petición
-    //const headers = new HttpHeaders({
-      'Content-Type': 'application/json',
-      // Si tu API requiere autenticación, agrégala aquí:
-      // 'Authorization': 'Bearer ' + token
-    });
-
-    // Hacemos la petición POST al servidor
-    return this.http.post<ApiResponse>(this.apiUrl, usuarioRequest, { headers });
-  }
-
-  actualizarUsuario(usuario: Usuario): Observable<ApiResponse> {
-    const usuarioRequest: UsuarioRequest = this.transformarUsuarioParaApi(usuario);
-    
-    const headers = new HttpHeaders({
-      'Content-Type': 'application/json'
-    });
-
-    // Para actualizar, usualmente se usa PUT y se incluye el ID en la URL
-    const url = `${this.apiUrl}/${usuario.noUsuario}`;
-    return this.http.put<ApiResponse>(url, usuarioRequest, { headers });
-  }
-
-  /**
-   * MÉTODO PARA OBTENER TODOS LOS USUARIOS
-   
-  obtenerUsuarios(): Observable<Usuario[]> {
-    return this.http.get<Usuario[]>(this.apiUrl);
-  }
-
-  /**
-   * MÉTODO PARA OBTENER UN USUARIO POR ID
-   
-  obtenerUsuarioPorId(id: number): Observable<Usuario> {
-    return this.http.get<Usuario>(`${this.apiUrl}/${id}`);
-  }
-
-  /**
-   * MÉTODO PARA ELIMINAR UN USUARIO
-   
-  eliminarUsuario(id: number): Observable<ApiResponse> {
-    return this.http.delete<ApiResponse>(`${this.apiUrl}/${id}`);
-  }
-
-  private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest {
+  private readonly apiUrl = 'http://200.7.99.74:8080/api/usuarios';  
+  private readonly cargosMap: { [key: string]: number } = {
+    'Gerente': 1,
+    'Analista': 2,
+    'Desarrollador': 3,
+    'Administrador': 4,
+    'Coordinador': 5,
+    'Supervisor': 6
+  };
+  constructor(private http: HttpClient) {}
+  private getHttpOptions() {
     return {
-      identificacion: usuario.identificacion,
-      nombres: usuario.nombres,
-      apellidos: usuario.apellidos,
-      usuario: usuario.usuario,
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      })
+    };
+  }
+  private handleError = (error: HttpErrorResponse) => {
+    let errorMessage = 'Error desconocido';    
+    if (error.error instanceof ErrorEvent) {
+      errorMessage = `Error de conexión: ${error.error.message}`;
+    } else {
+      switch (error.status) {
+        case 0:
+          errorMessage = 'No se puede conectar al servidor. Verifica tu conexión a internet.';
+          break;
+        case 400:
+          errorMessage = error.error?.message || 'Datos inválidos. Verifica la información ingresada.';
+          break;
+        case 401:
+          errorMessage = 'No tienes autorización para realizar esta operación.';
+          break;
+        case 403:
+          errorMessage = 'Acceso prohibido. Contacta al administrador.';
+          break;
+        case 404:
+          errorMessage = 'El usuario no fue encontrado.';
+          break;
+        case 409:
+          errorMessage = 'Ya existe un usuario con esta identificación o nombre de usuario.';
+          break;
+        case 422:
+          errorMessage = 'Los datos enviados no son válidos.';
+          break;
+        case 500:
+          errorMessage = 'Error interno del servidor. Intenta más tarde.';
+          break;
+        case 503:
+          errorMessage = 'Servicio no disponible temporalmente.';
+          break;
+        default:
+          errorMessage = `Error ${error.status}: ${error.error?.message || error.message}`;
+      }
+    }    
+    console.error('Error completo:', error);
+    return throwError(() => new Error(errorMessage));
+  };
+  obtenerUsuarios(): Observable<Usuario[]> {
+    return this.http.get<Usuario[]>(this.apiUrl, this.getHttpOptions())
+      .pipe(
+        tap(usuarios => console.log(`Se obtuvieron ${usuarios.length} usuarios`)),
+        retry(2),
+        catchError(this.handleError)
+      );
+  }
+  obtenerUsuarioPorId(id: number): Observable<Usuario> {
+    return this.http.get<Usuario>(`${this.apiUrl}/${id}`, this.getHttpOptions())
+      .pipe(
+        tap(usuario => console.log('Usuario obtenido:', usuario)),
+        catchError(this.handleError)
+      );
+  }
+  crearUsuario(usuario: Usuario): Observable<ApiResponse> {
+    const usuarioRequest = this.transformarUsuarioParaApi(usuario);    
+    console.log('Creando usuario:', usuarioRequest);    
+    return this.http.post<ApiResponse>(this.apiUrl, usuarioRequest, this.getHttpOptions())
+      .pipe(
+        tap(response => console.log('Usuario creado exitosamente:', response)),
+        catchError(this.handleError)
+      );
+  }
+  actualizarUsuario(usuario: Usuario): Observable<ApiResponse> {
+    if (!usuario.noUsuario) {
+      return throwError(() => new Error('ID de usuario requerido para actualizar'));
+    }
+    const usuarioRequest = this.transformarUsuarioParaApi(usuario);
+    const url = `${this.apiUrl}/${usuario.noUsuario}`;    
+    console.log('Actualizando usuario:', usuarioRequest);    
+    return this.http.put<ApiResponse>(url, usuarioRequest, this.getHttpOptions())
+      .pipe(
+        tap(response => console.log('Usuario actualizado exitosamente:', response)),
+        catchError(this.handleError)
+      );
+  }
+  eliminarUsuario(id: number): Observable<ApiResponse> {
+    return this.http.delete<ApiResponse>(`${this.apiUrl}/${id}`, this.getHttpOptions())
+      .pipe(
+        tap(response => console.log('Usuario eliminado:', response)),
+        catchError(this.handleError)
+      );
+  }
+  private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest {
+    if (!usuario.identificacion?.trim()) {
+      throw new Error('La identificación es requerida');
+    }
+    if (!usuario.nombres?.trim()) {
+      throw new Error('Los nombres son requeridos');
+    }
+    if (!usuario.correoEmpresarial?.trim()) {
+      throw new Error('El correo empresarial es requerido');
+    }
+    return {
+      identificacion: usuario.identificacion.trim(),
+      nombres: usuario.nombres.trim(),
+      apellidos: usuario.apellidos?.trim() || '',
+      usuario: usuario.usuario?.trim() || '',
       cargo: {
-        // Aquí necesitas mapear el cargo a su ID
-        // Si tu formulario solo tiene el nombre del cargo, necesitarás
-        // otro método para obtener el ID del cargo
-        idCargo: this.obtenerIdCargo(usuario.cargo ?? '')
+        idCargo: this.obtenerIdCargo(usuario.cargo || '')
       },
-      correoEmpresarial: usuario.correoEmpresarial || '',
-      correoPersonal: usuario.correoPersonal || '',
-      telefono1: usuario.celular || '', // El celular del formulario va a telefono1
-      telefono2: usuario.telefono || '', // El teléfono del formulario va a telefono2
-      direccion: usuario.direccion || '',
-      dobleAutenticacion: this.convertirDobleAutenticacion(usuario.dobleAutenticacion ? usuario.dobleAutenticacion : 'Google Authenticator')
+      correoEmpresarial: usuario.correoEmpresarial.trim(),
+      correoPersonal: usuario.correoPersonal?.trim() || '',
+      telefono1: usuario.celular?.trim() || '',
+      telefono2: usuario.telefono?.trim() || '',
+      direccion: usuario.direccion?.trim() || '',
+      dobleAutenticacion: this.convertirDobleAutenticacion(usuario.dobleAutenticacion)
     };
   }
-
-
   private obtenerIdCargo(cargo: string): number {
-    // Esta es una implementación de ejemplo
-    // Deberías reemplazarla con tu lógica real
-    const cargos: { [key: string]: number } = {
-      'Gerente': 1,
-      'Analista': 2,
-      'Desarrollador': 3,
-      'Administrador': 4
-      // Agrega más cargos según tu sistema
-    };
+    const cargoLimpio = cargo.trim();
+    const idCargo = this.cargosMap[cargoLimpio];
     
-    return cargos[cargo] || 1; // Retorna 1 por defecto si no encuentra el cargo
+    if (!idCargo) {
+      console.warn(`Cargo no reconocido: "${cargoLimpio}". Usando cargo por defecto.`);
+      return 1;
+    }    
+    return idCargo;
   }
-
-
-  private convertirDobleAutenticacion(dobleAuth: string): boolean {
-    // Si el usuario seleccionó alguna opción, consideramos que sí quiere doble autenticación
-    return dobleAuth !== null && dobleAuth !== undefined && dobleAuth !== '';
+  private convertirDobleAutenticacion(dobleAuth?: string): boolean {
+    if (!dobleAuth) return false;    
+    const valor = dobleAuth.trim().toLowerCase();
+    return valor !== '' && valor !== 'ninguna' && valor !== 'false' && valor !== '0';
   }
-*/}
+  obtenerCargosDisponibles(): string[] {
+    return Object.keys(this.cargosMap);
+  }
+  validarUsuarioExistente(identificacion: string, excludeId?: number): Observable<boolean> {
+    let url = `${this.apiUrl}/validar/${encodeURIComponent(identificacion)}`;
+    if (excludeId) {
+      url += `?exclude=${excludeId}`;
+    }    
+    return this.http.get<boolean>(url, this.getHttpOptions())
+      .pipe(
+        catchError(() => throwError(() => new Error('Error al validar usuario existente')))
+      );
+  }
+}
