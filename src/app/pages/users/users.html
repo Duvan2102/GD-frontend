@@ -1,74 +1,130 @@
-<div class="usuarios-container">
-  <!-- CABECERA -->
-  <div class="seccion-cabecera mb-4">
-    <h2>USUARIOS</h2>
-    <button class="btn-crear-usuario btn" data-bs-toggle="modal" data-bs-target="#crearUsuarioModal">
-      <i class="bi bi-plus-circle-dotted"></i>
-      Crear usuario
-    </button>
-  </div>
+<div class="principal-wrapper">
+  <div class="container-fluid p-4">
 
-  <!-- CONTROLES (buscador, toggle activos, cantidad) -->
-  <app-controls
-    [textoboton]="'Crear usuario'"
-    [labelAprobados]="'ACTIVOS'"
-    [quantity]="itemsPerPage"
-    [toggleApproved]="activos"
-    [search]="searchTerm"
-    (quantityChange)="onChangeCantidad($event)"
-    (toggleApprovedChange)="onToggleActivos($event)"
-    (searchChange)="onBuscar($event)">
-  </app-controls>
+    <!-- CABECERA -->
+    <div class="seccion-cabecera">
+      <h2 class="mb-2">USUARIOS</h2>
+      <button class="btn-crear" (click)="openCreateUserModal()">
+        <i class="bi bi-plus-circle-dotted"></i>
+        Crear usuario
+      </button>
+    </div>
 
-  <!-- TABLA -->
-  <div class="tabla-scroll">
-    <table class="usuarios-tabla">
-      <thead>
-        <tr>
-          <th>No Usuario</th><th>Identificación</th><th>Nombres</th>
-          <th>Apellidos</th><th>Usuario</th><th>Estado</th><th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <ng-container *ngFor="let u of usuariosFiltrados; let i = index">
+    
+
+    <!-- CONTROLES -->
+    <app-controls
+      [textoboton]="'Crear usuario'"
+      [labelAprobados]="'ACTIVOS'"
+      [quantity]="itemsPerPage"
+      [toggleApproved]="activos"
+      [search]="searchTerm"
+      (quantityChange)="onChangeCantidad($event)"
+      (toggleApprovedChange)="onToggleActivos($event)"
+      (searchChange)="onBuscar($event)">
+    </app-controls>
+
+    <!-- TABLA -->
+    <div class="panel-tabla-scroll">
+      <table class="usuarios-tabla">
+        <thead>
           <tr>
-            <td>{{ u.noUsuario }}</td>
-            <td>{{ u.identificacion }}</td>
-            <td>{{ u.nombres }}</td>
-            <td>{{ u.apellidos }}</td>
-            <td>{{ u.usuario }}</td>
-            <td>{{ u.estado }}</td>
-            <td>
-              <button class="usuarios-ver" (click)="toggleDesplegable(i)">
-                <i *ngIf="filaDesplegada===i; else right" class="bi bi-chevron-down"></i>
-                <ng-template #right><i class="bi bi-chevron-right"></i></ng-template>
-              </button>
-            </td>
+            <th>No Usuario</th>
+            <th>Identificación</th>
+            <th>Nombres</th>
+            <th>Apellidos</th>
+            <th>Usuario</th>
+            <th>Estado</th>
+            <th></th>
           </tr>
-          <tr *ngIf="filaDesplegada===i" class="desplegable-row">
-            <td colspan="7">
-              <div class="desplegable-contenido">
-                <div><b>Perfil</b><br> Funcionario</div>
-                <div class="acciones-usuario">
-                  <a href="#" (click)="accion('inactivar',u,$event)">+ Inactivar usuario</a>
-                   &gt;
-                  <a href="#" (click)="accion('editar',u,$event)">Editar usuario</a> •
-                  <a href="#" (click)="accion('cambiarContraseña',u,$event)">Cambiar contraseña</a> •
-                  <a href="#" (click)="accion('eliminarQR',u,$event)">Eliminar QR</a>
-                </div>
-              </div>
-            </td>
-          </tr>
-        </ng-container>
-      </tbody>
-    </table>
-  </div>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let u of usuariosFiltrados; let i = index">
+            <tr>
+              <td>{{ u.noUsuario }}</td>
+              <td>{{ u.identificacion }}</td>
+              <td>{{ u.nombres }}</td>
+              <td>{{ u.apellidos }}</td>
+              <td>{{ u.usuario }}</td>
+              <td>{{ u.estado }}</td>
+              <td>
+                <button class="usuarios-ver" (click)="toggleDesplegable(i)">
+                  <i *ngIf="filaDesplegada === i; else right" class="bi bi-chevron-down"></i>
+                  <ng-template #right><i class="bi bi-chevron-right"></i></ng-template>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="filaDesplegada === i" class="desplegable-row">
+              <td colspan="7">
+                <div class="desplegable-contenido">
+                  <!-- Perfil y acciones desplegables -->
+                  <div><b>Perfil</b><br> Funcionario</div>
+                  <div class="acciones-usuario">
+                    <a href="#" (click)="abrirConfirmModal('inactivar', u); $event.preventDefault()">+ Inactivar usuario</a>
+                    <a href="#" (click)="accion('editar', u, $event); $event.preventDefault()">Editar usuario</a> •
+                    <a href="#" (click)="accion('cambiarContraseña', u, $event); $event.preventDefault()">Cambiar contraseña</a> •
+                    <a href="#" (click)="abrirConfirmModal('eliminarQR', u); $event.preventDefault()">Eliminar QR</a>
 
-  <!-- FOOTER: paginación reutilizable -->
-  <app-footer-controls
-    [totalItems]="usuariosFiltradosLength"
-    [itemsPerPage]="itemsPerPage"
-    [currentPage]="paginaActual"
-    (changePage)="onChangePage($event)">
-  </app-footer-controls>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- FOOTER: paginación -->
+    <app-footer-controls
+      [totalItems]="usuariosFiltradosLength"
+      [itemsPerPage]="itemsPerPage"
+      [currentPage]="paginaActual"
+      (changePage)="onChangePage($event)">
+    </app-footer-controls>
+  </div>
 </div>
+
+<!-- MODALES -->
+
+<app-user-form-modal
+  *ngIf="isUserFormVisible"
+  [isVisible]="isUserFormVisible"
+  [isEditMode]="currentAction === 'editar'"
+  [user]="currentUser"
+  (close)="closeUserFormModal()"
+  (save)="saveUser($event)">
+</app-user-form-modal>
+
+<app-password-modal
+  [isVisible]="isPasswordModalVisible"
+  [mensajeModal]="mensajePasswordModal"
+  [user]="currentUser"
+  (close)="closePasswordModal()"
+  (validate)="handlePasswordValidation($event)">
+</app-password-modal>
+
+<app-confirm-modal
+  [visible]="confirmModalVisible"
+  [mensaje]="confirmModalMessage"
+  [textoAceptar]="'Aceptar'"
+  (aceptar)="onAceptarConfirmacion()"
+  (cancelar)="onCancelarConfirmacion()">
+</app-confirm-modal>
+
+
+<app-success-modal
+  [visible]="modalSuccessVisible"
+  [mensaje]="modalSuccessMessage"
+  [textoBtn]="modalSuccessBtn"
+  (aceptar)="cerrarModalSuccess()">
+</app-success-modal>
+
+<app-change-password
+  [isVisible]="isChangePasswordModalVisible"
+  [skipValidation]="true"
+  (close)="closeChangePasswordModal()"
+  (passwordChanged)="handlePasswordChanged()">
+</app-change-password>
+
+
+

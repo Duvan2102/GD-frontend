@@ -1,34 +1,31 @@
-<div class="approval-details">
+<div class="principal-wrapper">
   <div class="container-fluid p-4">
 
     <div class="seccion-cabecera">
       <h2>DETALLES APROBACIONES</h2>
     </div>
 
-    <div class="seccion-contenido">
-      <app-controls
-        (quantityChange)="onQuantityChange($event)"
-        (toggleApprovedChange)="onToggleApproved($event)"
-        (searchChange)="onSearchChange($event)">
-      </app-controls>
+    <app-controls
+      (quantityChange)="onQuantityChange($event)"
+      (toggleApprovedChange)="onToggleApproved($event)"
+      (searchChange)="onSearchChange($event)">
+    </app-controls>
 
-      <app-requests-table
+    <app-requests-table
       [requests]="displayedRequests"
       [totalItems]="totalFiltered"
       [currentOrder]="currentOrder"
       [ascendingOrder]="ascendingOrder"
-      textoboton="DETALLE <br> SOLICITUD"
       (sort)="sortBy($event)"
       (manage)="onManage($event)">
     </app-requests-table>
 
-      <app-footer-controls
-        [totalItems]="totalFiltered"
-        [itemsPerPage]="itemsPerPage"
-        [currentPage]="currentPage"
-        (changePage)="onChangePage($event)"
-      ></app-footer-controls>
-    </div>
+    <app-footer-controls
+      [totalItems]="totalFiltered"
+      [itemsPerPage]="itemsPerPage"
+      [currentPage]="currentPage"
+      (changePage)="onChangePage($event)"
+    ></app-footer-controls>
 
   </div>
 </div>

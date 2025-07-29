@@ -1,0 +1,132 @@
+<!-- Modal backdrop -->
+<div class="custom-backdrop" [class.show]="isVisible" (click)="onClose()"></div>
+
+<!-- Modal -->
+<div class="modal" [class.show]="isVisible" *ngIf="isVisible">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content user-form-modal">
+      
+      <!-- Header -->
+      <div class="modal-header">
+        <h5 class="modal-title">{{ modalTitle }}</h5>
+        <button type="button" class="btn-close" (click)="onClose()"></button>
+      </div>
+      
+      <!-- Body -->
+      <div class="modal-body" [formGroup]="userForm">
+        
+        <!-- Información básica -->
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <label class="form-label">Identificación</label>
+            <input type="text" class="form-control" formControlName="identificacion"
+                   [class.is-invalid]="userForm.get('identificacion')?.invalid && userForm.get('identificacion')?.touched">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Nombres</label>
+            <input type="text" class="form-control" formControlName="nombres"
+                   [class.is-invalid]="userForm.get('nombres')?.invalid && userForm.get('nombres')?.touched">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Apellidos</label>
+            <input type="text" class="form-control" formControlName="apellidos"
+                   [class.is-invalid]="userForm.get('apellidos')?.invalid && userForm.get('apellidos')?.touched">
+          </div>
+        </div>
+
+        <!-- Usuario y Cargo -->
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label">Usuario</label>
+            <input type="text" class="form-control" formControlName="usuario"
+                   [class.is-invalid]="userForm.get('usuario')?.invalid && userForm.get('usuario')?.touched">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Cargo</label>
+            <input type="text" class="form-control" formControlName="cargo"
+                   [class.is-invalid]="userForm.get('cargo')?.invalid && userForm.get('cargo')?.touched">
+          </div>
+        </div>
+
+        <!-- Correos -->
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label">Correo empresarial</label>
+            <input type="email" class="form-control" formControlName="correoEmpresarial"
+                   [class.is-invalid]="userForm.get('correoEmpresarial')?.invalid && userForm.get('correoEmpresarial')?.touched">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Correo personal</label>
+            <input type="email" class="form-control" formControlName="correoPersonal"
+                   [class.is-invalid]="userForm.get('correoPersonal')?.invalid && userForm.get('correoPersonal')?.touched">
+          </div>
+        </div>
+
+        <!-- Teléfonos -->
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label">Celular</label>
+            <input type="text" class="form-control" formControlName="celular"
+                   [class.is-invalid]="userForm.get('celular')?.invalid && userForm.get('celular')?.touched">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Teléfono</label>
+            <input type="text" class="form-control" formControlName="telefono">
+          </div>
+        </div>
+
+        <!-- Dirección y Doble Autenticación -->
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label">Dirección</label>
+            <input type="text" class="form-control" formControlName="direccion">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Doble Autenticación</label>
+            <select class="form-select" formControlName="dobleAutenticacion">
+              <option *ngFor="let option of dobleAutenticacionOptions" [value]="option">
+                {{ option }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Separador -->
+        <hr class="my-4">
+
+        <!-- Perfiles -->
+        <h6 class="mb-3">Perfiles</h6>
+        <div formGroupName="perfiles">
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="administrador" formControlName="administrador">
+            <label class="form-check-label" for="administrador">
+              ADMINISTRADOR
+            </label>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="funcionarioCreador" formControlName="funcionarioCreador">
+            <label class="form-check-label" for="funcionarioCreador">
+              FUNCIONARIO (creador)
+            </label>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="funcionarios" formControlName="funcionarios">
+            <label class="form-check-label" for="funcionarios">
+              FUNCIONARIOS
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Footer -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="onClose()">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-primary-custom" (click)="onSave()" [disabled]="userForm.invalid">
+          {{ submitButtonText }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

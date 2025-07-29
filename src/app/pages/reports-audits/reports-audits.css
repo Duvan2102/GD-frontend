@@ -1,0 +1,46 @@
+/* Espaciado antes de la tabla */
+.table-responsive {
+  margin-top: 1rem;
+}
+
+/* Tabla sin bordes exteriores y con ancho completo */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+/* Encabezados */
+thead th {
+  text-align: left;
+  padding: 0.75rem 0.5rem;
+  color: #516E5F;
+  border-bottom: 2px solid #516E5F;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* Filas de cuerpo */
+tbody tr {
+  border-bottom: 1px solid #B5C4B1;
+}
+
+tbody tr:last-child {
+  border-bottom: none;
+}
+
+/* Celdas */
+tbody td {
+  padding: 0.75rem 0.5rem;
+  color: #333;
+}
+
+/* Rayas alternas */
+tbody tr:nth-child(even) td {
+  background: #F9F9F9;
+}
+
+/* Aumentar tamaño de los checkboxes */
+input[type="checkbox"] {
+  transform: scale(1.2);
+}

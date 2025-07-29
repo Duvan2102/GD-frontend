@@ -1,0 +1,22 @@
+<div class="modal fade show custom-backdrop"
+     tabindex="-1"
+     *ngIf="visible"
+     style="display: block;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content modal-content-custom text-center">
+      <div class="modal-body">
+        <div style="margin-bottom:1.5rem;">
+          <i class="bi bi-exclamation-octagon" style="font-size: 3rem; color: #c9613e;"></i>
+        </div>
+        <h2 class="modal-title-custom" style="margin-bottom: 2rem;">{{ mensaje }}</h2>
+        <button class="btn btn-success btn-lg custom-btn-accept"
+                style="margin-right:16px;" (click)="aceptar.emit()">
+          {{ textoAceptar || 'Aceptar' }}
+        </button>
+        <button class="btn btn-danger btn-lg" (click)="cancelar.emit()">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

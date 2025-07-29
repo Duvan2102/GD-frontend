@@ -1,0 +1,32 @@
+.modal-content.success-modal .success-icon,
+.modal-content.feedback-modal .success-icon {
+  font-size: 2.7rem;
+  color: #58bb7d;
+  margin-bottom: 1rem;
+}
+.modal-content.success-modal .success-title,
+.modal-content.feedback-modal .success-title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+}
+.modal-content.success-modal .success-btn,
+.modal-content.feedback-modal .feedback-btn {
+  background: #73aa98;
+  border: none;
+  font-size: 1.13rem;
+  font-weight: bold;
+  padding: 10px 2.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(76, 114, 103, 0.11);
+  color: #fff;
+  transition: background 0.2s;
+}
+.modal-content.success-modal .success-btn:hover,
+.modal-content.feedback-modal .feedback-btn:hover {
+  background: #5c9785;
+}
+.modal-content.success-modal .success-title,
+.modal-content.feedback-modal .feedback-title {
+  color: #222;
+}
