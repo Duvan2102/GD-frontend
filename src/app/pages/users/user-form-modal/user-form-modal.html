@@ -15,63 +15,115 @@
       <!-- Body -->
       <div class="modal-body" [formGroup]="userForm">
         
+        <!-- ALERTAS DE ÉXITO Y ERROR DEL SERVIDOR -->
+        <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+          <i class="fas fa-check-circle me-2"></i>
+          <strong>¡Éxito!</strong> {{ successMessage }}
+          <button type="button" class="btn-close" (click)="successMessage = ''" aria-label="Close"></button>
+        </div>
+
+        <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Error:</strong>
+          <div [innerHTML]="errorMessage.replace('\n', '<br>')"></div>
+          <button type="button" class="btn-close" (click)="errorMessage = ''" aria-label="Close"></button>
+        </div>
+
+        <div *ngIf="validatingUser" class="alert alert-info mb-3" role="alert">
+          <i class="fas fa-spinner fa-spin me-2"></i>
+          Validando identificación...
+        </div>
+
         <!-- Información básica -->
         <div class="row mb-3">
           <div class="col-md-4">
-            <label class="form-label">Identificación</label>
+            <label class="form-label">Identificación <span class="text-danger">*</span></label>
             <input type="text" class="form-control" formControlName="identificacion"
                    [class.is-invalid]="userForm.get('identificacion')?.invalid && userForm.get('identificacion')?.touched">
+            <div *ngIf="getErrorMessage('identificacion')" class="invalid-feedback">
+              {{ getErrorMessage('identificacion') }}
+            </div>
           </div>
           <div class="col-md-4">
-            <label class="form-label">Nombres</label>
+            <label class="form-label">Nombres <span class="text-danger">*</span></label>
             <input type="text" class="form-control" formControlName="nombres"
                    [class.is-invalid]="userForm.get('nombres')?.invalid && userForm.get('nombres')?.touched">
+            <div *ngIf="getErrorMessage('nombres')" class="invalid-feedback">
+              {{ getErrorMessage('nombres') }}
+            </div>
           </div>
           <div class="col-md-4">
-            <label class="form-label">Apellidos</label>
+            <label class="form-label">Apellidos <span class="text-danger">*</span></label>
             <input type="text" class="form-control" formControlName="apellidos"
                    [class.is-invalid]="userForm.get('apellidos')?.invalid && userForm.get('apellidos')?.touched">
+            <div *ngIf="getErrorMessage('apellidos')" class="invalid-feedback">
+              {{ getErrorMessage('apellidos') }}
+            </div>
           </div>
         </div>
 
         <!-- Usuario y Cargo -->
         <div class="row mb-3">
           <div class="col-md-6">
-            <label class="form-label">Usuario</label>
+            <label class="form-label">Usuario <span class="text-danger">*</span></label>
             <input type="text" class="form-control" formControlName="usuario"
                    [class.is-invalid]="userForm.get('usuario')?.invalid && userForm.get('usuario')?.touched">
+            <div *ngIf="getErrorMessage('usuario')" class="invalid-feedback">
+              {{ getErrorMessage('usuario') }}
+            </div>
           </div>
           <div class="col-md-6">
-            <label class="form-label">Cargo</label>
-            <input type="text" class="form-control" formControlName="cargo"
-                   [class.is-invalid]="userForm.get('cargo')?.invalid && userForm.get('cargo')?.touched">
+            <label class="form-label">Cargo <span class="text-danger">*</span></label>
+            <select class="form-select" formControlName="cargo"
+                    [class.is-invalid]="userForm.get('cargo')?.invalid && userForm.get('cargo')?.touched">
+              <option value="">Selecciona un cargo</option>
+              <option *ngFor="let cargo of cargosDisponibles" [value]="cargo">
+                {{ cargo }}
+              </option>
+            </select>
+            <div *ngIf="getErrorMessage('cargo')" class="invalid-feedback">
+              {{ getErrorMessage('cargo') }}
+            </div>
           </div>
         </div>
 
         <!-- Correos -->
         <div class="row mb-3">
           <div class="col-md-6">
-            <label class="form-label">Correo empresarial</label>
+            <label class="form-label">Correo empresarial <span class="text-danger">*</span></label>
             <input type="email" class="form-control" formControlName="correoEmpresarial"
                    [class.is-invalid]="userForm.get('correoEmpresarial')?.invalid && userForm.get('correoEmpresarial')?.touched">
+            <div *ngIf="getErrorMessage('correoEmpresarial')" class="invalid-feedback">
+              {{ getErrorMessage('correoEmpresarial') }}
+            </div>
           </div>
           <div class="col-md-6">
             <label class="form-label">Correo personal</label>
             <input type="email" class="form-control" formControlName="correoPersonal"
                    [class.is-invalid]="userForm.get('correoPersonal')?.invalid && userForm.get('correoPersonal')?.touched">
+            <div *ngIf="getErrorMessage('correoPersonal')" class="invalid-feedback">
+              {{ getErrorMessage('correoPersonal') }}
+            </div>
           </div>
         </div>
 
         <!-- Teléfonos -->
         <div class="row mb-3">
           <div class="col-md-6">
-            <label class="form-label">Celular</label>
+            <label class="form-label">Celular <span class="text-danger">*</span></label>
             <input type="text" class="form-control" formControlName="celular"
                    [class.is-invalid]="userForm.get('celular')?.invalid && userForm.get('celular')?.touched">
+            <div *ngIf="getErrorMessage('celular')" class="invalid-feedback">
+              {{ getErrorMessage('celular') }}
+            </div>
           </div>
           <div class="col-md-6">
             <label class="form-label">Teléfono</label>
-            <input type="text" class="form-control" formControlName="telefono">
+            <input type="text" class="form-control" formControlName="telefono"
+                   [class.is-invalid]="userForm.get('telefono')?.invalid && userForm.get('telefono')?.touched">
+            <div *ngIf="getErrorMessage('telefono')" class="invalid-feedback">
+              {{ getErrorMessage('telefono') }}
+            </div>
           </div>
         </div>
 
@@ -79,15 +131,23 @@
         <div class="row mb-3">
           <div class="col-md-6">
             <label class="form-label">Dirección</label>
-            <input type="text" class="form-control" formControlName="direccion">
+            <input type="text" class="form-control" formControlName="direccion"
+                   [class.is-invalid]="userForm.get('direccion')?.invalid && userForm.get('direccion')?.touched">
+            <div *ngIf="getErrorMessage('direccion')" class="invalid-feedback">
+              {{ getErrorMessage('direccion') }}
+            </div>
           </div>
           <div class="col-md-6">
-            <label class="form-label">Doble Autenticación</label>
-            <select class="form-select" formControlName="dobleAutenticacion">
-              <option *ngFor="let option of dobleAutenticacionOptions" [value]="option">
-                {{ option }}
+            <label class="form-label">Doble Autenticación <span class="text-danger">*</span></label>
+            <select class="form-select" formControlName="dobleAutenticacion"
+                    [class.is-invalid]="userForm.get('dobleAutenticacion')?.invalid && userForm.get('dobleAutenticacion')?.touched">
+              <option *ngFor="let option of dobleAutenticacionOptions" [value]="option.value">
+                {{ option.label }}
               </option>
             </select>
+            <div *ngIf="getErrorMessage('dobleAutenticacion')" class="invalid-feedback">
+              {{ getErrorMessage('dobleAutenticacion') }}
+            </div>
           </div>
         </div>
 
@@ -120,10 +180,14 @@
       
       <!-- Footer -->
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="onClose()">
+        <button type="button" class="btn btn-secondary" (click)="onClose()" [disabled]="isLoading">
           Cancelar
         </button>
-        <button type="button" class="btn btn-primary-custom" (click)="onSave()" [disabled]="userForm.invalid">
+        <button type="button" 
+                class="btn btn-primary-custom" 
+                (click)="onSave()" 
+                [disabled]="userForm.invalid || isLoading">
+          <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
           {{ submitButtonText }}
         </button>
       </div>
