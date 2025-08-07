@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { CommonForm } from './common-form';
+import { DepartmentCreation } from './department-creation';
 
-describe('CommonForm', () => {
-  let component: CommonForm;
-  let fixture: ComponentFixture<CommonForm>;
+describe('DepartmentCreation', () => {
+  let component: DepartmentCreation;
+  let fixture: ComponentFixture<DepartmentCreation>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CommonForm]
+      imports: [DepartmentCreation]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(CommonForm);
+    fixture = TestBed.createComponent(DepartmentCreation);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

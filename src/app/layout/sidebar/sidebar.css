@@ -8,8 +8,7 @@
 }
 
 .sidebar ul {
-  padding: 1%;
-  margin: 0;
+padding: 1%;
 }
 
 .sidebar li {
@@ -23,7 +22,7 @@
   text-decoration: none;
   border-radius: 6px;
   transition: background-color 0.3s;
-  font-size: 160%
+  font-size: 160%;
 }
 
 .sidebar i {

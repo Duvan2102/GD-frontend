@@ -1,0 +1,56 @@
+<div class="modal custom-backdrop" tabindex="-1" [class.show]="isVisible" [style.display]="isVisible ? 'block' : 'none'">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">{{ modalTitle }}</h5>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="onCancel()"></button>
+      </div>
+
+      <form (ngSubmit)="onSubmit()">
+        <div class="modal-body text-center">
+          <div class="mb-3">
+            <label for="areaDescripcion" class="form-label">Nombre del Área</label>
+            <input
+              type="text"
+              id="areaDescripcion"
+              class="form-control text-center"
+              [(ngModel)]="area.descripcion"
+              name="areaDescripcion"
+              placeholder="Escribe el nombre del área"
+              required
+              autocomplete="off"
+            />
+          </div>
+          <div class="mb-3">
+            <label for="areaDepartamento" class="form-label">Departamento</label>
+            <select
+              id="areaDepartamento"
+              class="form-select text-center"
+              [(ngModel)]="area.departamento.idDepartamento"
+              name="areaDepartamento"
+              required
+            >
+              <option value="0" disabled>Selecciona un departamento</option>
+              <option *ngFor="let dep of departments" [value]="dep.idDepartamento">
+                {{ dep.descripcion }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer justify-content-center">
+          <button type="button" class="btn btn-secondary" (click)="onCancel()">Cancelar</button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="!area.descripcion.trim() || !area.departamento.idDepartamento"
+          >
+            {{ mode === 'update' ? 'Actualizar' : 'Crear' }}
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>

@@ -1,0 +1,71 @@
+<div class="modal custom-backdrop" tabindex="-1" [class.show]="isVisible" [style.display]="isVisible ? 'block' : 'none'">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">{{ modalTitle }}</h5>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="onCancel()"></button>
+      </div>
+
+      <form (ngSubmit)="onSubmit()">
+        <div class="modal-body text-center">
+          <div class="mb-3">
+            <label for="descripcion" class="form-label">Nombre de la Tipología</label>
+            <input
+              type="text"
+              id="descripcion"
+              class="form-control text-center"
+              [(ngModel)]="descripcion"
+              name="descripcion"
+              placeholder="Escribe el nombre de la tipología"
+              required
+            />
+          </div>
+
+          <div class="mb-3">
+            <label for="department" class="form-label">Departamento</label>
+            <select
+              id="department"
+              class="form-select text-center"
+              [(ngModel)]="selectedDepartment"
+              (ngModelChange)="onDepartmentSelect($event)"
+              name="department"
+              required
+            >
+              <option [ngValue]="undefined" disabled>Selecciona un departamento</option>
+              <option *ngFor="let dep of departments" [ngValue]="dep">{{ dep.descripcion }}</option>
+            </select>
+          </div>
+
+          <div *ngIf="selectedDepartment" class="mb-3">
+            <label for="area" class="form-label">Área (Opcional)</label>
+            <select id="area" class="form-select text-center" [(ngModel)]="selectedArea" (ngModelChange)="onAreaSelect($event)" name="area">
+              <option [ngValue]="undefined">Selecciona un área</option>
+              <option *ngFor="let area of filteredAreas" [ngValue]="area">{{ area.descripcion }}</option>
+            </select>
+          </div>
+
+          <div *ngIf="selectedArea" class="mb-3">
+            <label for="cargo" class="form-label">Cargo (Opcional)</label>
+            <select id="cargo" class="form-select text-center" [(ngModel)]="selectedPosition" name="cargo">
+              <option [ngValue]="undefined">Selecciona un cargo</option>
+              <option *ngFor="let pos of filteredPositions" [ngValue]="pos">{{ pos.descripcion }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer justify-content-center">
+          <button type="button" class="btn btn-secondary" (click)="onCancel()">Cancelar</button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="!descripcion.trim() || !selectedDepartment"
+          >
+            {{ mode === 'update' ? 'Actualizar' : 'Crear' }}
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>

@@ -1,0 +1,59 @@
+<div class="modal custom-backdrop" tabindex="-1" [class.show]="isVisible" [style.display]="isVisible ? 'block' : 'none'">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">{{ modalTitle }}</h5>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="onCancel()"></button>
+      </div>
+
+      <form (ngSubmit)="onSubmit()">
+        <div class="modal-body text-center">
+          <div class="mb-3">
+            <label for="positionDescripcion" class="form-label">Nombre del Cargo</label>
+            <input
+              type="text"
+              id="positionDescripcion"
+              class="form-control text-center"
+              [(ngModel)]="position.descripcion"
+              name="positionDescripcion"
+              placeholder="Escribe el nombre del cargo"
+              required
+              autocomplete="off"
+            />
+          </div>
+          <div class="mb-3">
+            <label for="positionArea" class="form-label">Área</label>
+            <select
+              id="positionArea"
+              class="form-select text-center"
+              [(ngModel)]="position.area.idArea"
+              name="positionArea"
+              required
+            >
+              <option value="0" disabled>Selecciona un área</option>
+              <option *ngFor="let area of areas" [value]="area.idArea">
+                {{ area.descripcion }}
+              </option>
+            </select>
+          </div>
+          <div *ngIf="getSelectedAreaInfo()" class="area-info text-muted small mt-2">
+            <strong>Departamento:</strong> {{ getSelectedAreaInfo()?.departamento?.descripcion }}
+          </div>
+        </div>
+
+        <div class="modal-footer justify-content-center">
+          <button type="button" class="btn btn-secondary" (click)="onCancel()">Cancelar</button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="!position.descripcion.trim() || !position.area.idArea"
+          >
+            {{ mode === 'update' ? 'Actualizar' : 'Crear' }}
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>

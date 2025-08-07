@@ -13,9 +13,9 @@ export class ConfirmModal {
   @Input() mensaje: string = '';
   @Input() textoAceptar: string = 'Aceptar';
   @Input() textoCancelar: string = 'Cancelar';
-  @Input() icono: string = 'bi bi-exclamation-octagon-fill'; // Bootstrap icon class (puedes cambiarla)
-  @Input() colorAceptar: string = '#609179'; // Verde institucional
-  @Input() colorCancelar: string = '#A34133'; // Rojo institucional
+  @Input() icono: string = 'bi bi-exclamation-octagon-fill'; 
+  @Input() colorAceptar: string = '#609179'; 
+  @Input() colorCancelar: string = '#A34133';
 
   @Output() aceptar = new EventEmitter<void>();
   @Output() cancelar = new EventEmitter<void>();
