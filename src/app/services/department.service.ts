@@ -27,7 +27,7 @@ export class DepartmentService {
   }
 
   update(id: number, dept: Partial<Department>): Observable<Department> {
-    return this.http.put<Department>(`${this.baseUrl}/${id}`, dept);
+    return this.http.post<Department>(`${this.baseUrl}`, dept);
   }
 
   delete(id: number): Observable<void> {

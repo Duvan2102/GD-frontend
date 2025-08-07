@@ -22,6 +22,10 @@ export class TypologyService {
     return this.http.get<Typology[]>(this.baseUrl);
   }
 
+   getById(id: number): Observable<Typology> {
+    return this.http.get<Typology>(`${this.baseUrl}/${id}`);
+  }
+
   create(typology: Partial<Typology>): Observable<Typology> {
     return this.http.post<Typology>(this.baseUrl, typology);
   }

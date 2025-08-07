@@ -22,6 +22,11 @@ export class AreaService {
     return this.http.get<Area[]>(this.baseUrl);
   }
 
+  getById(id: number) {
+  return this.http.get<Area>(`/api/areas/${id}`);
+}
+
+
   create(area: Area): Observable<Area> {
     return this.http.post<Area>(this.baseUrl, area);
   }

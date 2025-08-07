@@ -1,3 +1,5 @@
+// administration.ts
+
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -78,28 +80,28 @@ export class Administration implements OnInit {
   loadDepartments() {
     this.departmentService.getAll().subscribe({
       next: (data: Department[]) => this.departments = data,
-      error: () => this.mostrarModalError('Error al cargar departamentos')
+      error: (error) => this.mostrarModalError('Error al cargar departamentos', error)
     });
   }
 
   loadAreas() {
     this.areaService.getAll().subscribe({
       next: (data: Area[]) => this.areas = data,
-      error: () => this.mostrarModalError('Error al cargar áreas')
+      error: (error) => this.mostrarModalError('Error al cargar áreas', error)
     });
   }
 
   loadPositions() {
     this.positionService.getAll().subscribe({
       next: (data: Position[]) => this.positions = data,
-      error: () => this.mostrarModalError('Error al cargar cargos')
+      error: (error) => this.mostrarModalError('Error al cargar cargos', error)
     });
   }
 
   loadTypologies() {
     this.typologyService.getAll().subscribe({
       next: (data: Typology[]) => this.typologies = data,
-      error: () => this.mostrarModalError('Error al cargar tipologías')
+      error: (error) => this.mostrarModalError('Error al cargar tipologías', error)
     });
   }
 
@@ -167,8 +169,24 @@ export class Administration implements OnInit {
     this.modalSuccessVisible = true;
   }
   
-  mostrarModalError(mensaje: string) {
-    this.mostrarModalSuccess(mensaje, 'Cerrar');
+  mostrarModalError(mensaje: string, error?: any) {
+    let errorMsg = mensaje;
+    if (error) {
+      if (error.status === 400) {
+        errorMsg = 'Solicitud inválida: ' + (error.error?.message || mensaje);
+      } else if (error.status === 404) {
+        errorMsg = 'No se encontró el recurso solicitado.';
+      } else if (error.status === 409 && error.error?.message) {
+        errorMsg = error.error.message;
+      } else if (error.status === 409) {
+        errorMsg = 'Conflicto: El registro ya existe o está en uso.';
+      } else if (error.status === 500) {
+        errorMsg = 'Error interno del servidor. Intente más tarde.';
+      } else if (error.error?.message) {
+        errorMsg = error.error.message;
+      }
+    }
+    this.mostrarModalSuccess(errorMsg, 'Cerrar');
   }
 
   cerrarModalSuccess() {
@@ -192,7 +210,19 @@ export class Administration implements OnInit {
           this.loadTypologies();
           this.mostrarModalSuccess('Tipología eliminada con éxito');
         },
-        error: () => this.mostrarModalError('Error al eliminar la tipología. Es posible que esté en uso.')
+        error: (error) => {
+          this.typologyService.getById(typology.idTipologia!).subscribe({
+            next: () => {
+              // Si aún existe, error real
+              this.mostrarModalError('Error al eliminar la tipología. Es posible que esté en uso.', error);
+            },
+            error: () => {
+              // Si ya no existe, se asume borrada
+              this.loadTypologies();
+              this.mostrarModalSuccess('Tipología eliminada con éxito');
+            }
+          });
+        }
       });
     });
   }
@@ -203,7 +233,7 @@ export class Administration implements OnInit {
         this.showTypologyCreateModal = false;
         this.mostrarModalSuccess('Tipología creada con éxito');
       },
-      error: () => this.mostrarModalError('Error al crear la tipología.')
+      error: (error) => this.mostrarModalError('Error al crear la tipología.', error)
     });
   }
   actualizarTipologia(typology: Typology) {
@@ -219,7 +249,7 @@ export class Administration implements OnInit {
         this.selectedTypology = undefined;
         this.mostrarModalSuccess('Tipología actualizada con éxito');
       },
-      error: () => this.mostrarModalError('Error al actualizar la tipología.')
+      error: (error) => this.mostrarModalError('Error al actualizar la tipología.', error)
     });
   }
   closeTypologyModal() {
@@ -246,30 +276,48 @@ export class Administration implements OnInit {
             this.closeDepartmentModal();
             this.mostrarModalSuccess('Departamento creado con éxito');
         },
-        error: () => this.mostrarModalError('Error al crear el departamento.')
+        error: (error) => this.mostrarModalError('Error al crear el departamento.', error)
     });
   }
   confirmDepartmentUpdate(department: Department): void {
     if (!department.descripcion.trim() || !department.idDepartamento) return;
-    if(typeof department.idDepartamento !== 'number') return;
-    this.departmentService.update(department.idDepartamento, department).subscribe({
+    
+    const departmentId = Number(department.idDepartamento);
+    if (isNaN(departmentId)) {
+        this.mostrarModalError('El ID del departamento no es válido.');
+        return;
+    }
+
+    this.departmentService.update(departmentId, { ...department, idDepartamento: departmentId }).subscribe({
         next: () => {
             this.loadDepartments();
             this.closeDepartmentModal();
             this.mostrarModalSuccess('Departamento actualizado con éxito');
         },
-        error: () => this.mostrarModalError('Error al editar el departamento.')
+        error: (error) => this.mostrarModalError('Error al editar el departamento.', error)
     });
   }
   openDepartmentDeleteConfirmModal(department: Department) {
     this.showConfirmModal(`¿Eliminar departamento "${department.descripcion}"?`, () => {
-      if(typeof department.idDepartamento !== 'number') return;
-      this.departmentService.delete(department.idDepartamento).subscribe({
+      const departmentId = Number(department.idDepartamento);
+      if (isNaN(departmentId)) return;
+
+      this.departmentService.delete(departmentId).subscribe({
         next: () => {
           this.loadDepartments();
           this.mostrarModalSuccess('Departamento eliminado con éxito');
         },
-        error: () => this.mostrarModalError('Error al eliminar el departamento. Es posible que esté en uso.')
+        error: (error) => {
+          this.departmentService.getById(departmentId).subscribe({
+            next: () => {
+              this.mostrarModalError('Error al eliminar el departamento. Es posible que esté en uso.', error);
+            },
+            error: () => {
+              this.loadDepartments();
+              this.mostrarModalSuccess('Departamento eliminado con éxito');
+            }
+          });
+        }
       });
     });
   }
@@ -297,31 +345,57 @@ export class Administration implements OnInit {
             this.showAreaCreateModal = false;
             this.mostrarModalSuccess('Área creada exitosamente');
         },
-        error: () => this.mostrarModalError('Error al crear el área.')
+        error: (error) => this.mostrarModalError('Error al crear el área.', error)
     });
   }
   confirmAreaUpdate(area: Area): void {
     if (!area.idArea || !area.descripcion.trim() || !area.departamento?.idDepartamento) return;
-    if(typeof area.idArea !== 'number') return;
-    this.areaService.update(area.idArea, area).subscribe({
+    
+    const areaId = Number(area.idArea);
+    const departmentId = Number(area.departamento.idDepartamento);
+
+    if (isNaN(areaId) || isNaN(departmentId)) {
+        this.mostrarModalError('El ID del área o departamento no es válido.');
+        return;
+    }
+  
+    const areaToUpdate = {
+        ...area,
+        idArea: areaId,
+        departamento: { ...area.departamento, idDepartamento: departmentId }
+    };
+
+    this.areaService.update(areaId, areaToUpdate).subscribe({
         next: () => {
             this.loadAreas();
             this.showAreaUpdateModal = false;
             this.selectedArea = undefined;
             this.mostrarModalSuccess('Área actualizada exitosamente');
         },
-        error: () => this.mostrarModalError('Error al editar el área.')
+        error: (error) => this.mostrarModalError('Error al editar el área.', error)
     });
   }
   openAreaDeleteConfirmModal(area: Area) {
     this.showConfirmModal(`¿Eliminar área "${area.descripcion}"?`, () => {
-      if (!area.idArea) return;
-      this.areaService.delete(area.idArea).subscribe({
+      const areaId = Number(area.idArea);
+      if (isNaN(areaId)) return;
+
+      this.areaService.delete(areaId).subscribe({
         next: () => {
           this.loadAreas();
           this.mostrarModalSuccess('Área eliminada con éxito');
         },
-        error: () => this.mostrarModalError('Error al eliminar el área. Es posible que esté en uso.')
+        error: (error) => {
+          this.areaService.getById(areaId).subscribe({
+            next: () => {
+              this.mostrarModalError('Error al eliminar el área. Es posible que esté en uso.', error);
+            },
+            error: () => {
+              this.loadAreas();
+              this.mostrarModalSuccess('Área eliminada con éxito');
+            }
+          });
+        }
       });
     });
   }
@@ -351,7 +425,7 @@ export class Administration implements OnInit {
             this.showPositionCreateModal = false;
             this.mostrarModalSuccess('Cargo creado exitosamente');
         },
-        error: () => this.mostrarModalError('Error al crear el cargo.')
+        error: (error) => this.mostrarModalError('Error al crear el cargo.', error)
     });
   }
   confirmPositionUpdate(position: Position): void {
@@ -362,26 +436,41 @@ export class Administration implements OnInit {
         descripcion: position.descripcion,
         area: areaCompleta ? { ...areaCompleta } : { ...position.area }
     };
-    if(typeof position.idCargo !== 'number') return;
-    this.positionService.update(position.idCargo, positionToUpdate).subscribe({
+    
+    const positionId = Number(position.idCargo);
+    if (isNaN(positionId)) return;
+
+    this.positionService.update(positionId, positionToUpdate).subscribe({
         next: () => {
             this.loadPositions();
             this.showPositionUpdateModal = false;
             this.selectedPosition = undefined;
             this.mostrarModalSuccess('Cargo actualizado exitosamente');
         },
-        error: () => this.mostrarModalError('Error al editar el cargo.')
+        error: (error) => this.mostrarModalError('Error al editar el cargo.', error)
     });
   }
   openPositionDeleteConfirmModal(position: Position) {
     this.showConfirmModal(`¿Eliminar cargo "${position.descripcion}"?`, () => {
-      if (!position.idCargo) return;
-      this.positionService.delete(position.idCargo).subscribe({
+      const positionId = Number(position.idCargo);
+      if (isNaN(positionId)) return;
+
+      this.positionService.delete(positionId).subscribe({
         next: () => {
           this.loadPositions();
           this.mostrarModalSuccess('Cargo eliminado con éxito');
         },
-        error: () => this.mostrarModalError('Error al eliminar el cargo. Es posible que esté en uso.')
+        error: (error) => {
+          this.positionService.getById(positionId).subscribe({
+            next: () => {
+              this.mostrarModalError('Error al eliminar el cargo. Es posible que esté en uso.', error);
+            },
+            error: () => {
+              this.loadPositions();
+              this.mostrarModalSuccess('Cargo eliminado con éxito');
+            }
+          });
+        }
       });
     });
   }
