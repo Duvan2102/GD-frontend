@@ -10,6 +10,7 @@ import { Position } from '../../../services/positions.service';
   selector: 'app-tipology-creation',
   standalone: true,
   templateUrl: './tipology-creation.html',
+  styleUrls: ['./tipology-creation.css'],
   imports: [CommonModule, FormsModule]
 })
 export class Tipology implements OnChanges {

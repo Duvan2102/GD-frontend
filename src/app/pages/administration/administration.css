@@ -39,16 +39,21 @@
   background-color: transparent;
 }
 
-.btn-edit:hover,
-.btn-delete:hover {
+.btn-edit:hover {
   background-color: transparent;
   color: #5a8b81;
   border-color: transparent;
 }
 
+.btn-delete:hover {
+  background-color: transparent;
+  color: red;
+  border-color: transparent;
+}
+
 .btn-edit i,
 .btn-delete i {
-  font-size: 1.3rem;
+  font-size: 1.4rem;
 }
 
 .card.shadow-sm {

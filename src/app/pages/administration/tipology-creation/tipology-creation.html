@@ -38,7 +38,7 @@
           </div>
 
           <div *ngIf="selectedDepartment" class="mb-3">
-            <label for="area" class="form-label">Área (Opcional)</label>
+            <label for="area" class="form-label">Área</label>
             <select id="area" class="form-select text-center" [(ngModel)]="selectedArea" (ngModelChange)="onAreaSelect($event)" name="area">
               <option [ngValue]="undefined">Selecciona un área</option>
               <option *ngFor="let area of filteredAreas" [ngValue]="area">{{ area.descripcion }}</option>
@@ -46,7 +46,7 @@
           </div>
 
           <div *ngIf="selectedArea" class="mb-3">
-            <label for="cargo" class="form-label">Cargo (Opcional)</label>
+            <label for="cargo" class="form-label">Cargo</label>
             <select id="cargo" class="form-select text-center" [(ngModel)]="selectedPosition" name="cargo">
               <option [ngValue]="undefined">Selecciona un cargo</option>
               <option *ngFor="let pos of filteredPositions" [ngValue]="pos">{{ pos.descripcion }}</option>
@@ -59,7 +59,7 @@
           <button
             type="submit"
             class="btn btn-primary"
-            [disabled]="!descripcion.trim() || !selectedDepartment"
+            [disabled]="!descripcion.trim() || !selectedPosition"
           >
             {{ mode === 'update' ? 'Actualizar' : 'Crear' }}
           </button>
