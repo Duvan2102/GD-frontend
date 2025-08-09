@@ -9,6 +9,11 @@ import { SuccessModal } from './success-modal/success-modal';
 import { ConfirmModal } from './confirm-modal/confirm-modal';
 import { ChangePassword } from './change-password/change-password';
 
+// ELIMINAMOS LA INTERFACE LOCAL Y USAMOS LA DE common.interfaces
+// Esta línea debe añadirse al principio del archivo:
+// import { Usuario } from '../../interfaces/common.interfaces';
+
+// INTERFACE TEMPORAL - Reemplazar con la importación de arriba
 export interface Usuario {
   noUsuario: number;
   identificacion: string;
@@ -17,13 +22,13 @@ export interface Usuario {
   usuario: string;
   estado: string;
   activo: boolean;
-  cargo?: string;
-  correoEmpresarial?: string;
+  cargo: string; // CAMBIADO: Ya no es opcional para evitar conflictos
+  correoEmpresarial: string; // CAMBIADO: Ya no es opcional
   correoPersonal?: string;
-  celular?: string;
+  celular: string; // CAMBIADO: Ya no es opcional
   telefono?: string;
   direccion?: string;
-  dobleAutenticacion?: string;
+  dobleAutenticacion: string; // CAMBIADO: Ya no es opcional
   perfiles?: {
     administrador: boolean;
     funcionarioCreador: boolean;
@@ -59,7 +64,7 @@ export class Users {
   filaDesplegada: number | null = null;
   isUserFormVisible = false;
   isPasswordModalVisible = false;
-  isChangePasswordModalVisible = false; // <-- AÑADIDO
+  isChangePasswordModalVisible = false;
   currentUser: Usuario | null = null;
   currentAction = '';
   mensajePasswordModal: string = '';
@@ -101,25 +106,25 @@ export class Users {
       this.currentAction = '';
     }
   }
-  // -----------------------------------------------
 
   constructor() {
+    // DATOS ACTUALIZADOS para coincidir con la nueva interface
     for (let i = 1; i <= 52; i++) {
       this.usuarios.push({
         noUsuario: i,
-        identificacion: `ID-${i}`,
+        identificacion: `12345678${i.toString().padStart(2, '0')}`, // Formato más realista
         nombres: `Nombre${i}`,
         apellidos: `Apellido${i}`,
         usuario: `usuario${i}`,
         estado: i % 2 === 0 ? 'Activo' : 'Inactivo',
         activo: i % 2 === 0,
-        cargo: 'Funcionario',
-        correoEmpresarial: `usuario${i}@empresa.com`,
+        cargo: 'Funcionario', // Ya no es opcional
+        correoEmpresarial: `usuario${i}@empresa.com`, // Ya no es opcional
         correoPersonal: `usuario${i}@personal.com`,
-        celular: `300${i}566677`,
+        celular: `300${i.toString().padStart(7, '0')}`, // Ya no es opcional
         telefono: `5005566677`,
         direccion: `Calle 45 # 22-18`,
-        dobleAutenticacion: 'Google Authenticator',
+        dobleAutenticacion: 'Google Authenticator', // Ya no es opcional
         perfiles: {
           administrador: i === 1,
           funcionarioCreador: i <= 5,
@@ -277,12 +282,10 @@ export class Users {
         this.mostrarModalSuccess('Usuario inactivado con éxito', 'Aceptar');
         break;
 
-      // --- MODIFICADO PARA ABRIR EL MODAL DE CAMBIO DE CONTRASEÑA ---
       case 'cambiarContraseña':
         this.isPasswordModalVisible = false;
         this.isChangePasswordModalVisible = true;
         break;
-      // ---------------------------------------------------------------
 
       case 'eliminarQR':
         const idxQR = this.usuarios.findIndex(u => u.noUsuario === this.currentUser!.noUsuario);
@@ -296,7 +299,6 @@ export class Users {
         console.log('Acción no reconocida en validación:', this.currentAction);
     }
 
-    // Solo limpiar si NO es cambio de contraseña
     if (this.currentAction !== 'cambiarContraseña') {
       this.filtrarUsuarios();
       this.isPasswordModalVisible = false;
@@ -305,7 +307,6 @@ export class Users {
     }
   }
 
-  // --- MÉTODOS AÑADIDOS PARA MODAL DE CAMBIO DE CONTRASEÑA ---
   closeChangePasswordModal(): void {
     this.isChangePasswordModalVisible = false;
     this.currentUser = null;
@@ -319,7 +320,6 @@ export class Users {
     this.mostrarModalSuccess('Contraseña cambiada con éxito', 'Aceptar');
     this.filtrarUsuarios();
   }
-  // --- FIN MÉTODOS AÑADIDOS ---
 
   confirmModalVisible = false;
   confirmModalMessage = '';
