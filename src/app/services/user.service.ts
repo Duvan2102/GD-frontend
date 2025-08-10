@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http
 import { Observable, throwError, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../environments/environment';
+import { PositionService, Position } from '../services/positions.service';
 import { 
   Usuario, 
   UsuarioRequest, 
@@ -29,27 +30,97 @@ export class UserService {
     })
   };
 
-  private readonly cargoMap: { [key: string]: number } = {
-    'Gerente': 1,
-    'Analista': 2,
-    'Desarrollador': 3,
-    'Administrador': 4,
-    'Funcionario': 5
-  };
-
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private positionService: PositionService
+  ) {}
   
-  obtenerCargosDisponibles(): Observable<string[]> {
-    const cargos = ['Gerente', 'Analista', 'Desarrollador', 'Administrador', 'Funcionario'];
-    return of(cargos);
+  obtenerCargosDisponibles(): Observable<Position[]> {
+    return this.positionService.getAll().pipe(
+      catchError((error) => {
+        console.warn('Error obteniendo cargos del backend, usando fallback:', error);
+        const cargosFallback: Position[] = [
+          { 
+            idCargo: 1, 
+            descripcion: 'Gerente', 
+            area: { 
+              idArea: 1, 
+              descripcion: 'Gerencia', 
+              departamento: { idDepartamento: 1, descripcion: 'Administración' } 
+            } 
+          },
+          { 
+            idCargo: 2, 
+            descripcion: 'Analista', 
+            area: { 
+              idArea: 2, 
+              descripcion: 'Análisis', 
+              departamento: { idDepartamento: 1, descripcion: 'Administración' } 
+            } 
+          },
+          { 
+            idCargo: 3, 
+            descripcion: 'Desarrollador', 
+            area: { 
+              idArea: 3, 
+              descripcion: 'Desarrollo', 
+              departamento: { idDepartamento: 2, descripcion: 'Tecnología' } 
+            } 
+          },
+          { 
+            idCargo: 4, 
+            descripcion: 'Administrador', 
+            area: { 
+              idArea: 4, 
+              descripcion: 'Administración', 
+              departamento: { idDepartamento: 1, descripcion: 'Administración' } 
+            } 
+          },
+          { 
+            idCargo: 5, 
+            descripcion: 'Funcionario', 
+            area: { 
+              idArea: 5, 
+              descripcion: 'General', 
+              departamento: { idDepartamento: 1, descripcion: 'Administración' } 
+            } 
+          }
+        ];
+        return of(cargosFallback);
+      })
+    );
+  }
+
+  obtenerCargoPorId(id: number): Observable<Position> {
+    return this.positionService.getById(id).pipe(
+      catchError((error) => {
+        console.warn(`Error obteniendo cargo con ID ${id}:`, error);
+        const cargoDefault: Position = {
+          idCargo: id,
+          descripcion: 'Cargo no encontrado',
+          area: {
+            idArea: 1,
+            descripcion: 'Sin área',
+            departamento: { idDepartamento: 1, descripcion: 'Sin departamento' }
+          }
+        };
+        return of(cargoDefault);
+      })
+    );
   }
 
   obtenerUsuarios(): Observable<Usuario[]> {
-    return this.http.get<Usuario[]>(this.apiUrl).pipe(catchError(this.handleError));
+    return this.http.get<Usuario[]>(this.apiUrl).pipe(
+      map(usuarios => this.procesarUsuariosRecibidos(usuarios)),
+      catchError(this.handleError)
+    );
   }
 
   obtenerUsuarioPorId(id: number): Observable<Usuario> {
-    return this.http.get<Usuario>(`${this.apiUrl}/${id}`).pipe(catchError(this.handleError));
+    return this.http.get<Usuario>(`${this.apiUrl}/${id}`).pipe(
+      map(usuario => this.procesarUsuarioRecibido(usuario)),
+      catchError(this.handleError)
+    );
   }
 
   verificarUsuarioExiste(identificacion: string): Observable<boolean> {
@@ -62,7 +133,9 @@ export class UserService {
 
   crearUsuario(usuario: Usuario): Observable<ApiResponse> {
     const usuarioRequest: UsuarioRequest = this.transformarUsuarioParaApi(usuario);
-    return this.http.post<ApiResponse>(this.apiUrl, usuarioRequest, this.httpOptions).pipe(catchError(this.handleError));
+    return this.http.post<ApiResponse>(this.apiUrl, usuarioRequest, this.httpOptions).pipe(
+      catchError(this.handleError)
+    );
   }
 
   actualizarUsuario(usuario: Usuario): Observable<ApiResponse> {
@@ -71,19 +144,69 @@ export class UserService {
     }
     const usuarioRequest: UsuarioRequest = this.transformarUsuarioParaApi(usuario);
     const url = `${this.apiUrl}/${usuario.noUsuario}`;
-    return this.http.put<ApiResponse>(url, usuarioRequest, this.httpOptions).pipe(catchError(this.handleError));
+    return this.http.put<ApiResponse>(url, usuarioRequest, this.httpOptions).pipe(
+      catchError(this.handleError)
+    );
   }
 
   eliminarUsuario(id: number): Observable<ApiResponse> {
-    return this.http.delete<ApiResponse>(`${this.apiUrl}/${id}`)
-      .pipe(
-        catchError(this.handleError)
-      );
+    return this.http.delete<ApiResponse>(`${this.apiUrl}/${id}`).pipe(
+      catchError(this.handleError)
+    );
   }
 
   getDobleAutenticacionOpciones(): string[] {
     return Object.values(DobleAutenticacionTipo);
   }
+
+  buscarUsuarios(criterios: Partial<Usuario>): Observable<Usuario[]> {
+    const params = new URLSearchParams();
+    
+    Object.entries(criterios).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        params.append(key, value.toString());
+      }
+    });
+
+    return this.http.get<Usuario[]>(`${this.apiUrl}/buscar?${params}`).pipe(
+      map(usuarios => this.procesarUsuariosRecibidos(usuarios)),
+      catchError(this.handleError)
+    );
+  }
+
+  private procesarUsuariosRecibidos(usuarios: any[]): Usuario[] {
+  return usuarios.map((usuario, index) => this.procesarUsuarioRecibido(usuario, index));
+}
+
+  private procesarUsuarioRecibido(usuario: any, index?: number): Usuario {
+  let cargoDescripcion = '';
+  if (usuario.cargo) {
+    if (typeof usuario.cargo === 'object' && usuario.cargo.descripcion) {
+      cargoDescripcion = usuario.cargo.descripcion;
+    } else if (typeof usuario.cargo === 'string') {
+      cargoDescripcion = usuario.cargo;
+    }
+  }
+
+  return {
+    ...usuario,
+    noUsuario: usuario.idUsuario || usuario.noUsuario || (index !== undefined ? index + 1 : 0),
+    cargo: cargoDescripcion,
+    estado: usuario.estado || 'Activo',
+    activo: usuario.activo !== undefined ? usuario.activo : true,
+    correoEmpresarial: usuario.correoEmpresarial || '',
+    celular: usuario.telefono1 || usuario.celular || '',
+    telefono: usuario.telefono2 || usuario.telefono || '',
+    dobleAutenticacion: typeof usuario.dobleAutenticacion === 'boolean' 
+      ? (usuario.dobleAutenticacion ? 'Google Authenticator' : '') 
+      : (usuario.dobleAutenticacion || 'Google Authenticator'),
+    perfiles: usuario.perfiles || {
+      administrador: false,
+      funcionarioCreador: false,
+      funcionarios: true
+    }
+  };
+}
 
   private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest {
     return {
@@ -92,25 +215,43 @@ export class UserService {
       apellidos: usuario.apellidos?.trim() || '',
       usuario: usuario.usuario?.trim() || '',
       cargo: {
-        // CORRECCIÓN: Usar el mapeo de cargos, por defecto Analista (ID: 2)
-        idCargo: this.obtenerIdCargo(usuario.cargo ?? 'Analista')
+        idCargo: this.obtenerIdCargo(usuario.cargo)
       },
       correoEmpresarial: usuario.correoEmpresarial?.trim() || '',
       correoPersonal: usuario.correoPersonal?.trim() || '',
       telefono1: usuario.celular?.trim() || '',
       telefono2: usuario.telefono?.trim() || '',
       direccion: usuario.direccion?.trim() || '',
-      dobleAutenticacion: this.convertirDobleAutenticacion(usuario.dobleAutenticacion),
-      perfiles: usuario.perfiles
+      dobleAutenticacion: this.convertirDobleAutenticacion(usuario.dobleAutenticacion)
     };
   }
 
-  private obtenerIdCargo(cargo: string): number {
-    // Por defecto devolver ID 2 (Analista)
-    return this.cargoMap[cargo] || 2;
+  private obtenerIdCargo(cargo: string | number | undefined): number {
+    if (typeof cargo === 'number') {
+      return cargo;
+    }
+    
+    if (typeof cargo === 'string') {
+      const cargoNumerico = parseInt(cargo, 10);
+      if (!isNaN(cargoNumerico)) {
+        return cargoNumerico;
+      }
+      
+      const cargoMapFallback: { [key: string]: number } = {
+        'Gerente': 1,
+        'Analista': 2,
+        'Desarrollador': 3,
+        'Administrador': 4,
+        'Funcionario': 5
+      };
+      
+      return cargoMapFallback[cargo] || 2;
+    }
+    
+    return 2;
   }
   
-  private convertirDobleAutenticacion(dobleAuth?: string): boolean {
+  private convertirDobleAutenticacion(dobleAuth?: string | null): boolean {
     return dobleAuth !== null && 
            dobleAuth !== undefined && 
            dobleAuth !== '' && 
@@ -121,14 +262,21 @@ export class UserService {
     let errorMessage = 'Error inesperado. Por favor, intenta más tarde.';
     
     if (error.error instanceof ErrorEvent) {
-      errorMessage = `Error: ${error.error.message}`;
+      errorMessage = `Error de conexión: ${error.error.message}`;
     } else {
+      // Error del lado del servidor
       switch (error.status) {
+        case 0:
+          errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
+          break;
         case 400:
           errorMessage = error.error?.message || 'Los datos enviados no son válidos. Por favor, revisa el formulario.';
           break;
         case 401:
           errorMessage = 'No tienes permisos para realizar esta operación.';
+          break;
+        case 403:
+          errorMessage = 'Acceso denegado. No tienes los permisos necesarios.';
           break;
         case 404:
           errorMessage = 'El usuario no fue encontrado.';
@@ -142,11 +290,21 @@ export class UserService {
         case 500:
           errorMessage = 'Error interno del servidor. Por favor, intenta más tarde.';
           break;
+        case 503:
+          errorMessage = 'El servicio no está disponible temporalmente. Intenta más tarde.';
+          break;
         default:
-          errorMessage = error.error?.message || errorMessage;
+          errorMessage = error.error?.message || `Error del servidor (${error.status}). Intenta más tarde.`;
       }
     }
-    console.error('Error en UserService:', error);
+    
+    console.error('Error en UserService:', {
+      status: error.status,
+      message: errorMessage,
+      error: error.error,
+      url: error.url
+    });
+    
     return throwError(() => ({
       status: error.status,
       message: errorMessage,

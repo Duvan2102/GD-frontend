@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subject, takeUntil } from 'rxjs';
 import { Controls } from '../approvals/controls/controls';
 import { FooterControls } from '../approvals/footer-controls/footer-controls';
 import { UserFormModal } from './user-form-modal/user-form-modal';
@@ -8,33 +9,8 @@ import { PasswordModal } from './password-modal/password-modal';
 import { SuccessModal } from './success-modal/success-modal';
 import { ConfirmModal } from './confirm-modal/confirm-modal';
 import { ChangePassword } from './change-password/change-password';
-
-// ELIMINAMOS LA INTERFACE LOCAL Y USAMOS LA DE common.interfaces
-// Esta línea debe añadirse al principio del archivo:
-// import { Usuario } from '../../interfaces/common.interfaces';
-
-// INTERFACE TEMPORAL - Reemplazar con la importación de arriba
-export interface Usuario {
-  noUsuario: number;
-  identificacion: string;
-  nombres: string;
-  apellidos: string;
-  usuario: string;
-  estado: string;
-  activo: boolean;
-  cargo: string; // CAMBIADO: Ya no es opcional para evitar conflictos
-  correoEmpresarial: string; // CAMBIADO: Ya no es opcional
-  correoPersonal?: string;
-  celular: string; // CAMBIADO: Ya no es opcional
-  telefono?: string;
-  direccion?: string;
-  dobleAutenticacion: string; // CAMBIADO: Ya no es opcional
-  perfiles?: {
-    administrador: boolean;
-    funcionarioCreador: boolean;
-    funcionarios: boolean;
-  };
-}
+import { UserService } from '../../services/user.service';
+import { Usuario } from '../../interfaces/common.interfaces';
 
 @Component({
   selector: 'app-usuarios',
@@ -53,7 +29,7 @@ export interface Usuario {
   templateUrl: './users.html',
   styleUrls: ['./users.css']
 })
-export class Users {
+export class Users implements OnInit, OnDestroy {
   usuarios: Usuario[] = [];
   usuariosFiltrados: Usuario[] = [];
   usuariosFiltradosLength = 0;
@@ -68,12 +44,79 @@ export class Users {
   currentUser: Usuario | null = null;
   currentAction = '';
   mensajePasswordModal: string = '';
+  
+  isLoading = false;
+  errorMessage = '';
+  private destroy$ = new Subject<void>();
 
   // -------- MODAL DE ÉXITO / CONFIRMACIÓN --------
   modalSuccessVisible: boolean = false;
   modalSuccessMessage: string = '';
   modalSuccessBtn: string = 'Aceptar';
   modalIsConfirmation: boolean = false;
+
+  confirmModalVisible = false;
+  confirmModalMessage = '';
+  confirmModalAction: 'inactivar' | 'eliminarQR' | null = null;
+
+  constructor(private userService: UserService) {}
+
+  ngOnInit(): void {
+    this.cargarUsuarios();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  cargarUsuarios(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+    
+    this.userService.obtenerUsuarios()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (usuarios) => {
+          this.usuarios = usuarios;
+          this.filtrarUsuarios();
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('Error cargando usuarios:', error);
+          this.errorMessage = 'Error al cargar los usuarios. Usando datos de ejemplo.';
+          this.isLoading = false;
+          this.cargarDatosDeEjemplo();
+        }
+      });
+  }
+
+  private cargarDatosDeEjemplo(): void {
+    for (let i = 1; i <= 52; i++) {
+      this.usuarios.push({
+        noUsuario: i,
+        identificacion: `12345678${i.toString().padStart(2, '0')}`,
+        nombres: `Nombre${i}`,
+        apellidos: `Apellido${i}`,
+        usuario: `usuario${i}`,
+        estado: i % 2 === 0 ? 'Activo' : 'Inactivo',
+        activo: i % 2 === 0,
+        cargo: 'Funcionario',
+        correoEmpresarial: `usuario${i}@empresa.com`,
+        correoPersonal: `usuario${i}@personal.com`,
+        celular: `300${i.toString().padStart(7, '0')}`,
+        telefono: `5005566677`,
+        direccion: `Calle 45 # 22-18`,
+        dobleAutenticacion: 'Google Authenticator',
+        perfiles: {
+          administrador: i === 1,
+          funcionarioCreador: i <= 5,
+          funcionarios: i > 5
+        }
+      } as Usuario);
+    }
+    this.filtrarUsuarios();
+  }
 
   mostrarModalConfirmacion(mensaje: string, textoBtn: string = 'Aceptar') {
     this.modalSuccessMessage = mensaje;
@@ -105,34 +148,6 @@ export class Users {
       this.currentUser = null;
       this.currentAction = '';
     }
-  }
-
-  constructor() {
-    // DATOS ACTUALIZADOS para coincidir con la nueva interface
-    for (let i = 1; i <= 52; i++) {
-      this.usuarios.push({
-        noUsuario: i,
-        identificacion: `12345678${i.toString().padStart(2, '0')}`, // Formato más realista
-        nombres: `Nombre${i}`,
-        apellidos: `Apellido${i}`,
-        usuario: `usuario${i}`,
-        estado: i % 2 === 0 ? 'Activo' : 'Inactivo',
-        activo: i % 2 === 0,
-        cargo: 'Funcionario', // Ya no es opcional
-        correoEmpresarial: `usuario${i}@empresa.com`, // Ya no es opcional
-        correoPersonal: `usuario${i}@personal.com`,
-        celular: `300${i.toString().padStart(7, '0')}`, // Ya no es opcional
-        telefono: `5005566677`,
-        direccion: `Calle 45 # 22-18`,
-        dobleAutenticacion: 'Google Authenticator', // Ya no es opcional
-        perfiles: {
-          administrador: i === 1,
-          funcionarioCreador: i <= 5,
-          funcionarios: i > 5
-        }
-      });
-    }
-    this.filtrarUsuarios();
   }
 
   filtrarUsuarios() {
@@ -234,12 +249,10 @@ export class Users {
   }
 
   saveUser(userData: Usuario): void {
-    this.currentUser = userData;
+    this.cargarUsuarios();
     this.isUserFormVisible = false;
-    this.mensajePasswordModal = this.currentAction === 'crear'
-      ? 'Ingrese su contraseña para finalizar la creación del usuario.'
-      : 'Ingrese su contraseña para guardar los cambios.';
-    this.isPasswordModalVisible = true;
+    this.currentUser = null;
+    this.currentAction = '';
   }
 
   closePasswordModal(): void {
@@ -255,31 +268,55 @@ export class Users {
 
     switch (this.currentAction) {
       case 'crear':
-        const nuevo: Usuario = {
-          ...this.currentUser!,
-          noUsuario: this.usuarios.length + 1,
-          estado: 'Activo',
-          activo: true
-        };
-        this.usuarios.push(nuevo);
-        this.mostrarModalSuccess('Usuario creado con éxito', 'Aceptar');
+        if (this.currentUser) {
+          this.userService.crearUsuario(this.currentUser)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (response) => {
+                this.mostrarModalSuccess('Usuario creado con éxito', 'Aceptar');
+                this.cargarUsuarios();
+              },
+              error: (error) => {
+                console.error('Error creando usuario:', error);
+                alert('Error al crear el usuario: ' + (error.message || 'Error desconocido'));
+              }
+            });
+        }
         break;
 
       case 'editar':
-        const idx = this.usuarios.findIndex(u => u.noUsuario === this.currentUser!.noUsuario);
-        if (idx > -1) {
-          this.usuarios[idx] = { ...this.currentUser! };
+        if (this.currentUser) {
+          this.userService.actualizarUsuario(this.currentUser)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (response) => {
+                this.mostrarModalSuccess('Usuario editado con éxito', 'Aceptar');
+                this.cargarUsuarios();
+              },
+              error: (error) => {
+                console.error('Error actualizando usuario:', error);
+                alert('Error al actualizar el usuario: ' + (error.message || 'Error desconocido'));
+              }
+            });
         }
-        this.mostrarModalSuccess('Usuario editado con éxito', 'Aceptar');
         break;
 
       case 'inactivar':
-        const idxInactivar = this.usuarios.findIndex(u => u.noUsuario === this.currentUser!.noUsuario);
-        if (idxInactivar > -1) {
-          this.usuarios[idxInactivar].estado = 'Inactivo';
-          this.usuarios[idxInactivar].activo = false;
+        if (this.currentUser) {
+          const usuarioInactivado = { ...this.currentUser, estado: 'Inactivo', activo: false };
+          this.userService.actualizarUsuario(usuarioInactivado)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: () => {
+                this.mostrarModalSuccess('Usuario inactivado con éxito', 'Aceptar');
+                this.cargarUsuarios();
+              },
+              error: (error) => {
+                console.error('Error inactivando usuario:', error);
+                alert('Error al inactivar el usuario: ' + (error.message || 'Error desconocido'));
+              }
+            });
         }
-        this.mostrarModalSuccess('Usuario inactivado con éxito', 'Aceptar');
         break;
 
       case 'cambiarContraseña':
@@ -288,11 +325,21 @@ export class Users {
         break;
 
       case 'eliminarQR':
-        const idxQR = this.usuarios.findIndex(u => u.noUsuario === this.currentUser!.noUsuario);
-        if (idxQR > -1) {
-          this.usuarios[idxQR].dobleAutenticacion = '';
+        if (this.currentUser) {
+          const usuarioSinQR = { ...this.currentUser, dobleAutenticacion: '' };
+          this.userService.actualizarUsuario(usuarioSinQR)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: () => {
+                this.mostrarModalSuccess('Código QR eliminado con éxito', 'Aceptar');
+                this.cargarUsuarios();
+              },
+              error: (error) => {
+                console.error('Error eliminando QR:', error);
+                alert('Error al eliminar el código QR: ' + (error.message || 'Error desconocido'));
+              }
+            });
         }
-        this.mostrarModalSuccess('Código QR eliminado con éxito', 'Aceptar');
         break;
 
       default:
@@ -300,7 +347,6 @@ export class Users {
     }
 
     if (this.currentAction !== 'cambiarContraseña') {
-      this.filtrarUsuarios();
       this.isPasswordModalVisible = false;
       this.currentUser = null;
       this.currentAction = '';
@@ -320,10 +366,6 @@ export class Users {
     this.mostrarModalSuccess('Contraseña cambiada con éxito', 'Aceptar');
     this.filtrarUsuarios();
   }
-
-  confirmModalVisible = false;
-  confirmModalMessage = '';
-  confirmModalAction: 'inactivar' | 'eliminarQR' | null = null;
 
   abrirConfirmModal(tipo: 'inactivar' | 'eliminarQR', usuario: Usuario) {
     this.confirmModalAction = tipo;

@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ViewChild, ElementRef, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Usuario } from '../users';
+import { Usuario } from '../../../interfaces/common.interfaces';
 
 @Component({
   selector: 'app-password-modal',
@@ -26,7 +26,6 @@ export class PasswordModal  {
     if (changes['isVisible'] && this.isVisible) {
       this.password = '';
       this.passwordVisible = false;
-      // Enfocar el input de forma más segura con ViewChild
       setTimeout(() => {
         this.passwordInput?.nativeElement.focus();
       }, 100);

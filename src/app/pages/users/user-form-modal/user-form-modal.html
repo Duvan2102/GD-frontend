@@ -77,8 +77,9 @@
             <select class="form-select" formControlName="cargo"
                     [class.is-invalid]="userForm.get('cargo')?.invalid && userForm.get('cargo')?.touched">
               <option value="">Selecciona un cargo</option>
-              <option *ngFor="let cargo of cargosDisponibles" [value]="cargo">
-                {{ cargo }}
+              <!-- CAMBIADO: Ahora usa cargo.idCargo y cargo.descripcion -->
+              <option *ngFor="let cargo of cargosDisponibles" [value]="cargo.idCargo">
+                {{ cargo.descripcion }}
               </option>
             </select>
             <div *ngIf="getErrorMessage('cargo')" class="invalid-feedback">
@@ -151,33 +152,6 @@
           </div>
         </div>
 
-        <!-- Separador -->
-        <hr class="my-4">
-
-        <!-- Perfiles -->
-        <h6 class="mb-3">Perfiles</h6>
-        <div formGroupName="perfiles">
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" id="administrador" formControlName="administrador">
-            <label class="form-check-label" for="administrador">
-              ADMINISTRADOR
-            </label>
-          </div>
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" id="funcionarioCreador" formControlName="funcionarioCreador">
-            <label class="form-check-label" for="funcionarioCreador">
-              FUNCIONARIO (creador)
-            </label>
-          </div>
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" id="funcionarios" formControlName="funcionarios">
-            <label class="form-check-label" for="funcionarios">
-              FUNCIONARIOS
-            </label>
-          </div>
-        </div>
-      </div>
-      
       <!-- Footer -->
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" (click)="onClose()" [disabled]="isLoading">

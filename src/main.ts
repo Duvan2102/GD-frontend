@@ -9,13 +9,14 @@ import { environment } from './app/environments/environment';
 import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 
+
 if (environment.production) {
   enableProdMode();
 }
 
 bootstrapApplication(App, {
   providers: [
-    // aquí sí puedes pasar EnvironmentProviders
+    provideHttpClient(),
     importProvidersFrom(
       RouterModule.forRoot(routes),
       HttpClient

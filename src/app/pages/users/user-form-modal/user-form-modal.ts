@@ -3,8 +3,9 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, OnDes
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
-import { Usuario } from '../users';
+import { Usuario } from '../../../interfaces/common.interfaces';
 import { UserService } from '../../../services/user.service';
+import { Position } from '../../../services/positions.service';
 
 @Component({
   selector: 'app-user-form-modal',
@@ -24,13 +25,14 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   @Output() save = new EventEmitter<Usuario>();
   @Output() userCreated = new EventEmitter<Usuario>();
   @Output() userUpdated = new EventEmitter<Usuario>();
+
   
   userForm!: FormGroup;
   dobleAutenticacionOptions = [
     { value: 'Google Authenticator', label: 'Google Authenticator' },
     { value: 'Token de Seguridad', label: 'Token de Seguridad' },
   ];
-  cargosDisponibles: string[] = [];
+  cargosDisponibles: Position[] = [];
   
   isLoading = false;
   errorMessage = '';
@@ -118,16 +120,34 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
   private loadFormData(): void {
     if (this.isEditMode && this.user) {
-      this.userForm.patchValue({
-        ...this.user,
-        perfiles: {
-          administrador: this.user.perfiles?.administrador || false,
-          funcionarioCreador: this.user.perfiles?.funcionarioCreador || false,
-          funcionarios: this.user.perfiles?.funcionarios || false
-        }
-      });
-    } else {
-      this.resetForm();
+      let cargoValue = '';
+      if (this.user.cargo) {
+        if (typeof this.user.cargo === 'string' && !isNaN(Number(this.user.cargo))) {
+          const cargoId = Number(this.user.cargo);
+          const cargoEncontrado = this.cargosDisponibles.find(c => c.idCargo === cargoId);
+          cargoValue = (cargoEncontrado && cargoEncontrado.idCargo) ? cargoEncontrado.idCargo.toString() : this.user.cargo;
+        } else {
+          const cargoEncontrado = this.cargosDisponibles.find(c => c.descripcion === this.user?.cargo);
+          cargoValue = (cargoEncontrado && cargoEncontrado.idCargo) 
+          ? cargoEncontrado.idCargo.toString() 
+          : (typeof this.user.cargo === 'number' ? this.user.cargo.toString() : (this.user.cargo || ''));
+      }
+    }
+  }
+}
+  private nameCargoControl(): void {
+    const cargoControl = this.userForm.get('cargo');
+    if (cargoControl) {
+      cargoControl.valueChanges
+        .pipe(
+          debounceTime(300),
+          takeUntil(this.destroy$)
+        )
+        .subscribe(() => {
+          if (!this.isEditMode) {
+            this.generateUsername();
+          }
+        });
     }
   }
 
@@ -135,12 +155,64 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     this.userService.obtenerCargosDisponibles()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (cargos) => {
+        next: (cargos: Position[]) => {
           this.cargosDisponibles = cargos;
+          if (this.isEditMode && this.user) {
+            this.loadFormData();
+          }
         },
         error: (error) => {
           console.error('Error cargando cargos:', error);
-          this.cargosDisponibles = ['Gerente', 'Analista', 'Desarrollador', 'Administrador', 'Funcionario'];
+          this.cargosDisponibles = [
+            { 
+              idCargo: 1, 
+              descripcion: 'Gerente', 
+              area: { 
+                idArea: 1, 
+                descripcion: 'Gerencia', 
+                departamento: { idDepartamento: 1, descripcion: 'Administración' } 
+              } 
+            },
+            { 
+              idCargo: 2, 
+              descripcion: 'Analista', 
+              area: { 
+                idArea: 2, 
+                descripcion: 'Análisis', 
+                departamento: { idDepartamento: 1, descripcion: 'Administración' } 
+              } 
+            },
+            { 
+              idCargo: 3, 
+              descripcion: 'Desarrollador', 
+              area: { 
+                idArea: 3, 
+                descripcion: 'Desarrollo', 
+                departamento: { idDepartamento: 2, descripcion: 'Tecnología' } 
+              } 
+            },
+            { 
+              idCargo: 4, 
+              descripcion: 'Administrador', 
+              area: { 
+                idArea: 4, 
+                descripcion: 'Administración', 
+                departamento: { idDepartamento: 1, descripcion: 'Administración' } 
+              } 
+            },
+            { 
+              idCargo: 5, 
+              descripcion: 'Funcionario', 
+              area: { 
+                idArea: 5, 
+                descripcion: 'General', 
+                departamento: { idDepartamento: 1, descripcion: 'Administración' } 
+              } 
+            }
+          ];
+          if (this.isEditMode && this.user) {
+            this.loadFormData();
+          }
         }
       });
   }
@@ -188,9 +260,24 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     this.isLoading = true;
     const usuarioData: Usuario = this.userForm.value;
 
+    const cargoSeleccionado = this.userForm.get('cargo')?.value;
+    let cargoParaEnviar: string = '';
+    
+    if (cargoSeleccionado) {
+      if (typeof cargoSeleccionado === 'number' || !isNaN(Number(cargoSeleccionado))) {
+        const cargoId = typeof cargoSeleccionado === 'number' ? cargoSeleccionado : Number(cargoSeleccionado);
+        const cargoEncontrado = this.cargosDisponibles.find(c => c.idCargo === cargoId);
+        cargoParaEnviar = cargoEncontrado?.descripcion || 'Funcionario';
+      } else {
+        cargoParaEnviar = cargoSeleccionado;
+      }
+    } else {
+      cargoParaEnviar = 'Funcionario';
+    }
+
     const usuarioCompleto: Usuario = {
       ...usuarioData,
-      cargo: usuarioData.cargo || 'Funcionario',
+      cargo: cargoParaEnviar,
       correoEmpresarial: usuarioData.correoEmpresarial || '',
       celular: usuarioData.celular || '',
       dobleAutenticacion: usuarioData.dobleAutenticacion || 'Google Authenticator',
@@ -208,7 +295,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         next: (response) => {
           console.log('Operación exitosa:', response);
           
-          // CORRECCIÓN: Usar el mensaje del servidor o uno por defecto
           this.successMessage = response?.message || 
             (this.isEditMode ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente');
           
@@ -220,7 +306,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
           
           this.save.emit(usuarioCompleto);
           
-          // Mostrar mensaje por 2 segundos antes de cerrar
           setTimeout(() => {
             this.onClose();
           }, 2000);
@@ -228,17 +313,13 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         error: (error) => {
           console.error('Error en operación:', error);
           
-          // CORRECCIÓN: Manejar la estructura de error del servicio
           if (error && typeof error === 'object') {
-            // El servicio devuelve un objeto con message, status, details, etc.
             this.errorMessage = error.message || 'Error inesperado al procesar la solicitud';
             
-            // Si hay detalles adicionales del servidor, mostrarlos también
             if (error.details && error.details.length > 0) {
               this.errorMessage += '\n• ' + error.details.join('\n• ');
             }
           } else {
-            // Fallback para otros tipos de error
             this.errorMessage = typeof error === 'string' ? error : 'Error inesperado al procesar la solicitud';
           }
           
@@ -287,7 +368,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     });
   }
 
-  // Getters para el template
   get modalTitle(): string {
     return this.isEditMode ? 'Editar Usuario' : 'Agregar Usuario';
   }

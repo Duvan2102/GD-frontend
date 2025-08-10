@@ -112,3 +112,27 @@
   width: 1rem;
   height: 1rem;
 }
+
+.user-form-modal {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.user-form-modal .modal-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #ddd;
+}
+
+.user-form-modal .modal-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #ddd;
+}
+
+.btn-primary-custom {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-primary-custom:disabled {
+  opacity: 0.6;
+}
