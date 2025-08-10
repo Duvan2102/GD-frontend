@@ -6,6 +6,7 @@ import { RouterModule } from '@angular/router';
 import { Controls } from '../approvals/controls/controls';
 import { RequestsTable } from '../approvals/requests-table/requests-table';
 import { FooterControls } from '../approvals/footer-controls/footer-controls';
+import { CreateForm } from './create-form/create-form';
 
 @Component({
   selector: 'app-approvals',
@@ -16,12 +17,15 @@ import { FooterControls } from '../approvals/footer-controls/footer-controls';
     RouterModule,
     Controls,
     RequestsTable,
-    FooterControls
+    FooterControls,
+    CreateForm
   ],
   templateUrl: './create-request.html',
   styleUrls: ['./create-request.css']
 })
 export class CreateRequest implements OnInit {
+  isCreateModalVisible = false;
+
   approvalsList = [
     { type: 'VIATICOS', id: '001', creationDate: '2025-03-26T12:00:00', creatorUser: 'USUARIO.HELISA', position: 'EMPLEADO', lastUpdate: '2025-03-27T13:00:00', status: 'APROBADO', approvers: ['AS'], priority: true },
     { type: 'VIATICOS', id: '002', creationDate: '2025-03-26T12:00:00', creatorUser: 'USUARIO.HELISA', position: 'EMPLEADO', lastUpdate: '2025-03-27T13:00:00', status: 'APROBADO', approvers: ['LC', 'JS'], priority: true },
@@ -64,6 +68,14 @@ export class CreateRequest implements OnInit {
 
   ngOnInit(): void {
     this.applyViewLogic();
+  }
+
+  openCreateModal() {
+    this.isCreateModalVisible = true;
+  }
+
+  closeCreateModal() {
+    this.isCreateModalVisible = false;
   }
 
   applyViewLogic(): void {

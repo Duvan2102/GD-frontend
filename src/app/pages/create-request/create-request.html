@@ -1,21 +1,20 @@
 <div class="principal-wrapper">
   <div class="container-fluid p-4">
-    <!-- CABECERA -->
     <div class="seccion-cabecera">
       <h2 class="mb-2">SOLICITUDES CREADAS</h2>
       <button
-    class="btn-crear"
-    data-bs-toggle="modal"
-    data-bs-target="#crearSolicitudModal">
-    <i class="bi bi-plus-circle-dotted"></i>
-    Crear solicitud
-  </button>
+        class="btn-crear"
+        (click)="openCreateModal()">
+        <i class="bi bi-plus-circle-dotted"></i>
+        Crear solicitud
+      </button>
     </div>
 
     <app-controls
       (quantityChange)="onQuantityChange($event)"
       (toggleApprovedChange)="onToggleApproved($event)"
-      (searchChange)="onSearchChange($event)">
+      (searchChange)="onSearchChange($event)"
+    >
     </app-controls>
 
     <app-requests-table
@@ -25,7 +24,8 @@
       [ascendingOrder]="ascendingOrder"
       textoboton="VISUALIZAR <br> SOLICITUD"
       (sort)="sortBy($event)"
-      (manage)="onManage($event)">
+      (manage)="onManage($event)"
+    >
     </app-requests-table>
 
     <app-footer-controls
@@ -34,6 +34,10 @@
       [currentPage]="currentPage"
       (changePage)="onChangePage($event)"
     ></app-footer-controls>
-
   </div>
 </div>
+
+<app-create-form 
+    [isVisible]="isCreateModalVisible"
+    (close)="closeCreateModal()">
+</app-create-form>

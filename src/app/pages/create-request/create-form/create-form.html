@@ -1,0 +1,237 @@
+<div class="modal custom-backdrop" tabindex="-1" [class.show]="isVisible" [style.display]="isVisible ? 'block' : 'none'">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-bottom-0 pb-2">
+        <h5 class="modal-title fw-semibold">Creación de Solicitud</h5>
+        <button type="button" class="btn-close btn-close--text" (click)="onCancelar()" aria-label="Close">
+  <span aria-hidden="true">&times;</span>
+</button>
+      </div>
+
+      <div class="modal-body p-3">
+        <div class="row g-4">
+          <!-- Columna izquierda -->
+          <div class="col-md-4">
+            <!-- Nombre de la Solicitud (OBLIGATORIO) -->
+            <div class="mb-3">
+              <label for="nombreSolicitud" class="form-label fw-medium">Nombre de la Solicitud</label>
+              <input
+                type="text"
+                id="nombreSolicitud"
+                class="form-control"
+                placeholder="Nombre del Documento"
+                [(ngModel)]="nombreSolicitud"
+                required>
+            </div>
+
+            <!-- Detalles Adicionales (OBLIGATORIO) -->
+            <div class="detalles-full-width">
+              <div class="mb-3"></div>
+              <label for="detalles" class="form-label fw-medium">Detalles Adicionales</label>
+              <textarea
+                id="detalles"
+                class="form-control"
+                rows="4"
+                placeholder="Agregue información adicional que ayude acerca de la solicitud"
+                [(ngModel)]="detallesAdicionales"
+                required>
+              </textarea>
+            </div>
+
+            <!-- Prioridad (OBLIGATORIO) -->
+            <div class="mb-3">
+              <label for="prioridad" class="form-label fw-medium">Prioridad</label>
+              <select
+                id="prioridad"
+                class="form-select"
+                [(ngModel)]="prioridad"
+                required>
+                <option value="" disabled>Seleccione una prioridad</option>
+                <option value="NORMAL">NORMAL</option>
+                <option value="IMPORTANTE">IMPORTANTE</option>
+              </select>
+            </div>
+
+            <!-- Documento de Aprobación (OBLIGATORIO) -->
+            <div class="mb-3">
+              <label class="form-label fw-medium">Documento de Aprobación</label>
+              <div class="d-flex gap-2">
+                <input
+                  type="file"
+                  id="documentoAprobacion"
+                  class="d-none"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                  (change)="onDocumentoAprobacionChange($event)"
+                  required>
+                <label for="documentoAprobacion" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2">
+                  <i class="bi bi-upload"></i>
+                  Cargar documento
+                </label>
+              </div>
+
+              <div *ngIf="documentoAprobacion" class="mt-2">
+                <div class="alert alert-light d-flex justify-content-between align-items-center py-2">
+                  <small class="mb-0">{{ documentoAprobacion.name }}</small>
+                  <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeDocumentoAprobacion()">
+                    <i class="bi bi-x"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Documentos Anexos (OPCIONAL) -->
+            <div class="mb-3">
+              <div class="form-check mb-2">
+                <input
+                  type="checkbox"
+                  id="documentosAnexos"
+                  class="form-check-input"
+                  [(ngModel)]="documentosAnexos">
+                <label for="documentosAnexos" class="form-check-label fw-medium">Documentos Anexos</label>
+              </div>
+
+              <div *ngIf="documentosAnexos">
+                <div class="d-flex gap-2">
+                  <input
+                    type="file"
+                    id="anexos"
+                    class="d-none"
+                    multiple
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                    (change)="onAnexosChange($event)">
+                  <label for="anexos" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2">
+                    <i class="bi bi-upload"></i>
+                    Cargar documento
+                  </label>
+                </div>
+                <div *ngFor="let anexo of anexos; let i = index" class="mt-2">
+                  <div class="alert alert-light d-flex justify-content-between align-items-center py-2">
+                    <small class="mb-0">{{ anexo.name }}</small>
+                    <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeAnexo(i)">
+                      <i class="bi bi-x"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna derecha -->
+          <div class="col-md-6">
+            <!-- Tipología (OBLIGATORIO) -->
+            <div class="mb-3">
+              <label for="tipologia" class="form-label fw-medium">Tipología</label>
+              <select
+                id="tipologia"
+                class="form-select"
+                [(ngModel)]="tipologia"
+                required>
+                <option value="" disabled selected>Seleccione una tipología</option>
+                <option *ngFor="let tip of tipologias" [value]="tip.idTipologia">{{ tip.descripcion }}</option>
+              </select>
+            </div>
+
+            <!-- Enviar recordatorio (OBLIGATORIO) -->
+            <div class="mb-3">
+              <label for="recordatorio" class="form-label fw-medium">Enviar recordatorio</label>
+              <select
+                id="recordatorio"
+                class="form-select"
+                [(ngModel)]="enviarRecordatorio"
+                required>
+                <option value="" disabled>Seleccione una opción</option>
+                <option *ngFor="let opcion of recordatorioOpciones" [value]="opcion.value">
+                  {{ opcion.label }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Switch Establecer Orden (opcional) -->
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <label class="form-label fw-medium mb-0">Establecer un Orden</label>
+                <div class="form-check form-switch">
+                  <input
+                    type="checkbox"
+                    id="establecerOrden"
+                    class="form-check-input"
+                    role="switch"
+                    [(ngModel)]="establecerOrden"
+                    (change)="onEstablecerOrdenChange()">
+                </div>
+              </div>
+            </div>
+
+            <!-- Destinatarios (al menos UNO obligatorio) -->
+            <div class="mb-3">
+              <label class="form-label fw-medium">Destinatarios</label>
+
+              <div class="row g-2 mb-2 text-muted small">
+                <div class="col-2" *ngIf="establecerOrden">
+                  <strong>Orden</strong>
+                </div>
+                <div [class]="establecerOrden ? 'col-8' : 'col-10'">
+                  <strong>Usuario</strong>
+                </div>
+                <div class="col-2"></div>
+              </div>
+
+              <div *ngFor="let destinatario of destinatarios; let i = index" class="row g-2 mb-2 align-items-center position-relative">
+                <div class="col-2" *ngIf="establecerOrden">
+                  <span class="badge bg-primary rounded-pill">{{ destinatario.orden }}</span>
+                </div>
+                <div [class]="establecerOrden ? 'col-8' : 'col-10'">
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    placeholder="Escribe aquí los nombres"
+                    [(ngModel)]="destinatario.searchTerm"
+                    (input)="onSearchUser($event, i)"
+                    (blur)="validateRecipient(i)"
+                    autocomplete="off"
+                    [disabled]="destinatario.usuario !== null">
+
+                  <div *ngIf="filteredUsers.length > 0 && activeRecipientIndex === i" class="user-dropdown">
+                    <ul class="list-group">
+                      <li *ngFor="let user of filteredUsers" class="list-group-item list-group-item-action" (mousedown)="selectUser(user, i)">
+                        {{ user.nombres }} {{ user.apellidos }} ({{ user.usuario }})
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="col-2">
+                  <button *ngIf="i > 0" type="button" class="btn btn-sm btn-outline-danger" (click)="eliminarDestinatario(i)">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </div>
+
+              <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-2" (click)="agregarDestinatario()">
+                <i class="bi bi-plus"></i>
+                Agregar destinatario
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer border-top-0 pt-2">
+        <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
+        <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+        <button type="button" class="btn btn-secondary" (click)="onCancelar()">
+          Cancelar
+        </button>
+
+        <!-- Previsualizar: deshabilitado hasta que TODO esté válido -->
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="onPreviewClick()"
+          [disabled]="!isFormValid()">
+          Previsualizar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
