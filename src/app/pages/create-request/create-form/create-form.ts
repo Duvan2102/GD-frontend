@@ -37,7 +37,7 @@ export class CreateForm implements OnInit {
   @Output() onPreview = new EventEmitter<void>();
   @Output() close = new EventEmitter<void>();
 
-  // Formulario data
+  
   nombreSolicitud: string = '';
   detallesAdicionales: string = '';
   prioridad: 'NORMAL' | 'IMPORTANTE' = 'NORMAL';
@@ -46,17 +46,17 @@ export class CreateForm implements OnInit {
   documentosAnexos: boolean = false;
   establecerOrden: boolean = false;
 
-  // Archivos
+  
   documentoAprobacion: File | null = null;
   anexos: File[] = [];
 
-  // Destinatarios
+  
   destinatarios: Destinatario[] = [
     { orden: 1, usuario: null, searchTerm: '' },
     { orden: 2, usuario: null, searchTerm: '' }
   ];
 
-  // Opciones
+  
   tipologias: Typology[] = [];
   recordatorioOpciones = [
     { value: 'NUNCA', label: 'NUNCA' },
@@ -153,38 +153,33 @@ export class CreateForm implements OnInit {
     this.activeRecipientIndex = null;
   }
 
-  // Manejo de archivos
+  
   onDocumentoAprobacionChange(event: any): void {
     const file = event.target.files[0];
     if (file && this.isValidFileType(file)) {
       this.documentoAprobacion = file;
     } else {
-      alert('Formato de archivo no válido. Solo se permiten PDF, Word, Excel, JPG y PNG.');
+      alert('Formato de archivo no válido. Solo se permite formato PDF');
       event.target.value = '';
     }
   }
 
   onAnexosChange(event: any): void {
-    const files = Array.from(event.target.files) as File[];
-    const validFiles = files.filter(file => this.isValidFileType(file));
-
-    if (validFiles.length !== files.length) {
-      alert('Algunos archivos tienen formato no válido. Solo se permiten PDF, Word, Excel, JPG y PNG.');
-    }
-
-    this.anexos = [...this.anexos, ...validFiles];
+  const file = event.target.files[0]; 
+  if (file && this.isValidFileType(file)) {
+    this.anexos = [file]; 
+  } else {
+    alert('Formato de archivo no válido. Solo se permite formatos PDF y Word');
+    event.target.value = '';
   }
+}
 
   private isValidFileType(file: File): boolean {
     const allowedTypes = [
       'application/pdf',
       'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'image/jpeg',
-      'image/jpg',
-      'image/png'
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
     ];
     return allowedTypes.includes(file.type);
   }
@@ -197,7 +192,7 @@ export class CreateForm implements OnInit {
     this.documentoAprobacion = null;
   }
 
-  // Manejo de destinatarios
+  
   agregarDestinatario(): void {
     const nuevoOrden = this.destinatarios.length + 1;
     this.destinatarios.push({ orden: nuevoOrden, usuario: null, searchTerm: '' });
@@ -229,7 +224,7 @@ export class CreateForm implements OnInit {
     }
   }
 
-  // Acciones del formulario
+  
   onPreviewClick(): void {
     this.onPreview.emit();
   }
