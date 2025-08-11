@@ -1,4 +1,4 @@
-// user-form-modal.ts - Componente optimizado con alertas del servidor
+// user-form-modal.ts - Componente completo con todas las correcciones
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
@@ -26,7 +26,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   @Output() userCreated = new EventEmitter<Usuario>();
   @Output() userUpdated = new EventEmitter<Usuario>();
 
-  
   userForm!: FormGroup;
   dobleAutenticacionOptions = [
     { value: 'Google Authenticator', label: 'Google Authenticator' },
@@ -55,6 +54,9 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['isVisible'] && this.isVisible) {
       this.resetMessages();
+      this.loadFormData();
+    }
+    if (changes['user'] && this.user) {
       this.loadFormData();
     }
   }
@@ -94,7 +96,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe(identificacion => {
-        if (identificacion && identificacion.length >= 6) {
+        if (identificacion && identificacion.length >= 6 && !this.isEditMode) {
           this.validateUniqueIdentification(identificacion);
         }
       });
@@ -121,33 +123,41 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   private loadFormData(): void {
     if (this.isEditMode && this.user) {
       let cargoValue = '';
+      
       if (this.user.cargo) {
-        if (typeof this.user.cargo === 'string' && !isNaN(Number(this.user.cargo))) {
-          const cargoId = Number(this.user.cargo);
-          const cargoEncontrado = this.cargosDisponibles.find(c => c.idCargo === cargoId);
-          cargoValue = (cargoEncontrado && cargoEncontrado.idCargo) ? cargoEncontrado.idCargo.toString() : this.user.cargo;
+        if (typeof this.user.cargo === 'number' || !isNaN(Number(this.user.cargo))) {
+          cargoValue = this.user.cargo.toString();
         } else {
-          const cargoEncontrado = this.cargosDisponibles.find(c => c.descripcion === this.user?.cargo);
+          const cargoEncontrado = this.cargosDisponibles.find(
+            c => c.descripcion === this.user?.cargo
+          );
           cargoValue = (cargoEncontrado && cargoEncontrado.idCargo) 
           ? cargoEncontrado.idCargo.toString() 
-          : (typeof this.user.cargo === 'number' ? this.user.cargo.toString() : (this.user.cargo || ''));
+          : '5';
+        }
       }
-    }
-  }
-}
-  private nameCargoControl(): void {
-    const cargoControl = this.userForm.get('cargo');
-    if (cargoControl) {
-      cargoControl.valueChanges
-        .pipe(
-          debounceTime(300),
-          takeUntil(this.destroy$)
-        )
-        .subscribe(() => {
-          if (!this.isEditMode) {
-            this.generateUsername();
-          }
-        });
+
+      this.userForm.patchValue({
+        noUsuario: this.user.noUsuario || this.user.noUsuario,
+        identificacion: this.user.identificacion || '',
+        nombres: this.user.nombres || '',
+        apellidos: this.user.apellidos || '',
+        usuario: this.user.usuario || '',
+        cargo: cargoValue,
+        correoEmpresarial: this.user.correoEmpresarial || '',
+        correoPersonal: this.user.correoPersonal || '',
+        celular: this.user.celular || '',
+        telefono: this.user.telefono || '',
+        direccion: this.user.direccion || '',
+        dobleAutenticacion: this.user.dobleAutenticacion || 'Google Authenticator',
+      });
+
+      // Deshabilitar el campo de identificación en modo edición
+      this.userForm.get('identificacion')?.disable();
+    } else {
+      // En modo creación, habilitar todos los campos
+      this.userForm.get('identificacion')?.enable();
+      this.resetForm();
     }
   }
 
@@ -163,6 +173,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         },
         error: (error) => {
           console.error('Error cargando cargos:', error);
+          // Cargos por defecto si falla el servicio
           this.cargosDisponibles = [
             { 
               idCargo: 1, 
@@ -251,39 +262,59 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
   onSave(): void {
     this.resetMessages();
+    
+    // Re-habilitar temporalmente el campo identificación para obtener su valor
+    const identificacionControl = this.userForm.get('identificacion');
+    const wasDisabled = identificacionControl?.disabled;
+    if (wasDisabled) {
+      identificacionControl?.enable();
+    }
+    
     if (this.userForm.invalid) {
       this.markFormGroupTouched();
       this.errorMessage = 'Por favor, corrige los errores en el formulario.';
+      if (wasDisabled) {
+        identificacionControl?.disable();
+      }
       return;
     }
 
     this.isLoading = true;
-    const usuarioData: Usuario = this.userForm.value;
-
-    const cargoSeleccionado = this.userForm.get('cargo')?.value;
-    let cargoParaEnviar: string = '';
+    const formValue = this.userForm.getRawValue(); // getRawValue incluye campos deshabilitados
     
-    if (cargoSeleccionado) {
-      if (typeof cargoSeleccionado === 'number' || !isNaN(Number(cargoSeleccionado))) {
-        const cargoId = typeof cargoSeleccionado === 'number' ? cargoSeleccionado : Number(cargoSeleccionado);
-        const cargoEncontrado = this.cargosDisponibles.find(c => c.idCargo === cargoId);
-        cargoParaEnviar = cargoEncontrado?.descripcion || 'Funcionario';
-      } else {
-        cargoParaEnviar = cargoSeleccionado;
-      }
-    } else {
-      cargoParaEnviar = 'Funcionario';
-    }
-
+    // Preparar el objeto usuario con el cargo como ID numérico
     const usuarioCompleto: Usuario = {
-      ...usuarioData,
-      cargo: cargoParaEnviar,
-      correoEmpresarial: usuarioData.correoEmpresarial || '',
-      celular: usuarioData.celular || '',
-      dobleAutenticacion: usuarioData.dobleAutenticacion || 'Google Authenticator',
+      ...formValue,
+      noUsuario: this.isEditMode ? (this.user?.noUsuario || this.user?.noUsuario) : undefined,
+      idUsuario: this.isEditMode ? (this.user?.noUsuario || this.user?.noUsuario) : undefined,
+      cargo: formValue.cargo, // Mantener como ID numérico/string
+      correoEmpresarial: formValue.correoEmpresarial || '',
+      correoPersonal: formValue.correoPersonal || '',
+      celular: formValue.celular || '',
+      telefono: formValue.telefono || '',
+      direccion: formValue.direccion || '',
+      dobleAutenticacion: formValue.dobleAutenticacion || 'Google Authenticator',
       estado: this.isEditMode ? (this.user?.estado || 'Activo') : 'Activo',
-      activo: this.isEditMode ? (this.user?.activo || true) : true
+      activo: this.isEditMode ? (this.user?.activo !== false) : true,
+      perfiles: formValue.perfiles || {
+        administrador: false,
+        funcionarioCreador: false,
+        funcionarios: true
+      }
     };
+
+    // Mostrar alerta de confirmación
+    const confirmMessage = this.isEditMode 
+      ? `¿Confirmas la actualización del usuario ${usuarioCompleto.nombres} ${usuarioCompleto.apellidos}?`
+      : `¿Confirmas la creación del usuario ${usuarioCompleto.nombres} ${usuarioCompleto.apellidos}?`;
+    
+    if (!confirm(confirmMessage)) {
+      this.isLoading = false;
+      if (wasDisabled) {
+        identificacionControl?.disable();
+      }
+      return;
+    }
 
     const operacion = this.isEditMode 
       ? this.userService.actualizarUsuario(usuarioCompleto)
@@ -295,35 +326,50 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         next: (response) => {
           console.log('Operación exitosa:', response);
           
+          // Mensaje de éxito
           this.successMessage = response?.message || 
             (this.isEditMode ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente');
           
+          // Alerta del navegador (simula alerta de Google)
+          alert(this.successMessage);
+          
+          // Emitir eventos
           if (this.isEditMode) {
             this.userUpdated.emit(usuarioCompleto);
           } else {
             this.userCreated.emit(usuarioCompleto);
-          }          
+          }
           
           this.save.emit(usuarioCompleto);
           
+          // Cerrar modal después de 1.5 segundos
           setTimeout(() => {
             this.onClose();
-          }, 2000);
+          }, 1500);
         },
         error: (error) => {
           console.error('Error en operación:', error);
           
+          // Manejar errores del servidor
           if (error && typeof error === 'object') {
-            this.errorMessage = error.message || 'Error inesperado al procesar la solicitud';
+            this.errorMessage = error.message || 'Error al procesar la solicitud';
             
-            if (error.details && error.details.length > 0) {
-              this.errorMessage += '\n• ' + error.details.join('\n• ');
+            if (error.details && Array.isArray(error.details) && error.details.length > 0) {
+              this.errorMessage += ':\n• ' + error.details.join('\n• ');
             }
           } else {
             this.errorMessage = typeof error === 'string' ? error : 'Error inesperado al procesar la solicitud';
           }
           
+          // Mostrar alerta de error
+          alert('Error: ' + this.errorMessage);
+          
           this.isLoading = false;
+          
+          // Restaurar estado del campo identificación
+          if (wasDisabled) {
+            identificacionControl?.disable();
+          }
         },
         complete: () => {
           this.isLoading = false;
@@ -347,6 +393,8 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         funcionarios: false
       }
     });
+    // Asegurar que identificación esté habilitado para próximo uso
+    this.userForm.get('identificacion')?.enable();
   }
 
   private resetMessages(): void {

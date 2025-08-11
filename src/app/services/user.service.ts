@@ -117,11 +117,11 @@ export class UserService {
   }
 
   obtenerUsuarioPorId(id: number): Observable<Usuario> {
-    return this.http.get<Usuario>(`${this.apiUrl}/${id}`).pipe(
-      map(usuario => this.procesarUsuarioRecibido(usuario)),
-      catchError(this.handleError)
-    );
-  }
+  return this.http.get<Usuario>(`${this.apiUrl}/${id}`).pipe(
+    map(usuario => this.procesarUsuarioRecibido(usuario, 0)),
+    catchError(this.handleError)
+  );
+}
 
   verificarUsuarioExiste(identificacion: string): Observable<boolean> {
     return this.http.get<Usuario[]>(`${this.apiUrl}/buscar?identificacion=${identificacion}`)
@@ -139,15 +139,16 @@ export class UserService {
   }
 
   actualizarUsuario(usuario: Usuario): Observable<ApiResponse> {
-    if (!usuario.noUsuario) {
-      return throwError(() => new Error('ID de usuario requerido para actualización'));
-    }
-    const usuarioRequest: UsuarioRequest = this.transformarUsuarioParaApi(usuario);
-    const url = `${this.apiUrl}/${usuario.noUsuario}`;
-    return this.http.put<ApiResponse>(url, usuarioRequest, this.httpOptions).pipe(
-      catchError(this.handleError)
-    );
+  const userId = usuario['noUsuario'] || usuario.noUsuario;
+  if (!userId) {
+    return throwError(() => new Error('ID de usuario requerido para actualización'));
   }
+  const usuarioRequest: UsuarioRequest = this.transformarUsuarioParaApi(usuario);
+  const url = `${this.apiUrl}/${userId}`;
+  return this.http.put<ApiResponse>(url, usuarioRequest, this.httpOptions).pipe(
+    catchError(this.handleError)
+  );
+}
 
   eliminarUsuario(id: number): Observable<ApiResponse> {
     return this.http.delete<ApiResponse>(`${this.apiUrl}/${id}`).pipe(
@@ -180,23 +181,32 @@ export class UserService {
 
   private procesarUsuarioRecibido(usuario: any, index?: number): Usuario {
   let cargoDescripcion = '';
+  let cargoId: string | number = '';
+  
   if (usuario.cargo) {
-    if (typeof usuario.cargo === 'object' && usuario.cargo.descripcion) {
-      cargoDescripcion = usuario.cargo.descripcion;
-    } else if (typeof usuario.cargo === 'string') {
-      cargoDescripcion = usuario.cargo;
+    if (typeof usuario.cargo === 'object') {
+      // Guardar tanto el ID como la descripción
+      cargoId = usuario.cargo.idCargo || '';
+      cargoDescripcion = usuario.cargo.descripcion || '';
+    } else if (typeof usuario.cargo === 'string' || typeof usuario.cargo === 'number') {
+      cargoDescripcion = usuario.cargo.toString();
+      cargoId = usuario.cargo;
     }
   }
 
   return {
     ...usuario,
+    idUsuario: usuario.idUsuario, // MANTENER el idUsuario original
     noUsuario: usuario.idUsuario || usuario.noUsuario || (index !== undefined ? index + 1 : 0),
-    cargo: cargoDescripcion,
+    cargo: cargoId || cargoDescripcion,
+    cargoDescripcion: cargoDescripcion,
     estado: usuario.estado || 'Activo',
     activo: usuario.activo !== undefined ? usuario.activo : true,
     correoEmpresarial: usuario.correoEmpresarial || '',
     celular: usuario.telefono1 || usuario.celular || '',
     telefono: usuario.telefono2 || usuario.telefono || '',
+    direccion: usuario.direccion || '', // AGREGAR valor por defecto
+    correoPersonal: usuario.correoPersonal || '', // AGREGAR valor por defecto
     dobleAutenticacion: typeof usuario.dobleAutenticacion === 'boolean' 
       ? (usuario.dobleAutenticacion ? 'Google Authenticator' : '') 
       : (usuario.dobleAutenticacion || 'Google Authenticator'),
