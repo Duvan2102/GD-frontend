@@ -17,12 +17,12 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'approvals', pathMatch: 'full' },
       { path: 'approvals', component: Approvals },
-      { path: 'administration', component: Administration },
+      { path: 'department-creation', component: DepartmentCreation },
       { path: 'reports-audits', component: ReportsAudits },
       { path: 'users', component: Users },
       { path: 'create-request', component: CreateRequest },
       { path: 'approval-details', component: ApprovalDetails },
-      { path: 'department-creation', component: DepartmentCreation },
+      { path: 'administration', component: Administration },
     ],
   },
   { path: '**', redirectTo: '' }

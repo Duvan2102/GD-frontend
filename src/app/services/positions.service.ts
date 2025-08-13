@@ -1,12 +1,11 @@
 // src/app/services/position.service.ts
 
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
 import { Area } from './area.service';
 
-// Interfaces alineadas con tu estructura de datos JSON
 export interface Position {
   idCargo?: number;
   descripcion: string;
@@ -15,7 +14,16 @@ export interface Position {
 
 @Injectable({  providedIn: 'root'})
 export class PositionService {
-  private baseUrl = `${environment.apiUrl}cargos`;
+  private baseUrl = `${environment.apiUrl}/cargos`;
+
+  private readonly httpOptions = {
+    headers: new HttpHeaders({
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    })
+  };
 
   constructor(private http: HttpClient) {}
 
