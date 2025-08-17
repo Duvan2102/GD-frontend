@@ -1,17 +1,17 @@
 .tabla-solicitudes {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 11px; /* entre 10px y 12px */
 }
 
 .tabla-solicitudes th {
   background-color: #f9fafb;
   color: #6b7280;
-  font-size: 12px;
+  font-size: 10px;   /* un poco más chico */
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 16px 20px;
+  letter-spacing: 0.2px;
+  padding: 6px 10px; /* menos alto que original */
   text-align: left;
   border-bottom: 1px solid #e5e7eb;
   white-space: nowrap;
@@ -21,12 +21,10 @@
 }
 
 .tabla-solicitudes td {
-  padding: 16px 20px;
+  padding: 6px 10px; /* intermedio */
   color: #374151;
-  font-size: 14px;
-  border-bottom: 1pX solid rgb(90, 139, 129, 0.3); 
-  border-left: 1px solid transparent;
-  border-right: 1px solid transparent;
+  font-size: 11px;   /* equilibrado */
+  border-bottom: 1px solid rgba(90, 139, 129, 0.3); 
 }
 
 .tabla-solicitudes tbody tr:hover {
@@ -34,21 +32,22 @@
 }
 
 .tabla-solicitudes tbody tr:hover td {
- 
   border-bottom: 2px solid #5A8B81; 
 }
 
 .tabla-solicitudes tbody tr:last-child td {
-    border-bottom: none;
+  border-bottom: none;
 }
 
 .btn-gestionar {
   background-color: #5A8B81;
-  color: white ;
+  color: white;
   border-color: #5A8B81;
   font-weight: 600;
+  font-size: 11px;     /* intermedio */
+  padding: 4px 8px;    /* menos grande */
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .btn-gestionar:hover {
@@ -59,7 +58,7 @@
 .icono-prioridad {
   color: #ef4444;
   font-weight: bold;
-  font-size: 30px;
+  font-size: 24px; /* antes 30px, no tan mini como 20px */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -69,20 +68,19 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: -4px;
 }
 
 .aprobador-icono {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;   /* entre 32px y 24px */
+  height: 28px;
   border-radius: 50%;
   color: white;
   font-weight: bold;
-  font-size: 12px;
-  margin-left: -12px;
+  font-size: 11px;  /* más chico que original */
+  margin-left: -10px; 
   border: 2px solid white;
   box-shadow: 0 1px 3px rgba(90, 139, 129, 0.8);
   position: relative;

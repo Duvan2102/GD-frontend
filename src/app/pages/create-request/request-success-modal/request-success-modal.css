@@ -1,0 +1,358 @@
+/* anula el padding global de la modal para esta vista */
+.modal-content.request-success-modal .modal-body { padding: 0 !important; }
+
+/* contenedor principal */
+.modal-dialog { max-width: 980px; width: 95%; }
+.modal-content.request-success-modal{
+  background: rgb(61, 107, 99);
+  border-radius: 12px;
+  border: 1px solid #d6d9d8;
+  box-shadow: 0 6px 18px rgba(0,0,0,.18);
+  overflow: hidden;
+}
+
+/* barra superior (degradado verde) */
+.modal-content.request-success-modal::before{
+  content:"";
+  display:block;
+  height: 60px;
+  background: linear-gradient(135deg, rgb(61, 107, 99) 0%, rgb(74, 128, 115) 100%);
+}
+
+/* cabecera de iconos sobre la barra */
+.modal-header-icons{
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+.icon-btn{
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  font-size: 18px;
+  color: #2c3e38;
+  cursor: pointer;
+  transition: all .15s ease;
+  backdrop-filter: blur(10px);
+}
+
+.icon-btn:hover{
+  transform: translateY(-1px);
+  background: rgba(255,255,255,1);
+}
+
+.close-icon{ margin-left: auto; }
+
+/* check centrado superior */
+.checkmark-icon-wrapper {
+  --icon-size: 120px;  /* 🔹 Cambia este valor para ajustar el tamaño */
+
+  position: absolute;
+  left: 50%;
+  top: 30px;
+  transform: translate(-50%, -75%);
+
+}
+
+.checkmark-icon-wrapper .bi-check2-circle {
+  font-size: 50px;
+  color: rgb(17, 17, 17, 0.6);
+}
+/* layout del cuerpo */
+.modal-body-content{
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 0;
+  margin: 20px 0 0 0;
+  min-height: 400px;
+}
+
+/* panel izquierdo */
+.left-panel {
+  background: #f7f8f8;
+  padding: 20px 24px;
+  border-right: 1px solid #e0e0e0;
+}
+
+.left-panel .section-title{
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #333;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+}
+
+.request-name{
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 20px 0;
+  line-height: 1.3;
+}
+
+.section-subtitle{
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+  margin: 20px 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.description-text{
+  font-size: 13px;
+  color: #666;
+  line-height: 1.4;
+  margin: 0 0 20px 0;
+  text-align: justify;
+}
+
+/* documento */
+.document-link{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all .15s ease;
+  margin: 15px 0 20px 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05);
+}
+
+.document-link:hover{
+  background: #f8f9fa;
+  border-color: rgb(61, 107, 99);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,.1);
+}
+
+.pdf-icon{
+  font-size: 28px;
+  color: #dc3545;
+  flex-shrink: 0;
+}
+
+.doc-info{
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.doc-info span{
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doc-info small{
+  color: #888;
+  font-size: 11px;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+
+/* botón cancelar */
+.btn-cancel{
+  display: block;
+  width: 100%;
+  height: 44px;
+  background: rgb(61, 107, 99);
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all .15s ease;
+  margin-top: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-cancel:hover{
+  background: #4a8073;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
+}
+
+.btn-cancel:disabled{
+  background: #999;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* panel derecho */
+.right-panel{
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: #fff;
+  padding: 20px 24px;
+}
+
+/* caja detalle solicitud */
+.request-detail-box{
+  background: #fff;
+  border: none;
+  margin: 0 0 25px 0;
+  padding: 0;
+}
+
+.request-detail-box .section-title{
+  margin: 0 0 15px 0;
+  color: #333;
+}
+
+.sender-info{
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 15px 0;
+}
+
+.sender-avatar{
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e91e63;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+
+.sender-details span{
+  display: block;
+  color: #888;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.sender-details strong{
+  display: block;
+  color: #333;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sender-timestamp{
+  color: #888;
+  font-size: 12px;
+  text-align: right;
+}
+
+.request-status{
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border-top: 1px solid #eee;
+  padding-top: 15px;
+  margin: 15px 0 0 0;
+}
+
+.request-status .section-subtitle {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+}
+
+/* sección aprobadores */
+.approvers-section{
+  background: #fff;
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.approvers-section .section-title{
+  margin: 0 0 15px 0;
+  color: #333;
+}
+
+.table-responsive{
+  overflow: auto;
+  margin: 0;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.approvers-table{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: #333;
+  margin: 0;
+}
+
+.approvers-table thead th{
+  background: #f8f9fa;
+  color: #333;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  height: 36px;
+  border-bottom: 2px solid #ddd;
+  padding: 8px 12px;
+  text-align: center;
+  font-size: 11px;
+}
+
+.approvers-table th, .approvers-table td{
+  border-right: 1px solid #eee;
+  text-align: center;
+  height: 40px;
+  vertical-align: middle;
+  padding: 8px 12px;
+}
+
+.approvers-table th:last-child, .approvers-table td:last-child{
+  border-right: none;
+}
+
+.approvers-table tbody tr{
+  border-bottom: 1px solid #eee;
+}
+
+.approvers-table tbody tr:last-child{
+  border-bottom: none;
+}
+
+.approvers-table tbody tr:hover{
+  background: #f8f9fa;
+}
+
+.no-approvers {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}

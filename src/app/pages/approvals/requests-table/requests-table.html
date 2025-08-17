@@ -49,7 +49,8 @@
           <span *ngIf="request.status" class="badge rounded-pill" [ngClass]="{
              'text-bg-success': request.status === 'APROBADO',
              'text-bg-warning': request.status === 'PENDIENTE',
-             'text-bg-danger': request.status === 'RECHAZADO'
+             'text-bg-danger': request.status === 'RECHAZADO',
+             'text-bg-secondary': request.status === 'CANCELADA'
            }">{{ request.status }}</span>
         </td>
         

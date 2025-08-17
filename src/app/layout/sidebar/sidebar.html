@@ -1,28 +1,32 @@
 <nav class="sidebar">
   <ul>
     <li>
-      <i class="bi bi-check-square-fill"></i>
+      <i class="bi bi-file-earmark-check"></i>
       <a routerLink="/approvals" routerLinkActive="active"> Aprobaciones</a>
     </li>
-    <li>
-      <i class="bi bi-file-text-fill"></i>
-      <a routerLink="/administration" routerLinkActive="active"> Administración</a>
+     <li>
+      <i class="bi bi-eye"></i>
+      <a routerLink="/approval-details" routerLinkActive="active"> Detalles Aprobaciones</a>
     </li>
     <li>
-      <i class="bi bi-plus-square-fill"></i>
-      <a routerLink="/create-request" routerLinkActive="active"> Crear Aprobaciones</a>
+      <i class="bi bi-file-earmark-arrow-up"></i>
+      <a routerLink="/create-request" routerLinkActive="active">+ Creación solicitudes</a>
     </li>
     <li>
-      <i class="bi bi-people-fill"></i>
+      <i class="bi bi-person-fill-add"></i>
       <a routerLink="/users" routerLinkActive="active"> Usuarios</a>
     </li>
     <li>
-      <i class="bi bi-bar-chart-fill"></i>
+      <i class="bi bi-card-checklist"></i>
       <a routerLink="/reports-audits" routerLinkActive="active"> Informes y Auditorias</a>
     </li>
-    <li>
-      <i class="bi bi-gear-fill"></i>
-      <a routerLink="/approval-details" routerLinkActive="active"> Detalles Aprobaciones</a>
+     <li>
+      <div class="ico-dev-gear">
+       <i class="bi bi-window base"></i>
+       <i class="bi bi-code-slash code"></i>
+       <i class="bi bi-gear gear"></i>
+      </div>
+      <a routerLink="/administration" routerLinkActive="active"> Administración</a>
     </li>
   </ul>
 </nav>

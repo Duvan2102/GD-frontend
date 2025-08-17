@@ -13,8 +13,7 @@
     <app-controls
       (quantityChange)="onQuantityChange($event)"
       (toggleApprovedChange)="onToggleApproved($event)"
-      (searchChange)="onSearchChange($event)"
-    >
+      (searchChange)="onSearchChange($event)">
     </app-controls>
 
     <app-requests-table
@@ -24,20 +23,29 @@
       [ascendingOrder]="ascendingOrder"
       textoboton="VISUALIZAR <br> SOLICITUD"
       (sort)="sortBy($event)"
-      (manage)="onManage($event)"
-    >
+      (manage)="onManage($event)">
     </app-requests-table>
 
     <app-footer-controls
       [totalItems]="totalFiltered"
       [itemsPerPage]="itemsPerPage"
       [currentPage]="currentPage"
-      (changePage)="onChangePage($event)"
-    ></app-footer-controls>
+      (changePage)="onChangePage($event)">
+    </app-footer-controls>
   </div>
 </div>
 
-<app-create-form 
+<app-create-form
     [isVisible]="isCreateModalVisible"
-    (close)="closeCreateModal()">
+    (close)="closeCreateModal()"
+    (onSaved)="handleSaveRequest($event)"
+    (deleteRequest)="handleDeleteRequest($event)">
 </app-create-form>
+
+<app-request-success-modal
+  [isVisible]="isDetailModalVisible"
+  [data]="successModalData"
+  [usuariosDisponibles]="allUsers"
+  (close)="closeDetailModal()"
+  (cancelRequest)="handleCancelRequest($event)">
+</app-request-success-modal>

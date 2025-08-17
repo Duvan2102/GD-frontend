@@ -1,0 +1,123 @@
+<div class="custom-backdrop" [class.show]="isVisible" (click)="onClose()"></div>
+
+<div class="modal"
+     tabindex="-1"
+     [class.show]="isVisible"
+     [style.display]="isVisible ? 'block' : 'none'">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content request-success-modal">
+
+      <div class="modal-header-icons">
+        <button class="icon-btn close-icon" (click)="onClose()" title="Cerrar" type="button">
+          <i class="bi bi-x"></i>
+        </button>
+        <div class="checkmark-icon-wrapper">
+          <i class="bi bi-check2-circle"></i>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-body-content" *ngIf="data">
+          <div class="left-panel">
+            <h2 class="section-title">APROBACIÓN</h2>
+            <p class="request-name">{{ data.nombreSolicitud }}</p>
+
+            <h3 class="section-subtitle">DESCRIPCIÓN</h3>
+            <p class="description-text">
+              {{ data.detallesAdicionales || 'En este apartado se colocará la descripción del documento adjunto para que las personas involucradas se hagan una idea de la solicitud.' }}
+            </p>
+
+            <div class="document-link" *ngIf="data.documentoAprobacion" (click)="viewDocument(data.documentoAprobacion)">
+              <i class="bi bi-file-earmark-pdf-fill pdf-icon"></i>
+              <div class="doc-info">
+                <span>{{ getDocumentName(data.documentoAprobacion) }}</span>
+                <small>DAR CLICK PARA VISUALIZAR</small>
+              </div>
+            </div>
+
+            <div *ngIf="data.anexos && data.anexos.length > 0">
+              <h3 class="section-subtitle">ANEXOS</h3>
+              <div class="document-link" *ngFor="let anexo of data.anexos" (click)="viewDocument(anexo)">
+                <i class="bi bi-file-earmark-fill pdf-icon"></i>
+                <div class="doc-info">
+                  <span>{{ getDocumentName(anexo) }}</span>
+                  <small>DAR CLICK PARA VISUALIZAR</small>
+                </div>
+              </div>
+            </div>
+
+            <button
+              class="btn-cancel"
+              type="button"
+              (click)="onCancelRequest()"
+              [disabled]="!canCancelRequest()"
+              [class.btn-disabled]="!canCancelRequest()">
+              {{ data.estado === 'Cancelada' ? 'Solicitud Cancelada' : 'Cancelar Sollicitud' }}
+            </button>
+          </div>
+
+          <div class="right-panel">
+            <div class="request-detail-box">
+              <h2 class="section-title">DETALLE SOLICITUD</h2>
+
+              <div class="sender-info" *ngIf="data.creador">
+                <div class="sender-avatar">
+                  {{ getCreatorInitials() }}
+                </div>
+                <div class="sender-details">
+                  <span>Enviado por</span>
+                  <strong>{{ data.creador.nombres }} {{ data.creador.apellidos }}</strong>
+                </div>
+                <div class="sender-timestamp">
+                  {{ formatDate(data.fechaCreacion) }}
+                </div>
+              </div>
+
+              <div class="request-status" *ngIf="data.estado">
+                <span class="section-subtitle">Estado:</span>
+                <span class="badge rounded-pill" [ngClass]="getStatusClass(data.estado)">
+                  {{ data.estado }}
+                </span>
+              </div>
+            </div>
+
+            <div class="approvers-section">
+              <h2 class="section-title">APROBADORES</h2>
+              <div class="table-responsive">
+                <table class="approvers-table" *ngIf="approvers.length > 0; else noApprovers">
+                  <thead>
+                    <tr>
+                      <th>Nombres y Apellidos</th>
+                      <th>Correo Electrónico</th>
+                      <th>Área</th>
+                      <th>Fecha</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let approver of approvers; trackBy: trackByApprover">
+                      <td>{{ approver.nombresApellidos }}</td>
+                      <td>{{ approver.correo }}</td>
+                      <td>{{ approver.area }}</td>
+                      <td>{{ formatDate(approver.fecha) }}</td>
+                      <td>
+                        <span class="badge rounded-pill" [ngClass]="getStatusClass(approver.estado)">
+                          {{ approver.estado }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <ng-template #noApprovers>
+                  <div class="no-approvers">
+                    <p>No se han asignado aprobadores a esta solicitud.</p>
+                  </div>
+                </ng-template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> </div>
+  </div>
+</div>

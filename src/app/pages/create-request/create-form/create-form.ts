@@ -1,9 +1,10 @@
-import { Component, Output, EventEmitter, OnInit, ChangeDetectorRef, Input } from '@angular/core';
+import { Component, Output, EventEmitter, OnInit, ChangeDetectorRef, Input, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TypologyService, Typology } from '../../../services/typology.service';
 import { UserService } from '../../../services/user.service';
 import { Usuario } from '../../../interfaces/common.interfaces';
+import { DocumentView, DocumentViewData } from '../document-view/document-view';
 
 interface Destinatario {
   orden: number;
@@ -11,7 +12,7 @@ interface Destinatario {
   searchTerm: string;
 }
 
-interface SolicitudData {
+export interface SolicitudData {
   nombreSolicitud: string;
   detallesAdicionales: string;
   prioridad: 'NORMAL' | 'IMPORTANTE';
@@ -27,17 +28,17 @@ interface SolicitudData {
 @Component({
   selector: 'app-create-form',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DocumentView],
   templateUrl: './create-form.html',
   styleUrls: ['./create-form.css']
 })
 export class CreateForm implements OnInit {
+  @ViewChild('docView') docView!: DocumentView;
   @Input() isVisible: boolean = false;
   @Output() onSaved = new EventEmitter<SolicitudData>();
-  @Output() onPreview = new EventEmitter<void>();
   @Output() close = new EventEmitter<void>();
+  @Output() deleteRequest = new EventEmitter<string | number>();
 
-  
   nombreSolicitud: string = '';
   detallesAdicionales: string = '';
   prioridad: 'NORMAL' | 'IMPORTANTE' = 'NORMAL';
@@ -45,32 +46,20 @@ export class CreateForm implements OnInit {
   enviarRecordatorio: 'NUNCA' | 'SEMANALMENTE' | 'CADA_3_DIAS' | 'TODOS_LOS_DIAS' = 'NUNCA';
   documentosAnexos: boolean = false;
   establecerOrden: boolean = false;
-
-  
   documentoAprobacion: File | null = null;
   anexos: File[] = [];
-
-  
   destinatarios: Destinatario[] = [
     { orden: 1, usuario: null, searchTerm: '' },
     { orden: 2, usuario: null, searchTerm: '' }
   ];
-
-  
   tipologias: Typology[] = [];
-  recordatorioOpciones = [
-    { value: 'NUNCA', label: 'NUNCA' },
-    { value: 'SEMANALMENTE', label: 'SEMANALMENTE' },
-    { value: 'CADA_3_DIAS', label: 'CADA 3 DÍAS' },
-    { value: 'TODOS_LOS_DIAS', label: 'TODOS LOS DÍAS' }
-  ];
-
   successMessage = '';
   errorMessage = '';
-
   allUsers: Usuario[] = [];
   filteredUsers: Usuario[] = [];
   activeRecipientIndex: number | null = null;
+  showDocumentView: boolean = false;
+  documentViewData: DocumentViewData | null = null;
 
   constructor(
     private typologyService: TypologyService,
@@ -85,13 +74,8 @@ export class CreateForm implements OnInit {
 
   loadTypologies(): void {
     this.typologyService.getAll().subscribe({
-      next: (data) => {
-        this.tipologias = data;
-      },
-      error: (error) => {
-        this.errorMessage = 'Error al cargar las tipologías.';
-        console.error(error);
-      }
+      next: (data) => { this.tipologias = data; },
+      error: (error) => { this.errorMessage = 'Error al cargar las tipologías.'; }
     });
   }
 
@@ -107,10 +91,7 @@ export class CreateForm implements OnInit {
             }
         }
       },
-      error: (error) => {
-        this.errorMessage = 'Error al cargar los usuarios.';
-        console.error(error);
-      }
+      error: (error) => { this.errorMessage = 'Error al cargar los usuarios.'; }
     });
   }
 
@@ -134,7 +115,7 @@ export class CreateForm implements OnInit {
       this.filteredUsers = [];
     }
   }
-  
+
   validateRecipient(index: number): void {
     setTimeout(() => {
         const recipient = this.destinatarios[index];
@@ -143,8 +124,7 @@ export class CreateForm implements OnInit {
         }
         this.activeRecipientIndex = null;
     }, 200);
-}
-
+  }
 
   selectUser(user: Usuario, index: number): void {
     this.destinatarios[index].usuario = user;
@@ -153,7 +133,6 @@ export class CreateForm implements OnInit {
     this.activeRecipientIndex = null;
   }
 
-  
   onDocumentoAprobacionChange(event: any): void {
     const file = event.target.files[0];
     if (file && this.isValidFileType(file)) {
@@ -165,34 +144,27 @@ export class CreateForm implements OnInit {
   }
 
   onAnexosChange(event: any): void {
-  const file = event.target.files[0]; 
-  if (file && this.isValidFileType(file)) {
-    this.anexos = [file]; 
-  } else {
-    alert('Formato de archivo no válido. Solo se permite formatos PDF y Word');
-    event.target.value = '';
+    const file = event.target.files[0];
+    if (file && this.isValidFileType(file)) {
+      this.anexos = [file];
+    } else {
+      alert('Formato de archivo no válido. Solo se permite formatos PDF y Word');
+      event.target.value = '';
+    }
   }
-}
 
   private isValidFileType(file: File): boolean {
     const allowedTypes = [
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-
     ];
     return allowedTypes.includes(file.type);
   }
 
-  removeAnexo(index: number): void {
-    this.anexos.splice(index, 1);
-  }
+  removeAnexo(index: number): void { this.anexos.splice(index, 1); }
+  removeDocumentoAprobacion(): void { this.documentoAprobacion = null; }
 
-  removeDocumentoAprobacion(): void {
-    this.documentoAprobacion = null;
-  }
-
-  
   agregarDestinatario(): void {
     const nuevoOrden = this.destinatarios.length + 1;
     this.destinatarios.push({ orden: nuevoOrden, usuario: null, searchTerm: '' });
@@ -211,9 +183,7 @@ export class CreateForm implements OnInit {
   }
 
   private reordenarDestinatarios(): void {
-    this.destinatarios.forEach((dest, index) => {
-      dest.orden = index + 1;
-    });
+    this.destinatarios.forEach((dest, index) => { dest.orden = index + 1; });
   }
 
   onEstablecerOrdenChange(): void {
@@ -224,9 +194,37 @@ export class CreateForm implements OnInit {
     }
   }
 
-  
   onPreviewClick(): void {
-    this.onPreview.emit();
+    if (!this.documentoAprobacion) {
+      alert('Debe cargar un documento de aprobación para previsualizar.');
+      return;
+    }
+    this.documentViewData = {
+      id: `temp-${Date.now()}`,
+      file: this.documentoAprobacion,
+      title: this.nombreSolicitud || 'Documento de Aprobación',
+    };
+    this.showDocumentView = true;
+  }
+
+  onCloseView(): void {
+    this.showDocumentView = false;
+    this.documentViewData = null;
+  }
+
+  onEditFromView(): void {
+    this.showDocumentView = false;
+  }
+
+  onSendFromView(): void {
+    this.onGuardar();
+    this.showDocumentView = false;
+  }
+
+  onDeleteFromView(solicitudId: string | number): void {
+    this.showDocumentView = false;
+    this.deleteRequest.emit(solicitudId);
+    this.onCloseView();
   }
 
   onCancelar(): void {
@@ -235,7 +233,6 @@ export class CreateForm implements OnInit {
   }
 
   onGuardar(): void {
-    
     if (this.isFormValid()) {
       const solicitudData: SolicitudData = {
         nombreSolicitud: this.nombreSolicitud,
@@ -254,15 +251,14 @@ export class CreateForm implements OnInit {
         documentoAprobacion: this.documentoAprobacion || undefined,
         anexos: this.anexos.length > 0 ? this.anexos : undefined
       };
-
       this.onSaved.emit(solicitudData);
       this.resetForm();
     } else {
       alert('Por favor completa todos los campos obligatorios.');
     }
   }
-  
-  public  isFormValid(): boolean {
+
+  public isFormValid(): boolean {
     return !!(
       this.nombreSolicitud.trim() &&
       this.tipologia &&
@@ -284,6 +280,8 @@ export class CreateForm implements OnInit {
       { orden: 1, usuario: null, searchTerm: '' },
       { orden: 2, usuario: null, searchTerm: '' }
     ];
+    this.showDocumentView = false;
+    this.documentViewData = null;
     this.loadUsers();
   }
 }

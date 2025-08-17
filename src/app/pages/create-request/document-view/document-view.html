@@ -1,0 +1,76 @@
+<!-- Backdrop -->
+<div class="custom-backdrop" [class.show]="isVisible"></div>
+
+<!-- Modal -->
+<div class="modal" tabindex="-1"
+     [class.show]="isVisible"
+     [style.display]="isVisible ? 'block' : 'none'">
+  <div class="modal-dialog modal-fullscreen">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">
+          {{ documentData?.file?.name || documentData?.title || 'Vista Previa del Documento' }}
+        </h5>
+        <div class="header-actions-right">
+          <button type="button" class="btn btn-outline-light btn-sm btn-edit" (click)="onEdit()">
+            <i class="bi bi-pencil-square"></i> Editar Solicitud
+          </button>
+          <button type="button" class="btn btn-outline-danger btn-sm btn-delete" (click)="onDelete()">
+            <i class="bi bi-trash3"></i> Eliminar solicitud
+          </button>
+          <button type="button" class="btn-close btn-close-white" (click)="onClose()" aria-label="Close"></button>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <div class="preview-container">
+          <div *ngIf="isLoading" class="loading-container">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="loading-text">Cargando documento...</p>
+          </div>
+
+          <div *ngIf="error && !isLoading" class="error-container">
+            <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+            <p class="error-text">{{ error }}</p>
+          </div>
+
+          <div *ngIf="pdfSrc && !isLoading && !error" class="document-viewer">
+            <ngx-extended-pdf-viewer
+              [src]="pdfSrc"
+              height="100%"
+              [(page)]="currentPage"
+              [zoom]="zoom + '%'"
+              (pagesLoaded)="onPagesLoaded($event)"
+              [showToolbar]="false">
+            </ngx-extended-pdf-viewer>
+          </div>
+
+          <div *ngIf="pdfSrc && !isLoading && !error" class="bottom-controls">
+            <div class="page-nav-controls" *ngIf="totalPages > 1">
+              <button type="button" class="btn-nav" (click)="onPreviousPage()" [disabled]="currentPage <= 1">
+                <i class="bi bi-arrow-up"></i>
+              </button>
+              <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+              <button type="button" class="btn-nav" (click)="onNextPage()" [disabled]="currentPage >= totalPages">
+                <i class="bi bi-arrow-down"></i>
+              </button>
+            </div>
+            <div class="zoom-controls-bottom">
+              <button type="button" class="btn-zoom" (click)="onZoomOut()"><i class="bi bi-dash"></i></button>
+              <button type="button" class="btn-zoom" (click)="onZoomReset()"><i class="bi bi-arrow-counterclockwise"></i></button>
+              <button type="button" class="btn-zoom" (click)="onZoomIn()"><i class="bi bi-plus"></i></button>
+            </div>
+            <div class="extra-actions">
+              <button type="button" class="btn-send-main" (click)="onSend()">Enviar</button>
+              <button type="button" class="btn-nav btn-close-bottom" (click)="onClose()"><i class="bi bi-x-lg"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
