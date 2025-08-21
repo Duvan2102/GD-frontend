@@ -47,12 +47,12 @@
             </div>
 
             <button
+              id="btn-manage-request"
               class="btn-cancel"
               type="button"
-              (click)="onCancelRequest()"
-              [disabled]="!canCancelRequest()"
-              [class.btn-disabled]="!canCancelRequest()">
-              {{ data.estado === 'Cancelada' ? 'Solicitud Cancelada' : 'Cancelar Sollicitud' }}
+              (click)="handleMainAction()"
+              [disabled]="!canPerformMainAction()">
+              {{ getMainActionText() }}
             </button>
           </div>
 
@@ -84,7 +84,7 @@
             <div class="approvers-section">
               <h2 class="section-title">APROBADORES</h2>
               <div class="table-responsive">
-                <table class="approvers-table" *ngIf="approvers.length > 0; else noApprovers">
+                <table class="approvers-table">
                   <thead>
                     <tr>
                       <th>Nombres y Apellidos</th>
@@ -108,16 +108,11 @@
                     </tr>
                   </tbody>
                 </table>
-
-                <ng-template #noApprovers>
-                  <div class="no-approvers">
-                    <p>No se han asignado aprobadores a esta solicitud.</p>
-                  </div>
-                </ng-template>
               </div>
             </div>
           </div>
         </div>
-      </div> </div>
+      </div> 
+    </div>
   </div>
 </div>

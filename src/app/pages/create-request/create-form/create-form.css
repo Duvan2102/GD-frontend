@@ -10,9 +10,10 @@
   max-width: 620px;
   width: 95vw;
   background: #f8f9fa;
-  max-height: 90vh; /* Aumentamos la altura máxima del modal */
-  display: flex; /* Agregado para habilitar Flexbox */
-  flex-direction: column; /* Agregado para apilar elementos verticalmente */
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  z-index: 1055; 
 }
 
 .modal-header {
@@ -21,7 +22,7 @@
   border-bottom: none;
   position: relative;
   border-radius: 6px 6px 0 0;
-  flex-shrink: 0; /* Evita que el header se encoja */
+  flex-shrink: 0;
 }
 
 .modal-title {
@@ -46,7 +47,7 @@
 
 .modal-body {
   background: #f8f9fa;
-  /* Eliminamos el overflow y flex-grow de aquí */
+  overflow-y: auto;
 }
 
 .form-container {
@@ -111,8 +112,6 @@
 }
 
 .btn-file-upload:hover { background: #5a7a6a; color: white; }
-
-
 
 .btn-remove {
   background: none;
@@ -200,7 +199,9 @@
   color: #2d3748;
 }
 
-.destinatarios-section { margin-top: 8px; }
+.destinatarios-section { 
+  margin-top: 8px; 
+}
 
 .destinatarios-header {
   display: flex;
@@ -213,19 +214,17 @@
   letter-spacing: 0.5px;
 }
 
-/* Contenedor para la lista de destinatarios con scroll */
 .destinatarios-list-container {
-  max-height: 60px; /* Altura máxima antes de que aparezca el scroll */
-  overflow-y: auto;  /* Scroll vertical automático */
-  overflow-x: hidden; /* Evita el scroll horizontal */
-  padding-right: 10px; /* Espacio para la barra de scroll */
+  max-height: 140px; 
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 10px;
   scrollbar-width: thin;
   scrollbar-color: #a0a0a0 #f8f9fa;
 }
 
-/* Estilos de la barra de scroll para navegadores Webkit (Chrome, Safari) */
 .destinatarios-list-container::-webkit-scrollbar {
-  width: 0px;
+  width: 5px;
 }
 .destinatarios-list-container::-webkit-scrollbar-track {
   background: #f8f9fa;
@@ -235,7 +234,6 @@
   border-radius: 10px;
   border: 2px solid #f8f9fa;
 }
-
 
 .header-orden { width: 50px; text-align: center; }
 .header-usuario { flex: 1; text-align: center; }
@@ -315,31 +313,91 @@
 
 .btn-trash:hover, .btn-add:hover { opacity: 1; }
 
-.user-dropdown {
-  position: absolute;
-  top: 100%;
+.user-dropdown-overlay {
+  position: fixed;
+  top: 0;
   left: 0;
-  right: 0;
-  z-index: 1000;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  max-height: 120px;
-  overflow-y: auto;
+  width: 100%;
+  height: 100%;
+  z-index: 1056; 
 }
 
-.dropdown-list { list-style: none; margin: 0; }
+.user-dropdown {
+  position: fixed; 
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.15);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1057; 
+  animation: dropdownFadeInUp 0.15s ease-out;
+}
+
+@keyframes dropdownFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dropdown-list { 
+  list-style: none; 
+  margin: 0; 
+  padding: 4px 0;
+}
 
 .dropdown-item {
   cursor: pointer;
-  font-size: 12px;
-  border-bottom: 1px solid #f7fafc;
+  font-size: 13px;
+  padding: 10px 16px;
   color: #4a5568;
+  border-bottom: 1px solid #f7fafc;
+  transition: background-color 0.1s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.dropdown-item:hover { background: #edf2f7; }
-.dropdown-item:last-child { border-bottom: none; }
+.dropdown-item:hover,
+.dropdown-item.highlighted {
+  background: #edf2f7;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item .user-name {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.dropdown-item .user-username {
+  font-size: 11px;
+  color: #718096;
+}
+
+.user-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.user-dropdown::-webkit-scrollbar-track {
+  background: #f8f9fa;
+}
+
+.user-dropdown::-webkit-scrollbar-thumb {
+  background-color: #cbd5e0;
+  border-radius: 3px;
+}
+
+.user-dropdown::-webkit-scrollbar-thumb:hover {
+  background-color: #a0aec0;
+}
 
 .modal-footer {
   border-top: none;
@@ -348,7 +406,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex-shrink: 0; /* Evita que el footer se encoja */
+  flex-shrink: 0;
 }
 
 .footer-buttons {

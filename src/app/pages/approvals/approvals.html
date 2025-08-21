@@ -29,3 +29,20 @@
 
   </div>
 </div>
+
+<app-request-success-modal
+  [isVisible]="isDetailModalVisible"
+  [data]="successModalData"
+  [usuariosDisponibles]="allUsers"
+  [isApprovalFlow]="true"
+  (close)="closeDetailModal()"
+  (manageRequest)="handleOpenDocumentToApprove($event)"> 
+</app-request-success-modal>
+
+<app-approval-document-view
+  [isVisible]="isApprovalDocumentViewVisible"
+  [documentData]="documentToApproveData"
+  (close)="closeApprovalDocumentView()"
+  (approve)="handleApproveRequest($event)"
+  (reject)="handleRejectRequest($event)">
+</app-approval-document-view>

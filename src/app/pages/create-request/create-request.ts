@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -6,22 +6,13 @@ import { Controls } from '../approvals/controls/controls';
 import { RequestsTable } from '../approvals/requests-table/requests-table';
 import { FooterControls } from '../approvals/footer-controls/footer-controls';
 import { CreateForm, SolicitudData } from './create-form/create-form';
-import { RequestSuccessModal, SuccessModalData } from './request-success-modal/request-success-modal';
+import { RequestSuccessModal, SuccessModalData, EstadoSolicitud } from './request-success-modal/request-success-modal';
 import { Usuario } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
-
-interface Approval {
-  type: string;
-  id: string;
-  creationDate: string;
-  creatorUser: string;
-  position: string;
-  lastUpdate: string;
-  status: 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA';
-  approvers: string[];
-  priority: boolean;
-  fullData?: SuccessModalData;
-}
+import { TypologyService, Typology } from '../../services/typology.service';
+import { ApprovalService } from '../../services/approval.service';
+import { Subscription } from 'rxjs';
+import { Approval } from '../approvals/approvals';
 
 @Component({
   selector: 'app-create-request',
@@ -39,25 +30,23 @@ interface Approval {
   templateUrl: './create-request.html',
   styleUrls: ['./create-request.css']
 })
-export class CreateRequest implements OnInit {
+export class CreateRequest implements OnInit, OnDestroy {
   isCreateModalVisible = false;
   isDetailModalVisible = false;
   successModalData: SuccessModalData | null = null;
-
   loggedInUser: Usuario = {
     noUsuario: 1,
     nombres: 'Luis Gabriel',
     apellidos: 'Perez Cabrales',
-    usuario: 'USUARIO.HELISA',
+    usuario: 'luis.perez',
     identificacion: '123',
     estado: 'Activo',
     activo: true
   };
-
   allUsers: Usuario[] = [];
-
+  tipologias: Typology[] = [];
   approvalsList: Approval[] = [];
-
+  private approvalsSubscription: Subscription | undefined;
   displayedRequests: Approval[] = [];
   private filteredRequests: Approval[] = [];
   totalFiltered: number = 0;
@@ -68,16 +57,40 @@ export class CreateRequest implements OnInit {
   currentOrder: string = 'creationDate';
   ascendingOrder: boolean = false;
 
-  constructor(private userService: UserService) {}
+  constructor(
+    private userService: UserService,
+    private typologyService: TypologyService,
+    private approvalService: ApprovalService
+  ) {}
 
   ngOnInit(): void {
+    this.loadTypologies();
     this.loadUsers();
-    this.applyViewLogic();
+    this.approvalsSubscription = this.approvalService.approvals$.subscribe(approvals => {
+      this.approvalsList = approvals;
+      this.applyViewLogic();
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.approvalsSubscription) {
+      this.approvalsSubscription.unsubscribe();
+    }
+  }
+
+  loadTypologies(): void {
+    this.typologyService.getAll().subscribe(typologies => {
+      this.tipologias = typologies;
+      this.applyViewLogic();
+    });
   }
 
   loadUsers(): void {
     this.userService.obtenerUsuarios().subscribe(users => {
       this.allUsers = users;
+      if (this.tipologias.length > 0) {
+        this.applyViewLogic();
+      }
     });
   }
 
@@ -92,13 +105,15 @@ export class CreateRequest implements OnInit {
   handleSaveRequest(solicitudData: SolicitudData): void {
     const newId = `00${this.approvalsList.length + 1}`;
     const now = new Date();
+    const estadoInicial: EstadoSolicitud = 'Enviada';
 
     const newSuccessData: SuccessModalData = {
       ...solicitudData,
       id: newId,
       creador: this.loggedInUser,
       fechaCreacion: now,
-      estado: 'Pendiente'
+      estado: estadoInicial,
+      approverStates: solicitudData.destinatarios.map(d => ({ usuarioId: d.usuarioId, estado: 'Pendiente' }))
     };
 
     const newApproval: Approval = {
@@ -114,9 +129,7 @@ export class CreateRequest implements OnInit {
       fullData: newSuccessData
     };
 
-    this.approvalsList.unshift(newApproval);
-    this.applyViewLogic();
-
+    this.approvalService.addApproval(newApproval);
     this.successModalData = newSuccessData;
     this.isCreateModalVisible = false;
     this.isDetailModalVisible = true;
@@ -128,23 +141,19 @@ export class CreateRequest implements OnInit {
   }
 
   handleCancelRequest(event: { solicitudId: string | number }): void {
-    const request = this.approvalsList.find(req => req.id === event.solicitudId);
+    const request = this.approvalsList.find(req => req.id.toString() === event.solicitudId.toString());
     if (request) {
       request.status = 'CANCELADA';
       if (request.fullData) {
         request.fullData.estado = 'Cancelada';
       }
-      this.applyViewLogic();
+      this.approvalService.updateApproval(request);
     }
     this.closeDetailModal();
   }
 
   handleDeleteRequest(solicitudId: string | number): void {
-      const index = this.approvalsList.findIndex(req => req.id === solicitudId);
-      if (index > -1) {
-          this.approvalsList.splice(index, 1);
-          this.applyViewLogic();
-      }
+    this.approvalService.deleteApproval(solicitudId);
   }
 
   onManage(id: string): void {
@@ -156,6 +165,21 @@ export class CreateRequest implements OnInit {
   }
 
   applyViewLogic(): void {
+    if (this.tipologias.length === 0 || this.allUsers.length === 0) {
+      this.displayedRequests = [];
+      return;
+    }
+
+    const getTypologyDescription = (typeId: string): string => {
+      const typology = this.tipologias.find(t => t.idTipologia.toString() === typeId.toString());
+      return typology ? typology.descripcion : typeId;
+    };
+
+    const getUserFullName = (userId: string): string => {
+      const user = this.allUsers.find(u => u.usuario === userId);
+      return user ? `${user.nombres} ${user.apellidos}` : userId;
+    };
+
     let result: Approval[] = [...this.approvalsList];
     if (this.showOnlyApproved) {
       result = result.filter(req => req.status === 'APROBADO');
@@ -163,8 +187,8 @@ export class CreateRequest implements OnInit {
     if (this.searchTerm) {
       const search = this.searchTerm.toLowerCase();
       result = result.filter(req =>
-        req.type.toLowerCase().includes(search) ||
-        req.creatorUser.toLowerCase().includes(search) ||
+        getTypologyDescription(req.type).toLowerCase().includes(search) ||
+        getUserFullName(req.creatorUser).toLowerCase().includes(search) ||
         req.id.toLowerCase().includes(search)
       );
     }
@@ -172,15 +196,33 @@ export class CreateRequest implements OnInit {
     this.totalFiltered = this.filteredRequests.length;
 
     this.filteredRequests.sort((a, b) => {
-      const valueA = (a as any)[this.currentOrder];
-      const valueB = (b as any)[this.currentOrder];
+      let valueA, valueB;
+      switch (this.currentOrder) {
+        case 'type':
+          valueA = getTypologyDescription(a.type);
+          valueB = getTypologyDescription(b.type);
+          break;
+        case 'creatorUser':
+          valueA = getUserFullName(a.creatorUser);
+          valueB = getUserFullName(b.creatorUser);
+          break;
+        default:
+          valueA = (a as any)[this.currentOrder];
+          valueB = (b as any)[this.currentOrder];
+      }
       if (valueA < valueB) return this.ascendingOrder ? -1 : 1;
       if (valueA > valueB) return this.ascendingOrder ? 1 : -1;
       return 0;
     });
 
     const start = (this.currentPage - 1) * this.itemsPerPage;
-    this.displayedRequests = this.filteredRequests.slice(start, start + this.itemsPerPage);
+    const page = this.filteredRequests.slice(start, start + this.itemsPerPage);
+
+    this.displayedRequests = page.map(req => ({
+      ...req,
+      type: getTypologyDescription(req.type),
+      creatorUser: getUserFullName(req.creatorUser)
+    }));
   }
 
   onToggleApproved(value: boolean): void { this.showOnlyApproved = value; this.currentPage = 1; this.applyViewLogic(); }

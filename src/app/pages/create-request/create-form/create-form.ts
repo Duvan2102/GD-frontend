@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter, OnInit, ChangeDetectorRef, Input, ViewChild } from '@angular/core';
+import { Component, Output, EventEmitter, OnInit, ChangeDetectorRef, Input, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TypologyService, Typology } from '../../../services/typology.service';
@@ -10,6 +10,7 @@ interface Destinatario {
   orden: number;
   usuario: Usuario | null;
   searchTerm: string;
+  originalSearchTerm?: string;
 }
 
 export interface SolicitudData {
@@ -48,10 +49,7 @@ export class CreateForm implements OnInit {
   establecerOrden: boolean = false;
   documentoAprobacion: File | null = null;
   anexos: File[] = [];
-  destinatarios: Destinatario[] = [
-    { orden: 1, usuario: null, searchTerm: '' },
-    { orden: 2, usuario: null, searchTerm: '' }
-  ];
+  destinatarios: Destinatario[] = [{ orden: 1, usuario: null, searchTerm: '' }];
   tipologias: Typology[] = [];
   successMessage = '';
   errorMessage = '';
@@ -60,12 +58,22 @@ export class CreateForm implements OnInit {
   activeRecipientIndex: number | null = null;
   showDocumentView: boolean = false;
   documentViewData: DocumentViewData | null = null;
+  highlightedUserIndex: number = -1;
+  dropdownStyle: any = {};
 
   constructor(
     private typologyService: TypologyService,
     private userService: UserService,
     private cdr: ChangeDetectorRef
   ) {}
+
+  @HostListener('window:resize')
+  @HostListener('window:scroll')
+  onResizeOrScroll() {
+    if (this.activeRecipientIndex !== null) {
+      this.closeDropdown();
+    }
+  }
 
   ngOnInit(): void {
     this.loadTypologies();
@@ -81,61 +89,98 @@ export class CreateForm implements OnInit {
 
   loadUsers(): void {
     this.userService.obtenerUsuarios().subscribe({
-      next: (data) => {
-        this.allUsers = data;
-        if (this.allUsers.length > 0) {
-            const helisaUser = this.allUsers.find(u => u.usuario === 'USUARIO.HELISA');
-            if (helisaUser) {
-              this.destinatarios[0].usuario = helisaUser;
-              this.destinatarios[0].searchTerm = `${helisaUser.nombres} ${helisaUser.apellidos}`;
-            }
-        }
-      },
+      next: (data) => { this.allUsers = data; },
       error: (error) => { this.errorMessage = 'Error al cargar los usuarios.'; }
     });
   }
 
-  onSearchUser(event: Event, index: number): void {
+  onSearchUser(event: Event, index: number, inputElement: HTMLInputElement): void {
     const searchTerm = (event.target as HTMLInputElement).value.toLowerCase();
     this.destinatarios[index].searchTerm = searchTerm;
+    this.destinatarios[index].originalSearchTerm = searchTerm;
     this.activeRecipientIndex = index;
+    this.highlightedUserIndex = -1;
 
-    const selectedUserIds = this.destinatarios
-      .map(d => d.usuario?.noUsuario)
-      .filter(id => id != null);
+    const selectedUserIds = this.destinatarios.map(d => d.usuario?.noUsuario).filter(id => id != null);
 
     if (searchTerm.length > 1) {
       this.filteredUsers = this.allUsers.filter(user =>
         !selectedUserIds.includes(user.noUsuario) &&
         (user.nombres.toLowerCase().includes(searchTerm) ||
-        user.apellidos.toLowerCase().includes(searchTerm) ||
-        user.usuario.toLowerCase().includes(searchTerm))
+         user.apellidos.toLowerCase().includes(searchTerm) ||
+         user.usuario.toLowerCase().includes(searchTerm))
       );
     } else {
       this.filteredUsers = [];
     }
+
+    if (this.filteredUsers.length > 0) {
+      this.calculateDropdownPosition(inputElement);
+    }
   }
 
-  validateRecipient(index: number): void {
-    setTimeout(() => {
-        const recipient = this.destinatarios[index];
+  calculateDropdownPosition(inputElement: HTMLInputElement) {
+    const rect = inputElement.getBoundingClientRect();
+    const dropdownHeight = 200; // Altura máxima del menú desplegable (definida en CSS)
+    
+    this.dropdownStyle = {
+      position: 'fixed',
+      bottom: `${window.innerHeight - rect.top + 5}px`, // Posiciona el menú 5px por encima del campo
+      left: `${rect.left}px`,
+      width: `${rect.width}px`,
+      top: 'auto', // Asegura que no haya un conflicto con la propiedad `top`
+    };
+  }
+
+  onSearchUserKeydown(event: KeyboardEvent, index: number): void {
+    if (this.filteredUsers.length === 0) return;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.highlightedUserIndex = (this.highlightedUserIndex + 1) % this.filteredUsers.length;
+      this.updateSearchTermWithHighlightedUser(index);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.highlightedUserIndex = (this.highlightedUserIndex - 1 + this.filteredUsers.length) % this.filteredUsers.length;
+      this.updateSearchTermWithHighlightedUser(index);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      if (this.highlightedUserIndex > -1) {
+        this.selectUser(this.filteredUsers[this.highlightedUserIndex], index);
+      }
+    } else if (event.key === 'Escape') {
+      this.closeDropdown();
+    }
+  }
+
+  private updateSearchTermWithHighlightedUser(index: number): void {
+    if (this.highlightedUserIndex > -1) {
+      const highlightedUser = this.filteredUsers[this.highlightedUserIndex];
+      this.destinatarios[index].searchTerm = `${highlightedUser.nombres} ${highlightedUser.apellidos} (${highlightedUser.usuario})`;
+    }
+  }
+
+  closeDropdown(): void {
+    if (this.activeRecipientIndex !== null) {
+        const recipient = this.destinatarios[this.activeRecipientIndex];
         if (recipient && !recipient.usuario) {
-            recipient.searchTerm = '';
+            recipient.searchTerm = recipient.originalSearchTerm || '';
         }
-        this.activeRecipientIndex = null;
-    }, 200);
+    }
+    this.activeRecipientIndex = null;
+    this.filteredUsers = [];
+    this.highlightedUserIndex = -1;
   }
 
   selectUser(user: Usuario, index: number): void {
     this.destinatarios[index].usuario = user;
-    this.destinatarios[index].searchTerm = `${user.nombres} ${user.apellidos}`;
-    this.filteredUsers = [];
-    this.activeRecipientIndex = null;
+    this.destinatarios[index].searchTerm = `${user.nombres} ${user.apellidos} (${user.usuario})`;
+    this.closeDropdown();
   }
-
+  
   onDocumentoAprobacionChange(event: any): void {
     const file = event.target.files[0];
-    if (file && this.isValidFileType(file)) {
+    if (file && file.type === 'application/pdf') {
       this.documentoAprobacion = file;
     } else {
       alert('Formato de archivo no válido. Solo se permite formato PDF');
@@ -144,21 +189,18 @@ export class CreateForm implements OnInit {
   }
 
   onAnexosChange(event: any): void {
-    const file = event.target.files[0];
-    if (file && this.isValidFileType(file)) {
-      this.anexos = [file];
-    } else {
-      alert('Formato de archivo no válido. Solo se permite formatos PDF y Word');
-      event.target.value = '';
+    const files = event.target.files;
+    for (let file of files) {
+      if (this.isValidFileType(file)) {
+        this.anexos.push(file);
+      } else {
+        alert('Uno o más archivos tienen un formato no válido. Solo se permiten PDF y Word.');
+      }
     }
   }
-
+  
   private isValidFileType(file: File): boolean {
-    const allowedTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ];
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     return allowedTypes.includes(file.type);
   }
 
@@ -171,14 +213,11 @@ export class CreateForm implements OnInit {
   }
 
   eliminarDestinatario(index: number): void {
-    if (index === 0) {
-      this.destinatarios[index].usuario = null;
-      this.destinatarios[index].searchTerm = '';
+    if (this.destinatarios.length > 1) {
+      this.destinatarios.splice(index, 1);
+      this.reordenarDestinatarios();
     } else {
-      if (this.destinatarios.length > 1) {
-        this.destinatarios.splice(index, 1);
-        this.reordenarDestinatarios();
-      }
+      this.destinatarios[0] = { orden: 1, usuario: null, searchTerm: '' };
     }
   }
 
@@ -187,11 +226,7 @@ export class CreateForm implements OnInit {
   }
 
   onEstablecerOrdenChange(): void {
-    if (!this.establecerOrden) {
-      this.destinatarios.forEach(dest => dest.orden = 0);
-    } else {
-      this.reordenarDestinatarios();
-    }
+    this.reordenarDestinatarios();
   }
 
   onPreviewClick(): void {
@@ -207,66 +242,51 @@ export class CreateForm implements OnInit {
     this.showDocumentView = true;
   }
 
-  onCloseView(): void {
-    this.showDocumentView = false;
-    this.documentViewData = null;
-  }
-
-  onEditFromView(): void {
-    this.showDocumentView = false;
-  }
-
-  onSendFromView(): void {
-    this.onGuardar();
-    this.showDocumentView = false;
-  }
+  onCloseView(): void { this.showDocumentView = false; }
+  onEditFromView(): void { this.showDocumentView = false; }
+  onSendFromView(): void { this.onGuardar(); }
 
   onDeleteFromView(solicitudId: string | number): void {
-    this.showDocumentView = false;
     this.deleteRequest.emit(solicitudId);
     this.onCloseView();
   }
 
   onCancelar(): void {
-    this.resetForm();
     this.close.emit();
+    this.resetForm();
   }
 
   onGuardar(): void {
-    if (this.isFormValid()) {
-      const solicitudData: SolicitudData = {
-        nombreSolicitud: this.nombreSolicitud,
-        detallesAdicionales: this.detallesAdicionales,
-        prioridad: this.prioridad,
-        tipologia: this.tipologia,
-        enviarRecordatorio: this.enviarRecordatorio,
-        documentosAnexos: this.documentosAnexos,
-        establecerOrden: this.establecerOrden,
-        destinatarios: this.destinatarios
-            .filter(d => d.usuario)
-            .map(dest => ({
-                usuarioId: dest.usuario!.usuario,
-                orden: this.establecerOrden ? dest.orden : undefined
-        })),
-        documentoAprobacion: this.documentoAprobacion || undefined,
-        anexos: this.anexos.length > 0 ? this.anexos : undefined
-      };
-      this.onSaved.emit(solicitudData);
-      this.resetForm();
-    } else {
-      alert('Por favor completa todos los campos obligatorios.');
+    if (!this.isFormValid()) {
+      alert('Por favor completa todos los campos obligatorios, incluyendo al menos un destinatario válido.');
+      return;
     }
+    const solicitudData: SolicitudData = {
+      nombreSolicitud: this.nombreSolicitud,
+      detallesAdicionales: this.detallesAdicionales,
+      prioridad: this.prioridad,
+      tipologia: this.tipologia,
+      enviarRecordatorio: this.enviarRecordatorio,
+      documentosAnexos: this.documentosAnexos,
+      establecerOrden: this.establecerOrden,
+      destinatarios: this.destinatarios
+          .filter(d => d.usuario)
+          .map(d => ({
+              usuarioId: d.usuario!.usuario,
+              orden: this.establecerOrden ? d.orden : undefined
+          })),
+      documentoAprobacion: this.documentoAprobacion || undefined,
+      anexos: this.anexos.length > 0 ? this.anexos : undefined,
+    };
+    this.onSaved.emit(solicitudData);
+    this.resetForm();
   }
 
-  public isFormValid(): boolean {
-    return !!(
-      this.nombreSolicitud.trim() &&
-      this.tipologia &&
-      this.destinatarios.some(dest => dest.usuario)
-    );
+  isFormValid(): boolean {
+    return !!(this.nombreSolicitud.trim() && this.tipologia && this.destinatarios.some(d => d.usuario !== null));
   }
 
-  private resetForm(): void {
+  resetForm(): void {
     this.nombreSolicitud = '';
     this.detallesAdicionales = '';
     this.prioridad = 'NORMAL';
@@ -276,12 +296,7 @@ export class CreateForm implements OnInit {
     this.establecerOrden = false;
     this.documentoAprobacion = null;
     this.anexos = [];
-    this.destinatarios = [
-      { orden: 1, usuario: null, searchTerm: '' },
-      { orden: 2, usuario: null, searchTerm: '' }
-    ];
+    this.destinatarios = [{ orden: 1, usuario: null, searchTerm: '' }];
     this.showDocumentView = false;
-    this.documentViewData = null;
-    this.loadUsers();
   }
 }

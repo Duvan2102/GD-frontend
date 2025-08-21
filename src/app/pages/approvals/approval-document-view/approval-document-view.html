@@ -1,0 +1,82 @@
+<div class="custom-backdrop" [class.show]="isVisible"></div>
+
+<div class="modal" tabindex="-1"
+     [class.show]="isVisible"
+     [style.display]="isVisible ? 'block' : 'none'">
+  <div class="modal-dialog modal-fullscreen">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">{{ getFileName() }}</h5>
+        <div class="header-actions-right">
+          <button type="button" class="btn btn-outline-light btn-sm" (click)="onBack()" title="Regresar">
+            <i class="bi bi-arrow-left"></i> Regresar
+          </button>
+          <button type="button" class="btn btn-outline-light btn-sm" (click)="onDownload()" title="Descargar">
+            <i class="bi bi-download"></i> Descargar
+          </button>
+          <button type="button" class="btn btn-outline-light btn-sm" (click)="onPrint()" title="Imprimir">
+            <i class="bi bi-printer"></i> Imprimir
+          </button>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="onClose()" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="preview-container">
+          <div *ngIf="isLoading" class="loading-container">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="loading-text">Cargando documento...</p>
+          </div>
+
+          <div *ngIf="error && !isLoading" class="error-container">
+            <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+            <p class="error-text">{{ error }}</p>
+          </div>
+
+          <div *ngIf="pdfSrc && !isLoading && !error" class="document-viewer pdf-viewer-container">
+            <ngx-extended-pdf-viewer
+              [src]="pdfSrc"
+              height="100%"
+              [showToolbar]="false"
+              [(page)]="currentPage"
+              [zoom]="zoom + '%'"
+              (pagesLoaded)="onPagesLoaded($event)"
+              (pdfLoaded)="onPdfLoaded($event)">
+            </ngx-extended-pdf-viewer>
+          </div>
+          
+          <div *ngIf="pdfSrc && !isLoading && !error" class="bottom-controls">
+            <button type="button" class="btn-approval btn-reject" [disabled]="!isScrolledToEnd" (click)="onReject()">
+              <i class="bi bi-x-circle"></i> Rechazar
+            </button>
+            
+            <div class="pdf-controls-group">
+              <div class="page-nav-controls" *ngIf="totalPages > 1">
+                <button type="button" class="btn-nav" (click)="onPreviousPage()" [disabled]="currentPage <= 1" title="Página anterior">
+                  <i class="bi bi-arrow-up"></i>
+                </button>
+                <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+                <button type="button" class="btn-nav" (click)="onNextPage()" [disabled]="currentPage >= totalPages" title="Página siguiente">
+                  <i class="bi bi-arrow-down"></i>
+                </button>
+              </div>
+              <div class="zoom-controls-bottom">
+                <button type="button" class="btn-zoom" (click)="onZoomOut()" title="Alejar"><i class="bi bi-dash"></i></button>
+                <button type="button" class="btn-zoom" (click)="onZoomReset()" title="Restablecer zoom"><i class="bi bi-arrow-counterclockwise"></i></button>
+                <button type="button" class="btn-zoom" (click)="onZoomIn()" title="Acercar"><i class="bi bi-plus"></i></button>
+              </div>
+            </div>
+
+            <button type="button" class="btn-approval btn-approve" [disabled]="!isScrolledToEnd" (click)="onApprove()">
+              <i class="bi bi-check-circle"></i> Aprobar
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
