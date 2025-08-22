@@ -6,6 +6,8 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 import { Usuario } from '../../../interfaces/common.interfaces';
 import { UserService } from '../../../services/user.service';
 import { Position } from '../../../services/positions.service';
+import { DepartmentService, Department } from '../../../services/department.service';
+import { AreaService, Area } from '../../../services/area.service';
 
 @Component({
   selector: 'app-user-form-modal',
@@ -32,6 +34,11 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     { value: 'Token de Seguridad', label: 'Token de Seguridad' },
   ];
   cargosDisponibles: Position[] = [];
+  departamentos: Department[] = [];
+  areas: Area[] = [];
+  hierarchicalData: any = { departamentos: [] };
+  isDropdownOpen = false;
+  selectedCargoInfo: Position | null = null;
   
   isLoading = false;
   errorMessage = '';
@@ -40,16 +47,18 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   private destroy$ = new Subject<void>();
 
   constructor(
-    private fb: FormBuilder,
-    private userService: UserService
-  ) {
+  private fb: FormBuilder,
+  private userService: UserService,
+  private departmentService: DepartmentService,
+  private areaService: AreaService
+) {
     this.initializeForm();
     this.setupFormValidations();
   }
 
   ngOnInit(): void {
-    this.loadCargosDisponibles();
-  }
+  this.loadHierarchicalData();
+}
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['isVisible'] && this.isVisible) {
@@ -137,6 +146,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         }
       }
 
+      
       this.userForm.patchValue({
         noUsuario: this.user.noUsuario || this.user.noUsuario,
         identificacion: this.user.identificacion || '',
@@ -152,80 +162,162 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         dobleAutenticacion: this.user.dobleAutenticacion || 'Google Authenticator',
       });
 
-      // Deshabilitar el campo de identificación en modo edición
+      if (this.user.cargo) {
+  this.setSelectedCargoFromValue(cargoValue);
+}
       this.userForm.get('identificacion')?.disable();
     } else {
-      // En modo creación, habilitar todos los campos
       this.userForm.get('identificacion')?.enable();
       this.resetForm();
     }
   }
+private setSelectedCargoFromValue(cargoValue: string): void {
+  if (!cargoValue) return;
+  
+  const cargoEncontrado = this.cargosDisponibles.find(cargo => 
+    cargo.idCargo?.toString() === cargoValue.toString()
+  );
+  
+  if (cargoEncontrado) {
+    this.selectedCargoInfo = cargoEncontrado;
+    console.log('Cargo establecido en edición:', cargoEncontrado);
+  } else {
+    console.warn('No se encontró el cargo con ID:', cargoValue);
+  }
+}
 
-  private loadCargosDisponibles(): void {
-    this.userService.obtenerCargosDisponibles()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (cargos: Position[]) => {
-          this.cargosDisponibles = cargos;
-          if (this.isEditMode && this.user) {
-            this.loadFormData();
-          }
-        },
-        error: (error) => {
-          console.error('Error cargando cargos:', error);
-          // Cargos por defecto si falla el servicio
-          this.cargosDisponibles = [
-            { 
-              idCargo: 1, 
-              descripcion: 'Gerente', 
-              area: { 
-                idArea: 1, 
-                descripcion: 'Gerencia', 
-                departamento: { idDepartamento: 1, descripcion: 'Administración' } 
-              } 
-            },
-            { 
-              idCargo: 2, 
-              descripcion: 'Analista', 
-              area: { 
-                idArea: 2, 
-                descripcion: 'Análisis', 
-                departamento: { idDepartamento: 1, descripcion: 'Administración' } 
-              } 
-            },
-            { 
-              idCargo: 3, 
-              descripcion: 'Desarrollador', 
-              area: { 
-                idArea: 3, 
-                descripcion: 'Desarrollo', 
-                departamento: { idDepartamento: 2, descripcion: 'Tecnología' } 
-              } 
-            },
-            { 
-              idCargo: 4, 
-              descripcion: 'Administrador', 
-              area: { 
-                idArea: 4, 
-                descripcion: 'Administración', 
-                departamento: { idDepartamento: 1, descripcion: 'Administración' } 
-              } 
-            },
-            { 
-              idCargo: 5, 
-              descripcion: 'Funcionario', 
-              area: { 
-                idArea: 5, 
-                descripcion: 'General', 
-                departamento: { idDepartamento: 1, descripcion: 'Administración' } 
-              } 
-            }
-          ];
-          if (this.isEditMode && this.user) {
-            this.loadFormData();
-          }
-        }
+  private loadHierarchicalData(): void {
+    Promise.all([
+      this.departmentService.getAll().toPromise(),
+      this.areaService.getAll().toPromise(),
+      this.userService.obtenerCargosDisponibles().toPromise()
+    ]).then(([departamentos, areas, cargos]) => {
+      this.departamentos = departamentos || [];
+      this.areas = areas || [];
+      this.cargosDisponibles = cargos || [];
+      this.buildHierarchicalStructure();
+      
+      if (this.isEditMode && this.user) {
+        this.loadFormData();
+      }
+    }).catch(error => {
+      console.error('Error cargando datos jerárquicos:', error);
+      this.loadFallbackData();
+    });
+  }
+
+  private loadFallbackData(): void {
+    this.departamentos = [
+      { idDepartamento: 1, descripcion: 'Administración' },
+      { idDepartamento: 2, descripcion: 'Tecnología' }
+    ];
+    
+    this.areas = [
+      { idArea: 1, descripcion: 'Gerencia', departamento: { idDepartamento: 1 } },
+      { idArea: 2, descripcion: 'Análisis', departamento: { idDepartamento: 1 } },
+      { idArea: 3, descripcion: 'Administración General', departamento: { idDepartamento: 1 } },
+      { idArea: 4, descripcion: 'Desarrollo', departamento: { idDepartamento: 2 } },
+      { idArea: 5, descripcion: 'Infraestructura', departamento: { idDepartamento: 2 } }
+    ];
+    
+    this.cargosDisponibles = [
+      { idCargo: 1, descripcion: 'Gerente', area: { idArea: 1, descripcion: 'Gerencia', departamento: { idDepartamento: 1, descripcion: 'Administración' } } },
+      { idCargo: 2, descripcion: 'Subgerente', area: { idArea: 1, descripcion: 'Gerencia', departamento: { idDepartamento: 1, descripcion: 'Administración' } } },
+      { idCargo: 3, descripcion: 'Analista', area: { idArea: 2, descripcion: 'Análisis', departamento: { idDepartamento: 1, descripcion: 'Administración' } } },
+      { idCargo: 4, descripcion: 'Coordinador Administrativo', area: { idArea: 3, descripcion: 'Administración General', departamento: { idDepartamento: 1, descripcion: 'Administración' } } },
+      { idCargo: 5, descripcion: 'Desarrollador Senior', area: { idArea: 4, descripcion: 'Desarrollo', departamento: { idDepartamento: 2, descripcion: 'Tecnología' } } },
+      { idCargo: 6, descripcion: 'Desarrollador Junior', area: { idArea: 4, descripcion: 'Desarrollo', departamento: { idDepartamento: 2, descripcion: 'Tecnología' } } },
+      { idCargo: 7, descripcion: 'Administrador de Sistemas', area: { idArea: 5, descripcion: 'Infraestructura', departamento: { idDepartamento: 2, descripcion: 'Tecnología' } } }
+    ];
+    
+    this.buildHierarchicalStructure();
+    if (this.isEditMode && this.user) {
+      this.loadFormData();
+    }
+  }
+
+  private buildHierarchicalStructure(): void {
+    const departamentosMap = new Map();
+    
+    this.cargosDisponibles.forEach(cargo => {
+      if (!cargo.area?.departamento) return;
+
+      const deptId = cargo.area.departamento.idDepartamento;
+      const areaId = cargo.area.idArea;
+
+      if (!departamentosMap.has(deptId)) {
+        departamentosMap.set(deptId, {
+          idDepartamento: deptId,
+          descripcion: cargo.area.departamento.descripcion,
+          areas: [],
+          expanded: false
+        });
+      }
+
+      const departamento = departamentosMap.get(deptId);
+      
+      let area = departamento.areas.find((a: any) => a.idArea === areaId);
+      if (!area) {
+        area = {
+          idArea: areaId,
+          descripcion: cargo.area.descripcion,
+          cargos: [],
+          expanded: false
+        };
+        departamento.areas.push(area);
+      }
+
+      area.cargos.push(cargo);
+    });
+
+    this.hierarchicalData.departamentos = Array.from(departamentosMap.values())
+      .sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
+    
+    this.hierarchicalData.departamentos.forEach((dept: any) => {
+      dept.areas.sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
+      dept.areas.forEach((area: any) => {
+        area.cargos.sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
       });
+    });
+  if (this.isEditMode && this.user && this.user.cargo) {
+  const cargoValue = typeof this.user.cargo === 'number' ? this.user.cargo.toString() : this.user.cargo;
+  this.setSelectedCargoFromValue(cargoValue);
+    }
+  }
+
+  toggleDropdown(): void {
+    this.isDropdownOpen = !this.isDropdownOpen;
+  }
+
+  closeDropdown(): void {
+    this.isDropdownOpen = false;
+  }
+
+  toggleDepartment(departamento: any): void {
+    departamento.expanded = !departamento.expanded;
+    if (!departamento.expanded) {
+      departamento.areas.forEach((area: any) => {
+        area.expanded = false;
+      });
+    }
+  }
+
+  toggleArea(area: any): void {
+    area.expanded = !area.expanded;
+  }
+
+  selectCargo(cargo: Position): void {
+    this.selectedCargoInfo = cargo;
+    this.userForm.get('cargo')?.setValue(cargo.idCargo);
+    this.closeDropdown();
+    console.log('Cargo seleccionado:', cargo);
+  }
+
+  get selectedCargoText(): string {
+    if (this.selectedCargoInfo) {
+      return this.selectedCargoInfo.descripcion;
+    }
+    return 'Selecciona un cargo';
   }
 
   private validateUniqueIdentification(identificacion: string): void {
@@ -280,14 +372,13 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     }
 
     this.isLoading = true;
-    const formValue = this.userForm.getRawValue(); // getRawValue incluye campos deshabilitados
+    const formValue = this.userForm.getRawValue();
     
-    // Preparar el objeto usuario con el cargo como ID numérico
     const usuarioCompleto: Usuario = {
       ...formValue,
       noUsuario: this.isEditMode ? (this.user?.noUsuario || this.user?.noUsuario) : undefined,
       idUsuario: this.isEditMode ? (this.user?.noUsuario || this.user?.noUsuario) : undefined,
-      cargo: formValue.cargo, // Mantener como ID numérico/string
+      cargo: formValue.cargo,
       correoEmpresarial: formValue.correoEmpresarial || '',
       correoPersonal: formValue.correoPersonal || '',
       celular: formValue.celular || '',
@@ -303,7 +394,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       }
     };
 
-    // Mostrar alerta de confirmación
     const confirmMessage = this.isEditMode 
       ? `¿Confirmas la actualización del usuario ${usuarioCompleto.nombres} ${usuarioCompleto.apellidos}?`
       : `¿Confirmas la creación del usuario ${usuarioCompleto.nombres} ${usuarioCompleto.apellidos}?`;
@@ -326,14 +416,11 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         next: (response) => {
           console.log('Operación exitosa:', response);
           
-          // Mensaje de éxito
           this.successMessage = response?.message || 
             (this.isEditMode ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente');
           
-          // Alerta del navegador (simula alerta de Google)
           alert(this.successMessage);
           
-          // Emitir eventos
           if (this.isEditMode) {
             this.userUpdated.emit(usuarioCompleto);
           } else {
@@ -342,7 +429,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
           
           this.save.emit(usuarioCompleto);
           
-          // Cerrar modal después de 1.5 segundos
           setTimeout(() => {
             this.onClose();
           }, 1500);
@@ -350,7 +436,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         error: (error) => {
           console.error('Error en operación:', error);
           
-          // Manejar errores del servidor
           if (error && typeof error === 'object') {
             this.errorMessage = error.message || 'Error al procesar la solicitud';
             
@@ -361,12 +446,10 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
             this.errorMessage = typeof error === 'string' ? error : 'Error inesperado al procesar la solicitud';
           }
           
-          // Mostrar alerta de error
           alert('Error: ' + this.errorMessage);
           
           this.isLoading = false;
           
-          // Restaurar estado del campo identificación
           if (wasDisabled) {
             identificacionControl?.disable();
           }
@@ -381,7 +464,10 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     this.resetMessages();
     this.resetForm();
     this.isLoading = false;
+    this.selectedCargoInfo = null;
+    this.isDropdownOpen = false;
     this.close.emit();
+    
   }
 
   private resetForm(): void {
@@ -393,8 +479,9 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         funcionarios: false
       }
     });
-    // Asegurar que identificación esté habilitado para próximo uso
     this.userForm.get('identificacion')?.enable();
+    this.selectedCargoInfo = null;
+    this.isDropdownOpen = false;
   }
 
   private resetMessages(): void {

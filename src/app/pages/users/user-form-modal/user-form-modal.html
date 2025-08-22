@@ -74,15 +74,66 @@
           </div>
           <div class="col-md-6">
             <label class="form-label">Cargo <span class="text-danger">*</span></label>
-            <select class="form-select" formControlName="cargo"
-                    [class.is-invalid]="userForm.get('cargo')?.invalid && userForm.get('cargo')?.touched">
-              <option value="">Selecciona un cargo</option>
-              <!-- CAMBIADO: Ahora usa cargo.idCargo y cargo.descripcion -->
-              <option *ngFor="let cargo of cargosDisponibles" [value]="cargo.idCargo">
-                {{ cargo.descripcion }}
-              </option>
-            </select>
-            <div *ngIf="getErrorMessage('cargo')" class="invalid-feedback">
+            
+            <!-- Dropdown jerárquico personalizado -->
+            <div class="hierarchical-dropdown" [class.is-invalid]="userForm.get('cargo')?.invalid && userForm.get('cargo')?.touched">
+              <!-- Campo de visualización -->
+              <div class="dropdown-display" 
+                   (click)="toggleDropdown()"
+                   [class.open]="isDropdownOpen">
+                <span class="selected-text">{{ selectedCargoText }}</span>
+                <i class="fas fa-chevron-down dropdown-arrow" [class.rotated]="isDropdownOpen"></i>
+              </div>
+
+              <!-- Panel desplegable -->
+              <div class="dropdown-panel" *ngIf="isDropdownOpen" (click)="$event.stopPropagation()">
+                <div class="dropdown-content">
+                  
+                  <!-- Lista de departamentos -->
+                  <div *ngFor="let departamento of hierarchicalData.departamentos" class="dropdown-item">
+                    
+                    <!-- Departamento header -->
+                    <div class="department-header" (click)="toggleDepartment(departamento)">
+                      <i class="fas" 
+                         [class.fa-chevron-down]="departamento.expanded"
+                         [class.fa-chevron-right]="!departamento.expanded"></i>
+                      <span class="department-name">{{ departamento.descripcion }}</span>
+                    </div>
+
+                    <!-- Áreas del departamento -->
+                    <div *ngIf="departamento.expanded" class="areas-container">
+                      <div *ngFor="let area of departamento.areas" class="dropdown-item area-item">
+                        
+                        <!-- Área header -->
+                        <div class="area-header" (click)="toggleArea(area)">
+                          <i class="fas" 
+                             [class.fa-chevron-down]="area.expanded"
+                             [class.fa-chevron-right]="!area.expanded"></i>
+                          <span class="area-name">{{ area.descripcion }}</span>
+                        </div>
+
+                        <!-- Cargos del área -->
+                        <div *ngIf="area.expanded" class="cargos-container">
+                          <div *ngFor="let cargo of area.cargos" 
+                               class="dropdown-item cargo-item"
+                               (click)="selectCargo(cargo)">
+                            <span class="cargo-bullet">•</span>
+                            <span class="cargo-name">{{ cargo.descripcion }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Mensaje si no hay datos -->
+                  <div *ngIf="hierarchicalData.departamentos.length === 0" class="no-data-message">
+                    No hay cargos disponibles
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="getErrorMessage('cargo')" class="invalid-feedback d-block">
               {{ getErrorMessage('cargo') }}
             </div>
           </div>

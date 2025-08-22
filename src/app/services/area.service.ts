@@ -14,7 +14,7 @@ export interface Area {
 
 @Injectable({ providedIn: 'root' })
 export class AreaService {
-  private baseUrl = `${environment.apiUrl}areas`; 
+  private baseUrl = `${environment.apiUrl}/areas`; 
 
   constructor(private http: HttpClient) {}
 

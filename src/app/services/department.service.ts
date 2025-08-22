@@ -10,7 +10,7 @@ export interface Department {
 
 @Injectable({ providedIn: 'root' })
 export class DepartmentService {
-  private baseUrl = `${environment.apiUrl}departamentos`;
+  private baseUrl = `${environment.apiUrl}/departamentos`;
 
   constructor(private http: HttpClient) {}
 
