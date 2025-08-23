@@ -218,4 +218,35 @@
       </div>
     </div>
   </div>
+<!-- MODALES DE CONFIRMACIÓN -->
+
+<!-- Modal de contraseña -->
+<app-password-modal
+  [isVisible]="isPasswordModalVisible"
+  [mensajeModal]="mensajePasswordModal"
+  [user]="pendingUserData"
+  (close)="closePasswordModal()"
+  (validate)="handlePasswordValidation($event)">
+</app-password-modal>
+
+<!-- Modal de confirmación -->
+<app-confirm-modal
+  [visible]="confirmModalVisible"
+  [mensaje]="confirmModalMessage"
+  [textoAceptar]="'Confirmar'"
+  [textoCancelar]="'Cancelar'"
+  (aceptar)="onAceptarConfirmacion()"
+  (cancelar)="onCancelarConfirmacion()">
+</app-confirm-modal>
+
+<!-- Modal de éxito -->
+<app-success-modal
+  [visible]="modalSuccessVisible"
+  [mensaje]="modalSuccessMessage"
+  [textoBtn]="modalSuccessBtn"
+  (aceptar)="cerrarModalSuccess()">
+</app-success-modal>
+
+<!-- Backdrop para cerrar el dropdown -->
+<div *ngIf="isDropdownOpen" class="dropdown-backdrop" (click)="closeDropdown()"></div>
 </div>

@@ -1,4 +1,3 @@
-// user-form-modal.ts - Componente completo con todas las correcciones
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
@@ -8,14 +7,20 @@ import { UserService } from '../../../services/user.service';
 import { Position } from '../../../services/positions.service';
 import { DepartmentService, Department } from '../../../services/department.service';
 import { AreaService, Area } from '../../../services/area.service';
+import { PasswordModal } from '../password-modal/password-modal';
+import { ConfirmModal } from '../confirm-modal/confirm-modal';
+import { SuccessModal } from '../success-modal/success-modal';
 
 @Component({
   selector: 'app-user-form-modal',
   standalone: true,
   imports: [
-    CommonModule,
-    ReactiveFormsModule
-  ],
+  CommonModule,
+  ReactiveFormsModule,
+  PasswordModal,
+  ConfirmModal,
+  SuccessModal
+],
   templateUrl: './user-form-modal.html',
   styleUrls: ['./user-form-modal.css']
 })
@@ -40,6 +45,16 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   isDropdownOpen = false;
   selectedCargoInfo: Position | null = null;
   
+isPasswordModalVisible = false;
+confirmModalVisible = false;
+modalSuccessVisible = false;
+
+mensajePasswordModal = '';
+confirmModalMessage = '';
+modalSuccessMessage = '';
+modalSuccessBtn = 'Aceptar';
+
+pendingUserData: Usuario | null = null;
   isLoading = false;
   errorMessage = '';
   successMessage = '';
@@ -237,53 +252,66 @@ private setSelectedCargoFromValue(cargoValue: string): void {
   }
 
   private buildHierarchicalStructure(): void {
-    const departamentosMap = new Map();
+  console.log('Construyendo estructura jerárquica...');
+  console.log('Departamentos:', this.departamentos);
+  console.log('Areas:', this.areas);
+  console.log('Cargos:', this.cargosDisponibles);
+
+  const departamentosMap = new Map();
+  
+  this.departamentos.forEach(dept => {
+    departamentosMap.set(dept.idDepartamento, {
+      idDepartamento: dept.idDepartamento,
+      descripcion: dept.descripcion,
+      areas: [],
+      expanded: false
+    });
+  });
+
+  this.areas.forEach(area => {
+    const deptId = area.departamento.idDepartamento;
+    const departamento = departamentosMap.get(deptId);
     
-    this.cargosDisponibles.forEach(cargo => {
-      if (!cargo.area?.departamento) return;
-
-      const deptId = cargo.area.departamento.idDepartamento;
-      const areaId = cargo.area.idArea;
-
-      if (!departamentosMap.has(deptId)) {
-        departamentosMap.set(deptId, {
-          idDepartamento: deptId,
-          descripcion: cargo.area.departamento.descripcion,
-          areas: [],
+    if (departamento) {
+      const areaExists = departamento.areas.find((a: any) => a.idArea === area.idArea);
+      if (!areaExists) {
+        departamento.areas.push({
+          idArea: area.idArea,
+          descripcion: area.descripcion,
+          cargos: [],
           expanded: false
         });
       }
-
-      const departamento = departamentosMap.get(deptId);
-      
-      let area = departamento.areas.find((a: any) => a.idArea === areaId);
-      if (!area) {
-        area = {
-          idArea: areaId,
-          descripcion: cargo.area.descripcion,
-          cargos: [],
-          expanded: false
-        };
-        departamento.areas.push(area);
-      }
-
-      area.cargos.push(cargo);
-    });
-
-    this.hierarchicalData.departamentos = Array.from(departamentosMap.values())
-      .sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
-    
-    this.hierarchicalData.departamentos.forEach((dept: any) => {
-      dept.areas.sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
-      dept.areas.forEach((area: any) => {
-        area.cargos.sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
-      });
-    });
-  if (this.isEditMode && this.user && this.user.cargo) {
-  const cargoValue = typeof this.user.cargo === 'number' ? this.user.cargo.toString() : this.user.cargo;
-  this.setSelectedCargoFromValue(cargoValue);
     }
-  }
+  });
+
+  this.cargosDisponibles.forEach(cargo => {
+    if (!cargo.area?.departamento) return;
+
+    const deptId = cargo.area.departamento.idDepartamento;
+    const areaId = cargo.area.idArea;
+    
+    const departamento = departamentosMap.get(deptId);
+    if (departamento) {
+      const area = departamento.areas.find((a: any) => a.idArea === areaId);
+      if (area) {
+        area.cargos.push(cargo);
+      }
+    }
+  });
+
+  this.hierarchicalData.departamentos = Array.from(departamentosMap.values())
+    .sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
+  
+  this.hierarchicalData.departamentos.forEach((dept: any) => {
+    dept.areas.sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
+    dept.areas.forEach((area: any) => {
+      area.cargos.sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
+    });
+  });
+
+  console.log('Estructura jerárquica construida:', this.hierarchicalData);
+}
 
   toggleDropdown(): void {
     this.isDropdownOpen = !this.isDropdownOpen;
@@ -320,6 +348,91 @@ private setSelectedCargoFromValue(cargoValue: string): void {
     return 'Selecciona un cargo';
   }
 
+closePasswordModal(): void {
+  this.isPasswordModalVisible = false;
+  this.pendingUserData = null;
+}
+
+handlePasswordValidation(password: string): void {
+  if (!password.trim()) {
+    alert('La contraseña no puede estar vacía');
+    return;
+  }
+
+  if (!this.pendingUserData) {
+    this.closePasswordModal();
+    return;
+  }
+
+  this.isPasswordModalVisible = false;
+  
+  this.confirmModalMessage = this.isEditMode 
+    ? `¿Confirmas la actualización del usuario ${this.pendingUserData.nombres} ${this.pendingUserData.apellidos}?`
+    : `¿Confirmas la creación del usuario ${this.pendingUserData.nombres} ${this.pendingUserData.apellidos}?`;
+  
+  this.confirmModalVisible = true;
+}
+
+onAceptarConfirmacion(): void {
+  this.confirmModalVisible = false;
+  
+  if (!this.pendingUserData) return;
+
+  this.isLoading = true;
+  const operacion = this.isEditMode 
+    ? this.userService.actualizarUsuario(this.pendingUserData)
+    : this.userService.crearUsuario(this.pendingUserData);
+
+  operacion
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (response) => {
+        this.isLoading = false;
+        
+        this.modalSuccessMessage = response?.message || 
+          (this.isEditMode ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente');
+        this.modalSuccessVisible = true;
+        
+        if (this.isEditMode) {
+          this.userUpdated.emit(this.pendingUserData!);
+        } else {
+          this.userCreated.emit(this.pendingUserData!);
+        }
+        
+        this.save.emit(this.pendingUserData!);
+      },
+      error: (error) => {
+        this.isLoading = false;
+        console.error('Error en operación:', error);
+        
+        if (error && typeof error === 'object') {
+          this.errorMessage = error.message || 'Error al procesar la solicitud';
+          
+          if (error.details && Array.isArray(error.details) && error.details.length > 0) {
+            this.errorMessage += ':\n• ' + error.details.join('\n• ');
+          }
+        } else {
+          this.errorMessage = typeof error === 'string' ? error : 'Error inesperado al procesar la solicitud';
+        }
+        
+        this.pendingUserData = null;
+      }
+    });
+}
+
+onCancelarConfirmacion(): void {
+  this.confirmModalVisible = false;
+  this.pendingUserData = null;
+}
+
+cerrarModalSuccess(): void {
+  this.modalSuccessVisible = false;
+  this.pendingUserData = null;
+  setTimeout(() => {
+    this.onClose();
+  }, 500);
+}
+
   private validateUniqueIdentification(identificacion: string): void {
     this.validatingUser = true;
     this.userService.verificarUsuarioExiste(identificacion)
@@ -353,136 +466,88 @@ private setSelectedCargoFromValue(cargoValue: string): void {
   }
 
   onSave(): void {
-    this.resetMessages();
-    
-    // Re-habilitar temporalmente el campo identificación para obtener su valor
-    const identificacionControl = this.userForm.get('identificacion');
-    const wasDisabled = identificacionControl?.disabled;
-    if (wasDisabled) {
-      identificacionControl?.enable();
-    }
-    
-    if (this.userForm.invalid) {
-      this.markFormGroupTouched();
-      this.errorMessage = 'Por favor, corrige los errores en el formulario.';
-      if (wasDisabled) {
-        identificacionControl?.disable();
-      }
-      return;
-    }
-
-    this.isLoading = true;
-    const formValue = this.userForm.getRawValue();
-    
-    const usuarioCompleto: Usuario = {
-      ...formValue,
-      noUsuario: this.isEditMode ? (this.user?.noUsuario || this.user?.noUsuario) : undefined,
-      idUsuario: this.isEditMode ? (this.user?.noUsuario || this.user?.noUsuario) : undefined,
-      cargo: formValue.cargo,
-      correoEmpresarial: formValue.correoEmpresarial || '',
-      correoPersonal: formValue.correoPersonal || '',
-      celular: formValue.celular || '',
-      telefono: formValue.telefono || '',
-      direccion: formValue.direccion || '',
-      dobleAutenticacion: formValue.dobleAutenticacion || 'Google Authenticator',
-      estado: this.isEditMode ? (this.user?.estado || 'Activo') : 'Activo',
-      activo: this.isEditMode ? (this.user?.activo !== false) : true,
-      perfiles: formValue.perfiles || {
-        administrador: false,
-        funcionarioCreador: false,
-        funcionarios: true
-      }
-    };
-
-    const confirmMessage = this.isEditMode 
-      ? `¿Confirmas la actualización del usuario ${usuarioCompleto.nombres} ${usuarioCompleto.apellidos}?`
-      : `¿Confirmas la creación del usuario ${usuarioCompleto.nombres} ${usuarioCompleto.apellidos}?`;
-    
-    if (!confirm(confirmMessage)) {
-      this.isLoading = false;
-      if (wasDisabled) {
-        identificacionControl?.disable();
-      }
-      return;
-    }
-
-    const operacion = this.isEditMode 
-      ? this.userService.actualizarUsuario(usuarioCompleto)
-      : this.userService.crearUsuario(usuarioCompleto);
-
-    operacion
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          console.log('Operación exitosa:', response);
-          
-          this.successMessage = response?.message || 
-            (this.isEditMode ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente');
-          
-          alert(this.successMessage);
-          
-          if (this.isEditMode) {
-            this.userUpdated.emit(usuarioCompleto);
-          } else {
-            this.userCreated.emit(usuarioCompleto);
-          }
-          
-          this.save.emit(usuarioCompleto);
-          
-          setTimeout(() => {
-            this.onClose();
-          }, 1500);
-        },
-        error: (error) => {
-          console.error('Error en operación:', error);
-          
-          if (error && typeof error === 'object') {
-            this.errorMessage = error.message || 'Error al procesar la solicitud';
-            
-            if (error.details && Array.isArray(error.details) && error.details.length > 0) {
-              this.errorMessage += ':\n• ' + error.details.join('\n• ');
-            }
-          } else {
-            this.errorMessage = typeof error === 'string' ? error : 'Error inesperado al procesar la solicitud';
-          }
-          
-          alert('Error: ' + this.errorMessage);
-          
-          this.isLoading = false;
-          
-          if (wasDisabled) {
-            identificacionControl?.disable();
-          }
-        },
-        complete: () => {
-          this.isLoading = false;
-        }
-      });
+  this.resetMessages();
+  
+  const identificacionControl = this.userForm.get('identificacion');
+  const wasDisabled = identificacionControl?.disabled;
+  if (wasDisabled) {
+    identificacionControl?.enable();
   }
+  
+  if (this.userForm.invalid) {
+    this.markFormGroupTouched();
+    this.errorMessage = 'Por favor, corrige los errores en el formulario.';
+    if (wasDisabled) {
+      identificacionControl?.disable();
+    }
+    return;
+  }
+
+  const formValue = this.userForm.getRawValue();
+  
+  this.pendingUserData = {
+    ...formValue,
+    noUsuario: this.isEditMode ? (this.user?.noUsuario || this.user?.noUsuario) : undefined,
+    idUsuario: this.isEditMode ? (this.user?.noUsuario || this.user?.noUsuario) : undefined,
+    cargo: formValue.cargo,
+    correoEmpresarial: formValue.correoEmpresarial || '',
+    correoPersonal: formValue.correoPersonal || '',
+    celular: formValue.celular || '',
+    telefono: formValue.telefono || '',
+    direccion: formValue.direccion || '',
+    dobleAutenticacion: formValue.dobleAutenticacion || 'Google Authenticator',
+    estado: this.isEditMode ? (this.user?.estado || 'Activo') : 'Activo',
+    activo: this.isEditMode ? (this.user?.activo !== false) : true,
+    perfiles: formValue.perfiles || {
+      administrador: false,
+      funcionarioCreador: false,
+      funcionarios: true
+    }
+  };
+
+  if (wasDisabled) {
+    identificacionControl?.disable();
+  }
+
+  this.mensajePasswordModal = this.isEditMode 
+    ? 'Ingrese su contraseña para guardar los cambios del usuario.'
+    : 'Ingrese su contraseña para crear el nuevo usuario.';
+  this.isPasswordModalVisible = true;
+}
 
   onClose(): void {
-    this.resetMessages();
-    this.resetForm();
-    this.isLoading = false;
-    this.selectedCargoInfo = null;
-    this.isDropdownOpen = false;
-    this.close.emit();
-    
-  }
+  this.resetMessages();
+  this.resetForm();
+  this.isLoading = false;
+  this.selectedCargoInfo = null;
+  this.isDropdownOpen = false;
+  
+  this.isPasswordModalVisible = false;
+  this.confirmModalVisible = false;
+  this.modalSuccessVisible = false;
+  this.pendingUserData = null;
+  
+  this.close.emit();
+}
 
   private resetForm(): void {
-    this.userForm.reset({
-      dobleAutenticacion: 'Google Authenticator',
-      perfiles: {
-        administrador: false,
-        funcionarioCreador: false,
-        funcionarios: false
-      }
-    });
-    this.userForm.get('identificacion')?.enable();
-    this.selectedCargoInfo = null;
-    this.isDropdownOpen = false;
-  }
+  this.userForm.reset({
+    dobleAutenticacion: 'Google Authenticator',
+    perfiles: {
+      administrador: false,
+      funcionarioCreador: false,
+      funcionarios: false
+    }
+  });
+  this.userForm.get('identificacion')?.enable();
+  this.selectedCargoInfo = null;
+  this.isDropdownOpen = false;
+  
+  this.isPasswordModalVisible = false;
+  this.confirmModalVisible = false;
+  this.modalSuccessVisible = false;
+  this.pendingUserData = null;
+}
 
   private resetMessages(): void {
     this.errorMessage = '';

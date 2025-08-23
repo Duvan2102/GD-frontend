@@ -49,7 +49,6 @@ export class Users implements OnInit, OnDestroy {
   errorMessage = '';
   private destroy$ = new Subject<void>();
 
-  // -------- MODAL DE ÉXITO / CONFIRMACIÓN --------
   modalSuccessVisible: boolean = false;
   modalSuccessMessage: string = '';
   modalSuccessBtn: string = 'Aceptar';
