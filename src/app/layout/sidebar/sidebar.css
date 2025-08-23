@@ -1,7 +1,7 @@
 .sidebar {
   background-color: #3d6b63;
   padding: 0.5rem; 
-  margin: 0.5rem;  
+  margin: 1rem 0.5rem 0.5rem 0.5rem;  
   border-radius: 12px; 
   box-shadow: 0 4px 10px rgba(90, 139, 129, 1);
   justify-content: space-between;

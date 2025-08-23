@@ -11,6 +11,9 @@ import { Usuario } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
 import { ApprovalService } from '../../services/approval.service';
 import { Subscription } from 'rxjs';
+import { delay } from 'rxjs/operators';
+import { AuthService } from '../../services/auth.service';
+import { Typology, TypologyService } from '../../services/typology.service';
 
 export interface Approval {
   type: string;
@@ -42,41 +45,44 @@ export interface Approval {
   styleUrls: ['./approvals.css']
 })
 export class Approvals implements OnInit, OnDestroy {
-  // ... (propiedades existentes sin cambios)
   approvalsList: Approval[] = [];
   private approvalsSubscription: Subscription | undefined;
   isDetailModalVisible = false;
   successModalData: SuccessModalData | null = null;
   allUsers: Usuario[] = [];
+  tipologias: Typology[] = [];
   displayedRequests: any[] = [];
   private filteredRequests: any[] = [];
   totalFiltered: number = 0;
   searchTerm: string = '';
-  showOnlyApproved: boolean = false;
+  showOnlyManaged: boolean = false;
   currentPage: number = 1;
   itemsPerPage: number = 10;
   currentOrder: string = 'creationDate';
   ascendingOrder: boolean = false;
   isApprovalDocumentViewVisible = false;
   documentToApproveData: ApprovalDocumentViewData | null = null;
+  isLoadingDetails = false;
+  currentUser: Usuario | null = null;
 
   constructor(
     private userService: UserService,
-    private approvalService: ApprovalService
+    private approvalService: ApprovalService,
+    private authService: AuthService,
+    private typologyService: TypologyService
   ) {}
 
   ngOnInit(): void {
-    this.loadUsers();
-    this.approvalsSubscription = this.approvalService.approvals$.subscribe(approvals => {
-      this.approvalsList = approvals;
-      this.applyViewLogic();
+    this.authService.getCurrentUser().subscribe(user => {
+        this.currentUser = user;
+        this.loadUsers();
+        this.loadTypologies();
+        this.subscribeToApprovals();
     });
   }
 
   ngOnDestroy(): void {
-    if (this.approvalsSubscription) {
-      this.approvalsSubscription.unsubscribe();
-    }
+    this.approvalsSubscription?.unsubscribe();
   }
 
   loadUsers(): void {
@@ -85,22 +91,63 @@ export class Approvals implements OnInit, OnDestroy {
     });
   }
 
+  loadTypologies(): void {
+    this.typologyService.getAll().subscribe(data => {
+      this.tipologias = data;
+    });
+  }
+
+  subscribeToApprovals(): void {
+    if (!this.currentUser) return;
+    this.approvalsSubscription = this.approvalService.getApprovalsByApprover(this.currentUser.usuario)
+      .subscribe(approvals => {
+          this.approvalsList = approvals;
+          this.applyViewLogic();
+    });
+  }
+
+  onManage(id: string): void {
+    this.isLoadingDetails = true;
+    this.approvalService.getApprovalDetails(id).pipe(delay(500))
+      .subscribe(requestDetails => {
+      if (requestDetails) {
+        if (requestDetails.fullData?.estado === 'Enviada') {
+            requestDetails.status = 'PENDIENTE';
+            if(requestDetails.fullData){
+              requestDetails.fullData.estado = 'Pendiente';
+            }
+            this.approvalService.updateApproval(requestDetails);
+        }
+        this.successModalData = requestDetails.fullData || null;
+        this.isDetailModalVisible = true;
+      }
+      this.isLoadingDetails = false;
+    });
+  }
+  
   applyViewLogic(): void {
+    const getTypologyDescription = (typeId: string): string => {
+      const typology = this.tipologias.find(t => t.idTipologia.toString() === typeId);
+      return typology ? typology.descripcion : typeId;
+    };
+
     let result = [...this.approvalsList];
-    if (this.showOnlyApproved) {
-      result = result.filter(req => req.status === 'APROBADO');
+    if (this.showOnlyManaged) {
+        result = result.filter(req => ['APROBADO', 'RECHAZADO', 'CANCELADA'].includes(req.status));
+    } else {
+        result = result.filter(req => req.status === 'PENDIENTE');
     }
+
     if (this.searchTerm) {
       const search = this.searchTerm.toLowerCase();
       result = result.filter(req =>
-        req.type.toLowerCase().includes(search) ||
+        getTypologyDescription(req.type).toLowerCase().includes(search) ||
         req.creatorUser.toLowerCase().includes(search) ||
         req.id.toLowerCase().includes(search)
       );
     }
     this.filteredRequests = result;
     this.totalFiltered = this.filteredRequests.length;
-
     if (this.currentOrder) {
       this.filteredRequests.sort((a, b) => {
         const valueA = (a as any)[this.currentOrder];
@@ -110,28 +157,11 @@ export class Approvals implements OnInit, OnDestroy {
         return 0;
       });
     }
-
     const start = (this.currentPage - 1) * this.itemsPerPage;
-    this.displayedRequests = this.filteredRequests.slice(start, start + this.itemsPerPage);
-  }
-
-  onToggleApproved(value: boolean): void { this.showOnlyApproved = value; this.currentPage = 1; this.applyViewLogic(); }
-  onQuantityChange(quantity: number): void { this.itemsPerPage = Number(quantity); this.currentPage = 1; this.applyViewLogic(); }
-  onSearchChange(term: string): void { this.searchTerm = term; this.currentPage = 1; this.applyViewLogic(); }
-  onChangePage(newPage: number): void { this.currentPage = newPage; this.applyViewLogic(); }
-  sortBy(field: string): void { if (this.currentOrder === field) { this.ascendingOrder = !this.ascendingOrder; } else { this.currentOrder = field; this.ascendingOrder = true; } this.applyViewLogic(); }
-
-  onManage(id: string): void {
-    const request = this.approvalsList.find(req => req.id === id);
-    if (request && request.fullData) {
-      if (request.fullData.estado === 'Enviada') {
-        request.status = 'PENDIENTE';
-        request.fullData.estado = 'Pendiente';
-        this.approvalService.updateApproval(request);
-      }
-      this.successModalData = request.fullData;
-      this.isDetailModalVisible = true;
-    }
+    this.displayedRequests = this.filteredRequests.slice(start, start + this.itemsPerPage).map(req => ({
+      ...req,
+      type: getTypologyDescription(req.type)
+    }));
   }
 
   closeDetailModal() {
@@ -162,19 +192,25 @@ export class Approvals implements OnInit, OnDestroy {
   }
 
   private updateRequestStatus(id: string | number, approvalStatus: 'APROBADO' | 'RECHAZADO', fullDataStatus: 'Aprobada' | 'Rechazada') {
-    const request = this.approvalsList.find(req => req.id === id);
-    if (request) {
+    this.approvalService.getApprovalDetails(id).subscribe(request => {
+      if (request) {
         request.status = approvalStatus;
         if (request.fullData) {
             request.fullData.estado = fullDataStatus;
         }
         this.approvalService.updateApproval(request);
-        this.applyViewLogic();
-    }
+      }
+    });
   }
   
   closeApprovalDocumentView() {
     this.isApprovalDocumentViewVisible = false;
     this.documentToApproveData = null;
   }
+
+  onToggleManaged(value: boolean): void { this.showOnlyManaged = value; this.currentPage = 1; this.applyViewLogic(); }
+  onQuantityChange(quantity: number): void { this.itemsPerPage = Number(quantity); this.currentPage = 1; this.applyViewLogic(); }
+  onSearchChange(term: string): void { this.searchTerm = term; this.currentPage = 1; this.applyViewLogic(); }
+  onChangePage(newPage: number): void { this.currentPage = newPage; this.applyViewLogic(); }
+  sortBy(field: string): void { if (this.currentOrder === field) { this.ascendingOrder = !this.ascendingOrder; } else { this.currentOrder = field; this.ascendingOrder = true; } this.applyViewLogic(); }
 }

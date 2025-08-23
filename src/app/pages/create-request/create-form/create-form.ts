@@ -121,14 +121,14 @@ export class CreateForm implements OnInit {
 
   calculateDropdownPosition(inputElement: HTMLInputElement) {
     const rect = inputElement.getBoundingClientRect();
-    const dropdownHeight = 200; // Altura máxima del menú desplegable (definida en CSS)
+    const dropdownHeight = 200;
     
     this.dropdownStyle = {
       position: 'fixed',
-      bottom: `${window.innerHeight - rect.top + 5}px`, // Posiciona el menú 5px por encima del campo
+      bottom: `${window.innerHeight - rect.top + 5}px`,
       left: `${rect.left}px`,
       width: `${rect.width}px`,
-      top: 'auto', // Asegura que no haya un conflicto con la propiedad `top`
+      top: 'auto',
     };
   }
 

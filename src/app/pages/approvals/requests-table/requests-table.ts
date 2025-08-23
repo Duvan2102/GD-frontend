@@ -18,6 +18,9 @@ export class RequestsTable {
   @Input() currentPage: number = 1;
   @Input() itemsPerPage: number = 10;
   @Input() detailedView: boolean = false;
+  @Input() isToggleActive: boolean = false;
+  @Input() viewType: 'approvals' | 'create-request' | 'approval-details' = 'approvals';
+
 
   @Output() sort = new EventEmitter<string>();
   @Output() manage = new EventEmitter<string>();

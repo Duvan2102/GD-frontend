@@ -1,16 +1,17 @@
-// src/app/services/position.service.ts
-
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
 import { Area } from './area.service';
 
-// Interfaces alineadas con tu estructura de datos JSON
 export interface Position {
   idCargo?: number;
   descripcion: string;
-  area: Area
+  area: Area;
+  permisos?: {
+    esAdministrador: boolean; 
+    esAuditor: boolean;
+  };
 }
 
 @Injectable({  providedIn: 'root'})
@@ -28,9 +29,8 @@ export class PositionService {
   }
 
   create(position: Partial<Position>): Observable<Position> {
-  return this.http.post<Position>(this.baseUrl, position);
-}
-
+    return this.http.post<Position>(this.baseUrl, position);
+  }
 
   update(id: number, position: Position): Observable<Position> {
     return this.http.put<Position>(`${this.baseUrl}/${id}`, position);

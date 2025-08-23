@@ -1,14 +1,18 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-
 import { Controls } from '../approvals/controls/controls';
 import { RequestsTable } from '../approvals/requests-table/requests-table';
 import { FooterControls } from '../approvals/footer-controls/footer-controls';
+import { ApprovalService } from '../../services/approval.service';
+import { Subscription } from 'rxjs';
+import { Approval } from '../approvals/approvals';
+import { Typology, TypologyService } from '../../services/typology.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
-  selector: 'app-approvals',
+  selector: 'app-approval-details',
   standalone: true,
   imports: [
     CommonModule,
@@ -21,60 +25,68 @@ import { FooterControls } from '../approvals/footer-controls/footer-controls';
   templateUrl: './approval-details.html',
   styleUrls: ['./approval-details.css']
 })
-export class ApprovalDetails implements OnInit {
-  approvalsList = [
-    { type: 'VIATICOS', id: '001', creationDate: '2025-03-26T12:00:00', creatorUser: 'USUARIO.HELISA', position: 'EMPLEADO', lastUpdate: '2025-03-27T13:00:00', status: 'APROBADO', approvers: ['AS'], priority: true },
-    { type: 'VIATICOS', id: '002', creationDate: '2025-03-26T12:00:00', creatorUser: 'USUARIO.HELISA', position: 'EMPLEADO', lastUpdate: '2025-03-27T13:00:00', status: 'APROBADO', approvers: ['LC', 'JS'], priority: true },
-    { type: 'REQUISICIONES', id: '003', creationDate: '2025-03-26T12:00:00', creatorUser: 'USUARIO.HELISA', position: 'EMPLEADO', lastUpdate: '2025-03-27T13:00:00', status: 'APROBADO', approvers: ['LC', 'JS'], priority: false },
-    { type: 'VIATICOS', id: '004', creationDate: '2025-03-27T08:30:00', creatorUser: 'ANA.ROJAS', position: 'ANALISTA', lastUpdate: '2025-03-28T10:00:00', status: 'PENDIENTE', approvers: ['LC'], priority: false },
-    { type: 'REQUISICIONES', id: '005', creationDate: '2025-03-26T09:45:00', creatorUser: 'CARLOS.DIAZ', position: 'JEFE DE ÁREA', lastUpdate: '2025-03-27T14:30:00', status: 'APROBADO', approvers: ['LC', 'JS'], priority: true },
-    { type: 'VIATICOS', id: '006', creationDate: '2025-03-27T11:20:00', creatorUser: 'MARIA.GOMEZ', position: 'EMPLEADO', lastUpdate: '2025-03-28T08:00:00', status: 'RECHAZADO', approvers: ['AS'], priority: false },
-    { type: 'REQUISICIONES', id: '007', creationDate: '2025-03-28T13:00:00', creatorUser: 'JUAN.PEREZ', position: 'COORDINADOR', lastUpdate: '2025-03-29T16:00:00', status: 'PENDIENTE', approvers: ['LC', 'AS'], priority: true },
-    { type: 'VIATICOS', id: '008', creationDate: '2025-03-29T15:30:00', creatorUser: 'LUISA.MORA', position: 'SUPERVISOR', lastUpdate: '2025-03-30T09:00:00', status: 'APROBADO', approvers: ['JS'], priority: false },
-    { type: 'REQUISICIONES', id: '009', creationDate: '2025-03-30T07:50:00', creatorUser: 'FERNANDO.TORO', position: 'JEFE DE ÁREA', lastUpdate: '2025-03-30T17:00:00', status: 'APROBADO', approvers: ['JS', 'LC'], priority: true },
-    { type: 'VIATICOS', id: '010', creationDate: '2025-04-01T10:15:00', creatorUser: 'CLAUDIA.VERA', position: 'EMPLEADO', lastUpdate: '2025-04-01T14:00:00', status: 'RECHAZADO', approvers: ['LC'], priority: false },
-    { type: 'REQUISICIONES', id: '011', creationDate: '2025-04-02T08:10:00', creatorUser: 'MARIO.SOSA', position: 'ANALISTA', lastUpdate: '2025-04-02T16:30:00', status: 'PENDIENTE', approvers: ['JS'], priority: true },
-    { type: 'VIATICOS', id: '012', creationDate: '2025-04-03T09:20:00', creatorUser: 'PATRICIA.OLIVER', position: 'SUPERVISOR', lastUpdate: '2025-04-04T10:00:00', status: 'APROBADO', approvers: ['LC'], priority: false },
-    { type: 'REQUISICIONES', id: '013', creationDate: '2025-04-04T14:30:00', creatorUser: 'GABRIELA.MENDEZ', position: 'JEFE DE ÁREA', lastUpdate: '2025-04-05T11:00:00', status: 'RECHAZADO', approvers: ['AS'], priority: false },
-    { type: 'VIATICOS', id: '014', creationDate: '2025-03-26T12:00:00', creatorUser: 'USUARIO.HELISA', position: 'EMPLEADO', lastUpdate: '2025-03-27T13:00:00', status: 'APROBADO', approvers: ['AS'], priority: true },
-    { type: 'VIATICOS', id: '015', creationDate: '2025-03-26T12:00:00', creatorUser: 'USUARIO.HELISA', position: 'EMPLEADO', lastUpdate: '2025-03-27T13:00:00', status: 'APROBADO', approvers: ['LC', 'JS'], priority: true },
-    { type: 'REQUISICIONES', id: '016', creationDate: '2025-03-26T12:00:00', creatorUser: 'USUARIO.HELISA', position: 'EMPLEADO', lastUpdate: '2025-03-27T13:00:00', status: 'APROBADO', approvers: ['LC', 'JS'], priority: false },
-    { type: 'VIATICOS', id: '017', creationDate: '2025-03-27T08:30:00', creatorUser: 'ANA.ROJAS', position: 'ANALISTA', lastUpdate: '2025-03-28T10:00:00', status: 'PENDIENTE', approvers: ['LC'], priority: false },
-    { type: 'REQUISICIONES', id: '018', creationDate: '2025-03-26T09:45:00', creatorUser: 'CARLOS.DIAZ', position: 'JEFE DE ÁREA', lastUpdate: '2025-03-27T14:30:00', status: 'APROBADO', approvers: ['LC', 'JS'], priority: true },
-    { type: 'VIATICOS', id: '019', creationDate: '2025-03-27T11:20:00', creatorUser: 'MARIA.GOMEZ', position: 'EMPLEADO', lastUpdate: '2025-03-28T08:00:00', status: 'RECHAZADO', approvers: ['AS'], priority: false },
-    { type: 'REQUISICIONES', id: '020', creationDate: '2025-03-28T13:00:00', creatorUser: 'JUAN.PEREZ', position: 'COORDINADOR', lastUpdate: '2025-03-29T16:00:00', status: 'PENDIENTE', approvers: ['LC', 'AS'], priority: true },
-    { type: 'VIATICOS', id: '021', creationDate: '2025-03-29T15:30:00', creatorUser: 'LUISA.MORA', position: 'SUPERVISOR', lastUpdate: '2025-03-30T09:00:00', status: 'APROBADO', approvers: ['JS'], priority: false },
-    { type: 'REQUISICIONES', id: '022', creationDate: '2025-03-30T07:50:00', creatorUser: 'FERNANDO.TORO', position: 'JEFE DE ÁREA', lastUpdate: '2025-03-30T17:00:00', status: 'APROBADO', approvers: ['JS', 'LC'], priority: true },
-    { type: 'VIATICOS', id: '023', creationDate: '2025-04-01T10:15:00', creatorUser: 'CLAUDIA.VERA', position: 'EMPLEADO', lastUpdate: '2025-04-01T14:00:00', status: 'RECHAZADO', approvers: ['LC'], priority: false },
-    { type: 'REQUISICIONES', id: '024', creationDate: '2025-04-02T08:10:00', creatorUser: 'MARIO.SOSA', position: 'ANALISTA', lastUpdate: '2025-04-02T16:30:00', status: 'PENDIENTE', approvers: ['JS'], priority: true },
-    { type: 'VIATICOS', id: '025', creationDate: '2025-04-03T09:20:00', creatorUser: 'PATRICIA.OLIVER', position: 'SUPERVISOR', lastUpdate: '2025-04-04T10:00:00', status: 'APROBADO', approvers: ['LC'], priority: false },
-    { type: 'REQUISICIONES', id: '026', creationDate: '2025-04-04T14:30:00', creatorUser: 'GABRIELA.MENDEZ', position: 'JEFE DE ÁREA', lastUpdate: '2025-04-05T11:00:00', status: 'RECHAZADO', approvers: ['AS'], priority: false }
-  ];
-
+export class ApprovalDetails implements OnInit, OnDestroy {
+  approvalsList: Approval[] = [];
+  private approvalsSubscription: Subscription | undefined;
+  tipologias: Typology[] = [];
+  
   displayedRequests: any[] = [];
   private filteredRequests: any[] = [];
   totalFiltered: number = 0;
 
   searchTerm: string = '';
-  showOnlyApproved: boolean = false;
+  showOnlyManaged: boolean = false;
   currentPage: number = 1;
   itemsPerPage: number = 10;
   currentOrder: string = 'creationDate';
   ascendingOrder: boolean = false;
 
+  constructor(
+    private approvalService: ApprovalService,
+    private typologyService: TypologyService,
+    private authService: AuthService
+    ) {}
+
   ngOnInit(): void {
-    this.applyViewLogic();
+    this.loadTypologies();
+    this.subscribeToApprovals();
+  }
+
+  ngOnDestroy(): void {
+    this.approvalsSubscription?.unsubscribe();
+  }
+
+  loadTypologies(): void {
+    this.typologyService.getAll().subscribe(data => {
+      this.tipologias = data;
+    });
+  }
+
+  subscribeToApprovals(): void {
+    this.approvalsSubscription = this.approvalService.getAllApprovals()
+      .subscribe(approvals => {
+        this.approvalsList = approvals;
+        this.applyViewLogic();
+      });
   }
 
   applyViewLogic(): void {
+    const getTypologyDescription = (typeId: string): string => {
+      const typology = this.tipologias.find(t => t.idTipologia.toString() === typeId);
+      return typology ? typology.descripcion : typeId;
+    };
+
     let result = [...this.approvalsList];
-    if (this.showOnlyApproved) {
+    if (this.showOnlyManaged) {
+      result = result.filter(req => req.status === 'RECHAZADO' || req.status === 'CANCELADA');
+    } else {
       result = result.filter(req => req.status === 'APROBADO');
     }
+
     if (this.searchTerm) {
       const search = this.searchTerm.toLowerCase();
       result = result.filter(req =>
-        req.type.toLowerCase().includes(search) ||
+        getTypologyDescription(req.type).toLowerCase().includes(search) ||
         req.creatorUser.toLowerCase().includes(search) ||
         req.id.toLowerCase().includes(search)
       );
@@ -93,11 +105,14 @@ export class ApprovalDetails implements OnInit {
     }
 
     const start = (this.currentPage - 1) * this.itemsPerPage;
-    this.displayedRequests = this.filteredRequests.slice(start, start + this.itemsPerPage);
+    this.displayedRequests = this.filteredRequests.slice(start, start + this.itemsPerPage).map(req => ({
+      ...req,
+      type: getTypologyDescription(req.type)
+    }));
   }
 
-  onToggleApproved(value: boolean): void {
-    this.showOnlyApproved = value;
+  onToggleManaged(value: boolean): void {
+    this.showOnlyManaged = value;
     this.currentPage = 1;
     this.applyViewLogic();
   }
@@ -130,6 +145,6 @@ export class ApprovalDetails implements OnInit {
   }
 
   onManage(id: string): void {
-    console.log('Managing request with ID from parent:', id);
+    console.log('Visualizando detalles para la solicitud con ID:', id);
   }
 }

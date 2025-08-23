@@ -6,8 +6,9 @@
     </div>
 
     <app-controls
+      [labelAprobados]="'CANCELADAS/RECHAZADAS'"
       (quantityChange)="onQuantityChange($event)"
-      (toggleApprovedChange)="onToggleApproved($event)"
+      (toggleApprovedChange)="onToggleManaged($event)"
       (searchChange)="onSearchChange($event)">
     </app-controls>
 
@@ -16,6 +17,8 @@
       [totalItems]="totalFiltered"
       [currentOrder]="currentOrder"
       [ascendingOrder]="ascendingOrder"
+      [isToggleActive]="showOnlyManaged"
+      [viewType]="'approval-details'"
       (sort)="sortBy($event)"
       (manage)="onManage($event)">
     </app-requests-table>

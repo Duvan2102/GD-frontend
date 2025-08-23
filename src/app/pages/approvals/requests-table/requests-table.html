@@ -55,7 +55,21 @@
         </td>
         
         <td class="text-center">
-          <button class="btn btn-sm btn-gestionar" (click)="manage.emit(request.id)">GESTIONAR <br>SOLICITUD</button>
+            <button class="btn btn-sm btn-gestionar" (click)="manage.emit(request.id)">
+                <ng-container *ngIf="viewType === 'approvals'">
+                    <span *ngIf="isToggleActive; else gestionarSolicitud">VISUALIZAR <br> SOLICITUD</span>
+                    <ng-template #gestionarSolicitud>GESTIONAR <br>SOLICITUD</ng-template>
+                </ng-container>
+
+                <ng-container *ngIf="viewType === 'create-request'">
+                    VISUALIZAR <br> SOLICITUD
+                </ng-container>
+
+                <ng-container *ngIf="viewType === 'approval-details'">
+                    <span *ngIf="isToggleActive; else visualizarSolicitudDetalles">VISUALIZAR <br> METADATA</span>
+                    <ng-template #visualizarSolicitudDetalles>VISUALIZAR <br>SOLICITUD</ng-template>
+                </ng-container>
+            </button>
         </td>
 
       </tr>

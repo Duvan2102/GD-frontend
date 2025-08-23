@@ -13,6 +13,7 @@ import { TypologyService, Typology } from '../../services/typology.service';
 import { ApprovalService } from '../../services/approval.service';
 import { Subscription } from 'rxjs';
 import { Approval } from '../approvals/approvals';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-create-request',
@@ -34,15 +35,7 @@ export class CreateRequest implements OnInit, OnDestroy {
   isCreateModalVisible = false;
   isDetailModalVisible = false;
   successModalData: SuccessModalData | null = null;
-  loggedInUser: Usuario = {
-    noUsuario: 1,
-    nombres: 'Luis Gabriel',
-    apellidos: 'Perez Cabrales',
-    usuario: 'luis.perez',
-    identificacion: '123',
-    estado: 'Activo',
-    activo: true
-  };
+  currentUser: Usuario | null = null;
   allUsers: Usuario[] = [];
   tipologias: Typology[] = [];
   approvalsList: Approval[] = [];
@@ -51,46 +44,59 @@ export class CreateRequest implements OnInit, OnDestroy {
   private filteredRequests: Approval[] = [];
   totalFiltered: number = 0;
   searchTerm: string = '';
-  showOnlyApproved: boolean = false;
+  showOnlyManaged: boolean = false;
   currentPage: number = 1;
   itemsPerPage: number = 10;
   currentOrder: string = 'creationDate';
   ascendingOrder: boolean = false;
+  isLoading = true;
 
   constructor(
     private userService: UserService,
     private typologyService: TypologyService,
-    private approvalService: ApprovalService
+    private approvalService: ApprovalService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
-    this.loadTypologies();
-    this.loadUsers();
-    this.approvalsSubscription = this.approvalService.approvals$.subscribe(approvals => {
-      this.approvalsList = approvals;
-      this.applyViewLogic();
+    this.authService.getCurrentUser().subscribe(user => {
+      this.currentUser = user;
+      this.loadInitialData();
     });
   }
 
+  loadInitialData(): void {
+    this.isLoading = true;
+    this.loadTypologies();
+    this.loadUsers();
+    this.subscribeToApprovals();
+  }
+
   ngOnDestroy(): void {
-    if (this.approvalsSubscription) {
-      this.approvalsSubscription.unsubscribe();
-    }
+    this.approvalsSubscription?.unsubscribe();
+  }
+
+  subscribeToApprovals(): void {
+    if (!this.currentUser) return;
+    this.approvalsSubscription = this.approvalService.getApprovalsByCreator(this.currentUser.noUsuario)
+      .subscribe(approvals => {
+        this.approvalsList = approvals;
+        this.applyViewLogic();
+        this.isLoading = false;
+      });
   }
 
   loadTypologies(): void {
-    this.typologyService.getAll().subscribe(typologies => {
-      this.tipologias = typologies;
+    this.typologyService.getAll().subscribe(data => {
+      this.tipologias = data;
       this.applyViewLogic();
     });
   }
 
   loadUsers(): void {
-    this.userService.obtenerUsuarios().subscribe(users => {
-      this.allUsers = users;
-      if (this.tipologias.length > 0) {
-        this.applyViewLogic();
-      }
+    this.userService.obtenerUsuarios().subscribe(data => {
+      this.allUsers = data;
+      this.applyViewLogic();
     });
   }
 
@@ -103,14 +109,16 @@ export class CreateRequest implements OnInit, OnDestroy {
   }
 
   handleSaveRequest(solicitudData: SolicitudData): void {
-    const newId = `00${this.approvalsList.length + 1}`;
+    if (!this.currentUser) return;
+
+    const newId = `REQ-${Date.now().toString().slice(-4)}`;
     const now = new Date();
     const estadoInicial: EstadoSolicitud = 'Enviada';
 
     const newSuccessData: SuccessModalData = {
       ...solicitudData,
       id: newId,
-      creador: this.loggedInUser,
+      creador: this.currentUser,
       fechaCreacion: now,
       estado: estadoInicial,
       approverStates: solicitudData.destinatarios.map(d => ({ usuarioId: d.usuarioId, estado: 'Pendiente' }))
@@ -120,16 +128,20 @@ export class CreateRequest implements OnInit, OnDestroy {
       id: newId,
       type: solicitudData.tipologia,
       creationDate: now.toISOString(),
-      creatorUser: this.loggedInUser.usuario,
-      position: 'EMPLEADO',
+      creatorUser: this.currentUser.usuario,
+      position: this.currentUser.cargo || 'Funcionario',
       lastUpdate: now.toISOString(),
       status: 'PENDIENTE',
-      approvers: solicitudData.destinatarios.map(d => d.usuarioId.substring(0, 2).toUpperCase()),
+      approvers: solicitudData.destinatarios.map(d => {
+        const user = this.allUsers.find(u => u.usuario === d.usuarioId);
+        return user ? (user.nombres.charAt(0) + user.apellidos.charAt(0)).toUpperCase() : '??';
+      }),
       priority: solicitudData.prioridad === 'IMPORTANTE',
       fullData: newSuccessData
     };
-
+    
     this.approvalService.addApproval(newApproval);
+    
     this.successModalData = newSuccessData;
     this.isCreateModalVisible = false;
     this.isDetailModalVisible = true;
@@ -141,14 +153,15 @@ export class CreateRequest implements OnInit, OnDestroy {
   }
 
   handleCancelRequest(event: { solicitudId: string | number }): void {
-    const request = this.approvalsList.find(req => req.id.toString() === event.solicitudId.toString());
-    if (request) {
-      request.status = 'CANCELADA';
-      if (request.fullData) {
-        request.fullData.estado = 'Cancelada';
+    this.approvalService.getApprovalDetails(event.solicitudId).subscribe(request => {
+      if (request) {
+        request.status = 'CANCELADA';
+        if (request.fullData) {
+          request.fullData.estado = 'Cancelada';
+        }
+        this.approvalService.updateApproval(request);
       }
-      this.approvalService.updateApproval(request);
-    }
+    });
     this.closeDetailModal();
   }
 
@@ -157,33 +170,32 @@ export class CreateRequest implements OnInit, OnDestroy {
   }
 
   onManage(id: string): void {
-    const request = this.approvalsList.find(req => req.id === id);
-    if (request && request.fullData) {
-      this.successModalData = request.fullData;
-      this.isDetailModalVisible = true;
-    }
+    this.approvalService.getApprovalDetails(id).subscribe(request => {
+      if (request && request.fullData) {
+        this.successModalData = request.fullData;
+        this.isDetailModalVisible = true;
+      }
+    });
   }
 
   applyViewLogic(): void {
-    if (this.tipologias.length === 0 || this.allUsers.length === 0) {
-      this.displayedRequests = [];
-      return;
-    }
-
     const getTypologyDescription = (typeId: string): string => {
-      const typology = this.tipologias.find(t => t.idTipologia.toString() === typeId.toString());
+      const typology = this.tipologias.find(t => t.idTipologia.toString() === typeId);
       return typology ? typology.descripcion : typeId;
     };
-
-    const getUserFullName = (userId: string): string => {
-      const user = this.allUsers.find(u => u.usuario === userId);
-      return user ? `${user.nombres} ${user.apellidos}` : userId;
+    const getUserFullName = (username: string): string => {
+      const user = this.allUsers.find(u => u.usuario === username);
+      return user ? `${user.nombres} ${user.apellidos}` : username;
     };
-
+    
     let result: Approval[] = [...this.approvalsList];
-    if (this.showOnlyApproved) {
-      result = result.filter(req => req.status === 'APROBADO');
+    
+    if (this.showOnlyManaged) {
+        result = result.filter(req => ['APROBADO', 'RECHAZADO', 'CANCELADA'].includes(req.status));
+    } else {
+        result = result.filter(req => req.status === 'PENDIENTE');
     }
+
     if (this.searchTerm) {
       const search = this.searchTerm.toLowerCase();
       result = result.filter(req =>
@@ -192,24 +204,13 @@ export class CreateRequest implements OnInit, OnDestroy {
         req.id.toLowerCase().includes(search)
       );
     }
+
     this.filteredRequests = result;
     this.totalFiltered = this.filteredRequests.length;
 
     this.filteredRequests.sort((a, b) => {
-      let valueA, valueB;
-      switch (this.currentOrder) {
-        case 'type':
-          valueA = getTypologyDescription(a.type);
-          valueB = getTypologyDescription(b.type);
-          break;
-        case 'creatorUser':
-          valueA = getUserFullName(a.creatorUser);
-          valueB = getUserFullName(b.creatorUser);
-          break;
-        default:
-          valueA = (a as any)[this.currentOrder];
-          valueB = (b as any)[this.currentOrder];
-      }
+      const valueA = (a as any)[this.currentOrder];
+      const valueB = (b as any)[this.currentOrder];
       if (valueA < valueB) return this.ascendingOrder ? -1 : 1;
       if (valueA > valueB) return this.ascendingOrder ? 1 : -1;
       return 0;
@@ -225,7 +226,7 @@ export class CreateRequest implements OnInit, OnDestroy {
     }));
   }
 
-  onToggleApproved(value: boolean): void { this.showOnlyApproved = value; this.currentPage = 1; this.applyViewLogic(); }
+  onToggleManaged(value: boolean): void { this.showOnlyManaged = value; this.currentPage = 1; this.applyViewLogic(); }
   onQuantityChange(quantity: number): void { this.itemsPerPage = Number(quantity); this.currentPage = 1; this.applyViewLogic(); }
   onSearchChange(term: string): void { this.searchTerm = term; this.currentPage = 1; this.applyViewLogic(); }
   onChangePage(newPage: number): void { this.currentPage = newPage; this.applyViewLogic(); }

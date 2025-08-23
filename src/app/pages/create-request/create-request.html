@@ -11,8 +11,9 @@
     </div>
 
     <app-controls
+      [labelAprobados]="'GESTIONADOS'"
       (quantityChange)="onQuantityChange($event)"
-      (toggleApprovedChange)="onToggleApproved($event)"
+      (toggleApprovedChange)="onToggleManaged($event)"
       (searchChange)="onSearchChange($event)">
     </app-controls>
 
@@ -21,7 +22,8 @@
       [totalItems]="totalFiltered"
       [currentOrder]="currentOrder"
       [ascendingOrder]="ascendingOrder"
-      textoboton="VISUALIZAR <br> SOLICITUD"
+      [isToggleActive]="showOnlyManaged"
+      [viewType]="'create-request'"
       (sort)="sortBy($event)"
       (manage)="onManage($event)">
     </app-requests-table>
