@@ -5,6 +5,7 @@ import { TypologyService, Typology } from '../../../services/typology.service';
 import { UserService } from '../../../services/user.service';
 import { Usuario } from '../../../interfaces/common.interfaces';
 import { DocumentView, DocumentViewData } from '../document-view/document-view';
+import { ConfirmModal } from '../../users/confirm-modal/confirm-modal';
 
 interface Destinatario {
   orden: number;
@@ -29,7 +30,7 @@ export interface SolicitudData {
 @Component({
   selector: 'app-create-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, DocumentView],
+  imports: [CommonModule, FormsModule, DocumentView, ConfirmModal],
   templateUrl: './create-form.html',
   styleUrls: ['./create-form.css']
 })
@@ -58,6 +59,9 @@ export class CreateForm implements OnInit {
   activeRecipientIndex: number | null = null;
   showDocumentView: boolean = false;
   documentViewData: DocumentViewData | null = null;
+  // Confirmación de envío
+  confirmVisible: boolean = false;
+  confirmMessage: string = '¿Confirmas el envío de la solicitud para aprobación?';
   highlightedUserIndex: number = -1;
   dropdownStyle: any = {};
 
@@ -244,7 +248,20 @@ export class CreateForm implements OnInit {
 
   onCloseView(): void { this.showDocumentView = false; }
   onEditFromView(): void { this.showDocumentView = false; }
-  onSendFromView(): void { this.onGuardar(); }
+  onSendFromView(): void {
+    // No volver al formulario aún; mostrar confirmación
+    this.confirmVisible = true;
+  }
+
+  onConfirmSend(): void {
+    this.confirmVisible = false;
+    this.onGuardar();
+  }
+
+  onCancelConfirm(): void {
+    // Mantener la vista de documento abierta
+    this.confirmVisible = false;
+  }
 
   onDeleteFromView(solicitudId: string | number): void {
     this.deleteRequest.emit(solicitudId);
@@ -257,6 +274,7 @@ export class CreateForm implements OnInit {
   }
 
   onGuardar(): void {
+    this.resolveTypedRecipients();
     if (!this.isFormValid()) {
       alert('Por favor completa todos los campos obligatorios, incluyendo al menos un destinatario válido.');
       return;
@@ -272,7 +290,7 @@ export class CreateForm implements OnInit {
       destinatarios: this.destinatarios
           .filter(d => d.usuario)
           .map(d => ({
-              usuarioId: d.usuario!.usuario,
+              usuarioId: (d.usuario!.usuario ?? String(d.usuario!.noUsuario)),
               orden: this.establecerOrden ? d.orden : undefined
           })),
       documentoAprobacion: this.documentoAprobacion || undefined,
@@ -298,5 +316,35 @@ export class CreateForm implements OnInit {
     this.anexos = [];
     this.destinatarios = [{ orden: 1, usuario: null, searchTerm: '' }];
     this.showDocumentView = false;
+  }
+
+  private resolveTypedRecipients(): void {
+    this.destinatarios.forEach((d) => {
+      if (d.usuario) return;
+      const term = (d.searchTerm || '').trim();
+      if (!term) return;
+      const match = term.match(/\(([^)]+)\)/);
+      let user: Usuario | undefined;
+      if (match && match[1]) {
+        const username = match[1].trim();
+        user = this.allUsers.find(u => u.usuario === username);
+      }
+      if (!user && /^\d+$/.test(term)) {
+        const idNum = parseInt(term, 10);
+        user = this.allUsers.find(u => u.noUsuario === idNum);
+      }
+      if (!user) {
+        const t = term.toLowerCase();
+        const matches = this.allUsers.filter(u =>
+          (u.nombres + ' ' + u.apellidos).toLowerCase().includes(t) ||
+          u.usuario.toLowerCase().includes(t)
+        );
+        if (matches.length === 1) user = matches[0];
+      }
+      if (user) {
+        d.usuario = user;
+        d.searchTerm = `${user.nombres} ${user.apellidos} (${user.usuario})`;
+      }
+    });
   }
 }

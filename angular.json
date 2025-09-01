@@ -42,8 +42,8 @@
             "production": {
               "fileReplacements": [
                 {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.prod.ts"
+                  "replace": "src/app/environments/environment.ts",
+                  "with": "src/app/environments/environment.prod.ts"
                 }
               ],
               "budgets": [
@@ -75,7 +75,8 @@
               "buildTarget": "gd-frontend:build:production"
             },
             "development": {
-              "buildTarget": "gd-frontend:build:development"
+              "buildTarget": "gd-frontend:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

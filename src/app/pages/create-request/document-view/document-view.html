@@ -39,6 +39,7 @@
             <ngx-extended-pdf-viewer
               [src]="pdfSrc"
               height="100%"
+              [textLayer]="true"
               [(page)]="currentPage"
               [zoom]="zoom + '%'"
               (pagesLoaded)="onPagesLoaded($event)"

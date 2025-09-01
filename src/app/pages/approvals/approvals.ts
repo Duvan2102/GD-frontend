@@ -25,7 +25,7 @@ export interface Approval {
   status: 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA';
   approvers: string[];
   priority: boolean;
-  fullData?: SuccessModalData;
+  fullData?: any;
 }
 
 @Component({
@@ -46,6 +46,8 @@ export interface Approval {
 })
 export class Approvals implements OnInit, OnDestroy {
   approvalsList: Approval[] = [];
+  private pendingApprovals: Approval[] = [];
+  private managedApprovals: Approval[] = [];
   private approvalsSubscription: Subscription | undefined;
   isDetailModalVisible = false;
   successModalData: SuccessModalData | null = null;
@@ -99,16 +101,29 @@ export class Approvals implements OnInit, OnDestroy {
 
   subscribeToApprovals(): void {
     if (!this.currentUser) return;
-    this.approvalsSubscription = this.approvalService.getApprovalsByApprover(this.currentUser.usuario)
-      .subscribe(approvals => {
-          this.approvalsList = approvals;
-          this.applyViewLogic();
+    const uid = this.currentUser.noUsuario;
+    // Pendientes por gestionar
+    this.approvalService.getApprovalsForApprover(uid).subscribe(list => {
+      this.pendingApprovals = list || [];
+      this.refreshApprovalsSource();
     });
+    // Histrico (gestionadas)
+    this.approvalService.getHistorico(uid).subscribe(list => {
+      // Filtrar slo las gestionadas
+      this.managedApprovals = (list || []).filter(a => ['APROBADO','RECHAZADO','CANCELADA'].includes(a.status));
+      this.refreshApprovalsSource();
+    });
+  }
+
+  private refreshApprovalsSource(): void {
+    this.approvalsList = this.showOnlyManaged ? this.managedApprovals : this.pendingApprovals;
+    this.applyViewLogic();
   }
 
   onManage(id: string): void {
     this.isLoadingDetails = true;
-    this.approvalService.getApprovalDetails(id).pipe(delay(500))
+    const uid = this.currentUser?.noUsuario;
+    this.approvalService.getApprovalDetails(id, uid).pipe(delay(500))
       .subscribe(requestDetails => {
       if (requestDetails) {
         if (requestDetails.fullData?.estado === 'Enviada') {
@@ -118,7 +133,8 @@ export class Approvals implements OnInit, OnDestroy {
             }
             this.approvalService.updateApproval(requestDetails);
         }
-        this.successModalData = requestDetails.fullData || null;
+        // Mapear al formato del modal con usuarios para mostrar nombres/áreas
+        this.successModalData = this.approvalService.mapToSuccessData(requestDetails.fullData, this.allUsers);
         this.isDetailModalVisible = true;
       }
       this.isLoadingDetails = false;
@@ -178,17 +194,39 @@ export class Approvals implements OnInit, OnDestroy {
       };
       this.isDetailModalVisible = false; 
       this.isApprovalDocumentViewVisible = true; 
+    } else if (data) {
+      const anyData: any = data as any;
+      const url = anyData.documentoUrl || anyData.pdfUrl || anyData.urlDocumento || anyData.url;
+      this.documentToApproveData = {
+        id: data.id!,
+        url: url,
+        title: (anyData.titulo || anyData.nombreSolicitud || 'Documento de la Solicitud')
+      };
+      this.isDetailModalVisible = false;
+      this.isApprovalDocumentViewVisible = true;
     }
   }
 
-  handleApproveRequest(id: string | number) {
-    this.updateRequestStatus(id, 'APROBADO', 'Aprobada');
+  handleApproveRequest(ev: { id: string | number, comentario?: string }) {
+    const uid = this.currentUser?.noUsuario;
+    if (!uid) return;
     this.isApprovalDocumentViewVisible = false;
+    this.approvalService.aprobarSolicitud(ev.id, uid, ev.comentario).subscribe(appr => {
+      if (appr) {
+        this.updateRequestStatus(appr.id, 'APROBADO', 'Aprobada');
+      }
+    });
   }
   
-  handleRejectRequest(id: string | number) {
-    this.updateRequestStatus(id, 'RECHAZADO', 'Rechazada');
+  handleRejectRequest(ev: { id: string | number, comentario?: string }) {
+    const uid = this.currentUser?.noUsuario;
+    if (!uid) return;
     this.isApprovalDocumentViewVisible = false;
+    this.approvalService.rechazarSolicitud(ev.id, uid, ev.comentario).subscribe(appr => {
+      if (appr) {
+        this.updateRequestStatus(appr.id, 'RECHAZADO', 'Rechazada');
+      }
+    });
   }
 
   private updateRequestStatus(id: string | number, approvalStatus: 'APROBADO' | 'RECHAZADO', fullDataStatus: 'Aprobada' | 'Rechazada') {
@@ -208,7 +246,7 @@ export class Approvals implements OnInit, OnDestroy {
     this.documentToApproveData = null;
   }
 
-  onToggleManaged(value: boolean): void { this.showOnlyManaged = value; this.currentPage = 1; this.applyViewLogic(); }
+  onToggleManaged(value: boolean): void { this.showOnlyManaged = value; this.currentPage = 1; this.refreshApprovalsSource(); }
   onQuantityChange(quantity: number): void { this.itemsPerPage = Number(quantity); this.currentPage = 1; this.applyViewLogic(); }
   onSearchChange(term: string): void { this.searchTerm = term; this.currentPage = 1; this.applyViewLogic(); }
   onChangePage(newPage: number): void { this.currentPage = newPage; this.applyViewLogic(); }

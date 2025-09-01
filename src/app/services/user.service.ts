@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { environment } from '../environments/environment';
 import { 
   Usuario, 
@@ -45,7 +45,35 @@ export class UserService {
   }
 
   obtenerUsuarios(): Observable<Usuario[]> {
-    return this.http.get<Usuario[]>(this.apiUrl).pipe(catchError(this.handleError));
+    const normalize = (res: any): Usuario[] => {
+      if (Array.isArray(res)) return res as Usuario[];
+      // soportar estructuras comunes
+      const data1 = res?.data ?? res;
+      const data2 = data1?.data ?? data1; // por si viene doblemente anidado
+      const list = data2?.usuarios ?? data2?.content ?? data2?.items ?? data2?.rows ?? data2?.results ?? data2?.list ?? data2;
+      return Array.isArray(list) ? (list as Usuario[]) : [];
+    };
+
+    const intento1$ = this.http.get<any>(this.apiUrl).pipe(
+      map(normalize),
+      catchError(() => of([] as Usuario[]))
+    );
+
+    // fallback si no trae datos: intentar con paginación
+    const intento2$ = () => this.http.get<any>(this.apiUrl, {
+      params: new HttpParams().set('page', '0').set('size', '1000')
+    }).pipe(map(normalize), catchError(() => of([] as Usuario[])));
+
+    // fallback final: endpoint alterno comunes
+    const intento3$ = () => this.http.get<any>(`${this.apiUrl}/activos`).pipe(
+      map(normalize), catchError(() => of([] as Usuario[]))
+    );
+
+    return intento1$.pipe(
+      switchMap(list => (list && list.length > 0) ? of(list) : intento2$()),
+      switchMap(list => (list && list.length > 0) ? of(list) : intento3$()),
+      catchError(this.handleError)
+    );
   }
 
   obtenerUsuarioPorId(id: number): Observable<Usuario> {

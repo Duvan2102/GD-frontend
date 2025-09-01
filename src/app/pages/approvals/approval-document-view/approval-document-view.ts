@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { NgxExtendedPdfViewerModule, PdfLoadedEvent, NgxExtendedPdfViewerService, PagesLoadedEvent } from 'ngx-extended-pdf-viewer';
 
 export interface ApprovalDocumentViewData {
@@ -13,7 +14,7 @@ export interface ApprovalDocumentViewData {
 @Component({
   selector: 'app-approval-document-view',
   standalone: true,
-  imports: [CommonModule, NgxExtendedPdfViewerModule],
+  imports: [CommonModule, FormsModule, NgxExtendedPdfViewerModule],
   templateUrl: './approval-document-view.html',
   styleUrls: ['./approval-document-view.css']
 })
@@ -21,8 +22,8 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
   @Input() isVisible = false;
   @Input() documentData: ApprovalDocumentViewData | null = null;
   @Output() close = new EventEmitter<void>();
-  @Output() approve = new EventEmitter<string | number>();
-  @Output() reject = new EventEmitter<string | number>();
+  @Output() approve = new EventEmitter<{ id: string | number, comentario?: string }>();
+  @Output() reject = new EventEmitter<{ id: string | number, comentario?: string }>();
   
   @Output() download = new EventEmitter<ApprovalDocumentViewData>();
   @Output() print = new EventEmitter<ApprovalDocumentViewData>();
@@ -35,6 +36,7 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
   currentPage = 1;
   totalPages = 1;
   zoom = 100;
+  comentario: string = '';
 
   private scrollListener?: (event: Event) => void;
 
@@ -150,13 +152,13 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
 
   onApprove() {
     if (this.documentData) {
-      this.approve.emit(this.documentData.id);
+      this.approve.emit({ id: this.documentData.id, comentario: this.comentario?.trim() || undefined });
     }
   }
 
   onReject() {
     if (this.documentData) {
-      this.reject.emit(this.documentData.id);
+      this.reject.emit({ id: this.documentData.id, comentario: this.comentario?.trim() || undefined });
     }
   }
 

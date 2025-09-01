@@ -11,7 +11,7 @@ import { Usuario } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
 import { TypologyService, Typology } from '../../services/typology.service';
 import { ApprovalService } from '../../services/approval.service';
-import { Subscription } from 'rxjs';
+import { Observable, of, Subscription } from 'rxjs';
 import { Approval } from '../approvals/approvals';
 import { AuthService } from '../../services/auth.service';
 
@@ -50,6 +50,7 @@ export class CreateRequest implements OnInit, OnDestroy {
   currentOrder: string = 'creationDate';
   ascendingOrder: boolean = false;
   isLoading = true;
+  isLoadingDetails = false;
 
   constructor(
     private userService: UserService,
@@ -111,40 +112,48 @@ export class CreateRequest implements OnInit, OnDestroy {
   handleSaveRequest(solicitudData: SolicitudData): void {
     if (!this.currentUser) return;
 
-    const newId = `REQ-${Date.now().toString().slice(-4)}`;
-    const now = new Date();
-    const estadoInicial: EstadoSolicitud = 'Enviada';
+    const idSolicitante = this.currentUser.noUsuario;
+    const idTipologia = Number(solicitudData.tipologia);
+    const destinatariosIds: number[] = solicitudData.destinatarios
+      .map(d => {
+        const found = this.allUsers.find(u => u.usuario === d.usuarioId)?.noUsuario;
+        if (typeof found === 'number') return found;
+        // Si viene un número en usuarioId, úsalo
+        const maybeNum = Number(d.usuarioId);
+        return Number.isFinite(maybeNum) && maybeNum > 0 ? maybeNum : undefined as any;
+      })
+      .filter((id): id is number => typeof id === 'number' && Number.isFinite(id));
 
-    const newSuccessData: SuccessModalData = {
-      ...solicitudData,
-      id: newId,
-      creador: this.currentUser,
-      fechaCreacion: now,
-      estado: estadoInicial,
-      approverStates: solicitudData.destinatarios.map(d => ({ usuarioId: d.usuarioId, estado: 'Pendiente' }))
-    };
+    if (destinatariosIds.length === 0) {
+      console.error('[CreateRequest] Error: no se pudieron resolver destinatarios a IDs numéricos');
+      alert('Debes seleccionar al menos un destinatario válido. Si el listado de usuarios no carga, intenta recargar la página.');
+      return;
+    }
 
-    const newApproval: Approval = {
-      id: newId,
-      type: solicitudData.tipologia,
-      creationDate: now.toISOString(),
-      creatorUser: this.currentUser.usuario,
-      position: this.currentUser.cargo || 'Funcionario',
-      lastUpdate: now.toISOString(),
-      status: 'PENDIENTE',
-      approvers: solicitudData.destinatarios.map(d => {
-        const user = this.allUsers.find(u => u.usuario === d.usuarioId);
-        return user ? (user.nombres.charAt(0) + user.apellidos.charAt(0)).toUpperCase() : '??';
-      }),
-      priority: solicitudData.prioridad === 'IMPORTANTE',
-      fullData: newSuccessData
-    };
-    
-    this.approvalService.addApproval(newApproval);
-    
-    this.successModalData = newSuccessData;
-    this.isCreateModalVisible = false;
-    this.isDetailModalVisible = true;
+    const pdf = solicitudData.documentoAprobacion as File;
+    const adjuntos = solicitudData.anexos;
+
+    this.approvalService.createSolicitud({
+      idSolicitante,
+      idTipologia,
+      destinatarios: destinatariosIds,
+      ordenFirma: solicitudData.establecerOrden,
+      comentarioInicial: solicitudData.detallesAdicionales,
+      nombreSolicitud: solicitudData.nombreSolicitud,
+      pdfPrincipal: pdf,
+      adjuntos: adjuntos
+    }).subscribe(appr => {
+      if (appr) {
+        // Asegurar usuarios cargados para el mapeo
+        const ensureUsers$ = this.allUsers.length > 0 ? of(this.allUsers) : this.userService.obtenerUsuarios();
+        ensureUsers$.subscribe((users: Usuario[]) => {
+          this.allUsers = users;
+          this.successModalData = this.approvalService.mapToSuccessData(appr.fullData, this.allUsers);
+          this.isCreateModalVisible = false;
+          this.isDetailModalVisible = true;
+        });
+      }
+    });
   }
 
   closeDetailModal(): void {
@@ -153,16 +162,13 @@ export class CreateRequest implements OnInit, OnDestroy {
   }
 
   handleCancelRequest(event: { solicitudId: string | number }): void {
-    this.approvalService.getApprovalDetails(event.solicitudId).subscribe(request => {
-      if (request) {
-        request.status = 'CANCELADA';
-        if (request.fullData) {
-          request.fullData.estado = 'Cancelada';
-        }
-        this.approvalService.updateApproval(request);
-      }
+    const uid = this.currentUser?.noUsuario;
+    if (!uid) return;
+    this.approvalService.cancelarSolicitud(event.solicitudId, uid).subscribe(() => {
+      this.closeDetailModal();
+      // refrescar listados del creador
+      this.subscribeToApprovals();
     });
-    this.closeDetailModal();
   }
 
   handleDeleteRequest(solicitudId: string | number): void {
@@ -170,12 +176,16 @@ export class CreateRequest implements OnInit, OnDestroy {
   }
 
   onManage(id: string): void {
-    this.approvalService.getApprovalDetails(id).subscribe(request => {
-      if (request && request.fullData) {
-        this.successModalData = request.fullData;
-        this.isDetailModalVisible = true;
-      }
-    });
+    const uid = this.currentUser?.noUsuario;
+    this.isLoadingDetails = true;
+    this.approvalService.getApprovalDetails(id, uid).pipe()
+      .subscribe(request => {
+        if (request && request.fullData) {
+          this.successModalData = request.fullData;
+          this.isDetailModalVisible = true;
+        }
+        this.isLoadingDetails = false;
+      });
   }
 
   applyViewLogic(): void {

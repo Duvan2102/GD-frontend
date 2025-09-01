@@ -40,6 +40,8 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   itemsPerPage: number = 10;
   currentOrder: string = 'creationDate';
   ascendingOrder: boolean = false;
+  isLoading = true;
+  currentUserId?: number;
 
   constructor(
     private approvalService: ApprovalService,
@@ -49,7 +51,10 @@ export class ApprovalDetails implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadTypologies();
-    this.subscribeToApprovals();
+    this.authService.getCurrentUser().subscribe(u => {
+      this.currentUserId = u.noUsuario;
+      this.subscribeToApprovals();
+    });
   }
 
   ngOnDestroy(): void {
@@ -63,10 +68,13 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   }
 
   subscribeToApprovals(): void {
-    this.approvalsSubscription = this.approvalService.getAllApprovals()
+    if (!this.currentUserId) return;
+    this.isLoading = true;
+    this.approvalsSubscription = this.approvalService.getHistorico(this.currentUserId)
       .subscribe(approvals => {
         this.approvalsList = approvals;
         this.applyViewLogic();
+        this.isLoading = false;
       });
   }
 

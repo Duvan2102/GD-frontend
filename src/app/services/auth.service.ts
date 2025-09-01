@@ -8,7 +8,7 @@ import { Position } from './positions.service';
 })
 export class AuthService {
   private currentUser: Usuario & { cargoCompleto: Position } = {
-    noUsuario: 1,
+    noUsuario: 2,
     identificacion: '123456789',
     nombres: 'Usuario',
     apellidos: 'De Prueba',
@@ -38,6 +38,21 @@ export class AuthService {
 
   getCurrentUser(): Observable<Usuario & { cargoCompleto: Position }> {
     return of(this.currentUser);
+  }
+
+  // Acceso síncrono para interceptores y headers
+  getCurrentUserValue(): (Usuario & { cargoCompleto: Position }) | null {
+    return this.currentUser ?? null;
+  }
+
+  // Permisos según privilegio por letra del cargo: E=Admin, I=Usuario, A=Auditor
+  setCargoPrivilege(privilegio: 'E'|'I'|'A'): void {
+    const isAdmin = privilegio === 'E';
+    const isAuditor = privilegio === 'A';
+    this.currentUser.cargoCompleto.permisos = {
+      esAdministrador: isAdmin,
+      esAuditor: isAuditor
+    };
   }
 
   // El administrador tiene acceso a las vistas de Usuarios y Administración

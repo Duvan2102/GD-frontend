@@ -49,3 +49,14 @@
   (approve)="handleApproveRequest($event)"
   (reject)="handleRejectRequest($event)">
 </app-approval-document-view>
+
+<!-- Loading overlay for detail fetch -->
+<div *ngIf="isLoadingDetails" class="loading-overlay">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Cargando...</span>
+  </div>
+  <div class="mt-2">Cargando detalles...</div>
+  <style>
+    .loading-overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.6);z-index:1050}
+  </style>
+</div>

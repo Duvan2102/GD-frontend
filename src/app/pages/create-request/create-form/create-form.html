@@ -136,3 +136,12 @@
 </div>
 
 <app-document-view #docView [isVisible]="showDocumentView" [documentData]="documentViewData" (close)="onCloseView()" (edit)="onEditFromView()" (send)="onSendFromView()" (deleteRequest)="onDeleteFromView($event)"></app-document-view>
+
+<app-confirm-modal
+  [visible]="confirmVisible"
+  [mensaje]="confirmMessage"
+  [textoAceptar]="'Confirmar envío'"
+  [textoCancelar]="'Volver'"
+  (aceptar)="onConfirmSend()"
+  (cancelar)="onCancelConfirm()"
+></app-confirm-modal>
