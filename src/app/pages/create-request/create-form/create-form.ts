@@ -22,7 +22,7 @@ export interface SolicitudData {
   enviarRecordatorio: 'NUNCA' | 'SEMANALMENTE' | 'CADA_3_DIAS' | 'TODOS_LOS_DIAS';
   documentosAnexos: boolean;
   establecerOrden: boolean;
-  destinatarios: Array<{ usuarioId: string; orden?: number }>;
+  destinatarios: Array<{ usuarioId: string; noUsuarioId?: number; orden?: number }>;
   documentoAprobacion?: File;
   anexos?: File[];
 }
@@ -59,7 +59,6 @@ export class CreateForm implements OnInit {
   activeRecipientIndex: number | null = null;
   showDocumentView: boolean = false;
   documentViewData: DocumentViewData | null = null;
-  // Confirmación de envío
   confirmVisible: boolean = false;
   confirmMessage: string = '¿Confirmas el envío de la solicitud para aprobación?';
   highlightedUserIndex: number = -1;
@@ -249,7 +248,6 @@ export class CreateForm implements OnInit {
   onCloseView(): void { this.showDocumentView = false; }
   onEditFromView(): void { this.showDocumentView = false; }
   onSendFromView(): void {
-    // No volver al formulario aún; mostrar confirmación
     this.confirmVisible = true;
   }
 
@@ -259,7 +257,6 @@ export class CreateForm implements OnInit {
   }
 
   onCancelConfirm(): void {
-    // Mantener la vista de documento abierta
     this.confirmVisible = false;
   }
 
@@ -279,6 +276,10 @@ export class CreateForm implements OnInit {
       alert('Por favor completa todos los campos obligatorios, incluyendo al menos un destinatario válido.');
       return;
     }
+    const destinatariosIds: number[] = this.destinatarios
+        .filter(d => d.usuario)
+        .map(d => d.usuario!.noUsuario);
+
     const solicitudData: SolicitudData = {
       nombreSolicitud: this.nombreSolicitud,
       detallesAdicionales: this.detallesAdicionales,
@@ -290,7 +291,8 @@ export class CreateForm implements OnInit {
       destinatarios: this.destinatarios
           .filter(d => d.usuario)
           .map(d => ({
-              usuarioId: (d.usuario!.usuario ?? String(d.usuario!.noUsuario)),
+              usuarioId: d.usuario!.usuario,
+              noUsuarioId: d.usuario!.noUsuario,
               orden: this.establecerOrden ? d.orden : undefined
           })),
       documentoAprobacion: this.documentoAprobacion || undefined,

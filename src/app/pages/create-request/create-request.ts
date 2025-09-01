@@ -6,14 +6,15 @@ import { Controls } from '../approvals/controls/controls';
 import { RequestsTable } from '../approvals/requests-table/requests-table';
 import { FooterControls } from '../approvals/footer-controls/footer-controls';
 import { CreateForm, SolicitudData } from './create-form/create-form';
-import { RequestSuccessModal, SuccessModalData, EstadoSolicitud } from './request-success-modal/request-success-modal';
+import { RequestSuccessModal, SuccessModalData } from './request-success-modal/request-success-modal';
 import { Usuario } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
 import { TypologyService, Typology } from '../../services/typology.service';
 import { ApprovalService } from '../../services/approval.service';
-import { Observable, of, Subscription } from 'rxjs';
+import { Observable, of, Subscription, combineLatest } from 'rxjs';
 import { Approval } from '../approvals/approvals';
 import { AuthService } from '../../services/auth.service';
+import { applyViewLogic } from '../../utils/view.utils';
 
 @Component({
   selector: 'app-create-request',
@@ -68,9 +69,14 @@ export class CreateRequest implements OnInit, OnDestroy {
 
   loadInitialData(): void {
     this.isLoading = true;
-    this.loadTypologies();
-    this.loadUsers();
-    this.subscribeToApprovals();
+    combineLatest([
+      this.userService.obtenerUsuarios(),
+      this.typologyService.getAll()
+    ]).subscribe(([users, typologies]) => {
+      this.allUsers = users;
+      this.tipologias = typologies;
+      this.subscribeToApprovals();
+    });
   }
 
   ngOnDestroy(): void {
@@ -79,26 +85,12 @@ export class CreateRequest implements OnInit, OnDestroy {
 
   subscribeToApprovals(): void {
     if (!this.currentUser) return;
-    this.approvalsSubscription = this.approvalService.getApprovalsByCreator(this.currentUser.noUsuario)
+    this.approvalsSubscription = this.approvalService.getApprovalsByCreator(this.currentUser.noUsuario, this.allUsers)
       .subscribe(approvals => {
         this.approvalsList = approvals;
         this.applyViewLogic();
         this.isLoading = false;
       });
-  }
-
-  loadTypologies(): void {
-    this.typologyService.getAll().subscribe(data => {
-      this.tipologias = data;
-      this.applyViewLogic();
-    });
-  }
-
-  loadUsers(): void {
-    this.userService.obtenerUsuarios().subscribe(data => {
-      this.allUsers = data;
-      this.applyViewLogic();
-    });
   }
 
   openCreateModal(): void {
@@ -115,14 +107,8 @@ export class CreateRequest implements OnInit, OnDestroy {
     const idSolicitante = this.currentUser.noUsuario;
     const idTipologia = Number(solicitudData.tipologia);
     const destinatariosIds: number[] = solicitudData.destinatarios
-      .map(d => {
-        const found = this.allUsers.find(u => u.usuario === d.usuarioId)?.noUsuario;
-        if (typeof found === 'number') return found;
-        // Si viene un número en usuarioId, úsalo
-        const maybeNum = Number(d.usuarioId);
-        return Number.isFinite(maybeNum) && maybeNum > 0 ? maybeNum : undefined as any;
-      })
-      .filter((id): id is number => typeof id === 'number' && Number.isFinite(id));
+      .filter(d => d.noUsuarioId)
+      .map(d => d.noUsuarioId as number);
 
     if (destinatariosIds.length === 0) {
       console.error('[CreateRequest] Error: no se pudieron resolver destinatarios a IDs numéricos');
@@ -144,7 +130,6 @@ export class CreateRequest implements OnInit, OnDestroy {
       adjuntos: adjuntos
     }).subscribe(appr => {
       if (appr) {
-        // Asegurar usuarios cargados para el mapeo
         const ensureUsers$ = this.allUsers.length > 0 ? of(this.allUsers) : this.userService.obtenerUsuarios();
         ensureUsers$.subscribe((users: Usuario[]) => {
           this.allUsers = users;
@@ -166,7 +151,6 @@ export class CreateRequest implements OnInit, OnDestroy {
     if (!uid) return;
     this.approvalService.cancelarSolicitud(event.solicitudId, uid).subscribe(() => {
       this.closeDetailModal();
-      // refrescar listados del creador
       this.subscribeToApprovals();
     });
   }
@@ -178,10 +162,10 @@ export class CreateRequest implements OnInit, OnDestroy {
   onManage(id: string): void {
     const uid = this.currentUser?.noUsuario;
     this.isLoadingDetails = true;
-    this.approvalService.getApprovalDetails(id, uid).pipe()
+    this.approvalService.getApprovalDetails(id, this.allUsers, uid).pipe()
       .subscribe(request => {
         if (request && request.fullData) {
-          this.successModalData = request.fullData;
+          this.successModalData = this.approvalService.mapToSuccessData(request.fullData, this.allUsers);
           this.isDetailModalVisible = true;
         }
         this.isLoadingDetails = false;
@@ -189,51 +173,19 @@ export class CreateRequest implements OnInit, OnDestroy {
   }
 
   applyViewLogic(): void {
-    const getTypologyDescription = (typeId: string): string => {
-      const typology = this.tipologias.find(t => t.idTipologia.toString() === typeId);
-      return typology ? typology.descripcion : typeId;
-    };
-    const getUserFullName = (username: string): string => {
-      const user = this.allUsers.find(u => u.usuario === username);
-      return user ? `${user.nombres} ${user.apellidos}` : username;
-    };
-    
-    let result: Approval[] = [...this.approvalsList];
-    
-    if (this.showOnlyManaged) {
-        result = result.filter(req => ['APROBADO', 'RECHAZADO', 'CANCELADA'].includes(req.status));
-    } else {
-        result = result.filter(req => req.status === 'PENDIENTE');
-    }
-
-    if (this.searchTerm) {
-      const search = this.searchTerm.toLowerCase();
-      result = result.filter(req =>
-        getTypologyDescription(req.type).toLowerCase().includes(search) ||
-        getUserFullName(req.creatorUser).toLowerCase().includes(search) ||
-        req.id.toLowerCase().includes(search)
-      );
-    }
-
-    this.filteredRequests = result;
-    this.totalFiltered = this.filteredRequests.length;
-
-    this.filteredRequests.sort((a, b) => {
-      const valueA = (a as any)[this.currentOrder];
-      const valueB = (b as any)[this.currentOrder];
-      if (valueA < valueB) return this.ascendingOrder ? -1 : 1;
-      if (valueA > valueB) return this.ascendingOrder ? 1 : -1;
-      return 0;
-    });
-
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    const page = this.filteredRequests.slice(start, start + this.itemsPerPage);
-
-    this.displayedRequests = page.map(req => ({
-      ...req,
-      type: getTypologyDescription(req.type),
-      creatorUser: getUserFullName(req.creatorUser)
-    }));
+    const { displayedRequests, totalFiltered } = applyViewLogic(
+      this.approvalsList,
+      this.showOnlyManaged,
+      this.searchTerm,
+      this.currentOrder,
+      this.ascendingOrder,
+      this.itemsPerPage,
+      this.currentPage,
+      this.tipologias,
+      this.allUsers
+    );
+    this.displayedRequests = displayedRequests;
+    this.totalFiltered = totalFiltered;
   }
 
   onToggleManaged(value: boolean): void { this.showOnlyManaged = value; this.currentPage = 1; this.applyViewLogic(); }

@@ -3,7 +3,7 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, OnDes
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
-import { Usuario } from '../users';
+import { Usuario } from '../../../interfaces/common.interfaces';
 import { UserService } from '../../../services/user.service';
 
 @Component({

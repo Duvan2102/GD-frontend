@@ -6,10 +6,13 @@ import { Controls } from '../approvals/controls/controls';
 import { RequestsTable } from '../approvals/requests-table/requests-table';
 import { FooterControls } from '../approvals/footer-controls/footer-controls';
 import { ApprovalService } from '../../services/approval.service';
-import { Subscription } from 'rxjs';
+import { Subscription, combineLatest } from 'rxjs';
 import { Approval } from '../approvals/approvals';
 import { Typology, TypologyService } from '../../services/typology.service';
 import { AuthService } from '../../services/auth.service';
+import { Usuario, UsuarioRequest, ApiResponse, ErrorResponse, DobleAutenticacionTipo } from '../../interfaces/common.interfaces';
+import { UserService } from '../../services/user.service';
+import { applyViewLogic } from '../../utils/view.utils';
 
 @Component({
   selector: 'app-approval-details',
@@ -29,7 +32,8 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   approvalsList: Approval[] = [];
   private approvalsSubscription: Subscription | undefined;
   tipologias: Typology[] = [];
-  
+  allUsers: Usuario[] = [];
+
   displayedRequests: any[] = [];
   private filteredRequests: any[] = [];
   totalFiltered: number = 0;
@@ -46,14 +50,14 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   constructor(
     private approvalService: ApprovalService,
     private typologyService: TypologyService,
-    private authService: AuthService
+    private authService: AuthService,
+    private userService: UserService
     ) {}
 
   ngOnInit(): void {
-    this.loadTypologies();
     this.authService.getCurrentUser().subscribe(u => {
       this.currentUserId = u.noUsuario;
-      this.subscribeToApprovals();
+      this.loadInitialData();
     });
   }
 
@@ -61,16 +65,22 @@ export class ApprovalDetails implements OnInit, OnDestroy {
     this.approvalsSubscription?.unsubscribe();
   }
 
-  loadTypologies(): void {
-    this.typologyService.getAll().subscribe(data => {
-      this.tipologias = data;
+  loadInitialData(): void {
+    this.isLoading = true;
+    combineLatest([
+      this.userService.obtenerUsuarios(),
+      this.typologyService.getAll()
+    ]).subscribe(([users, typologies]) => {
+      this.allUsers = users;
+      this.tipologias = typologies;
+      this.subscribeToApprovals();
     });
   }
 
   subscribeToApprovals(): void {
-    if (!this.currentUserId) return;
+    if (!this.currentUserId || this.allUsers.length === 0) return;
     this.isLoading = true;
-    this.approvalsSubscription = this.approvalService.getHistorico(this.currentUserId)
+    this.approvalsSubscription = this.approvalService.getHistorico(this.currentUserId, this.allUsers)
       .subscribe(approvals => {
         this.approvalsList = approvals;
         this.applyViewLogic();
@@ -79,44 +89,19 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   }
 
   applyViewLogic(): void {
-    const getTypologyDescription = (typeId: string): string => {
-      const typology = this.tipologias.find(t => t.idTipologia.toString() === typeId);
-      return typology ? typology.descripcion : typeId;
-    };
-
-    let result = [...this.approvalsList];
-    if (this.showOnlyManaged) {
-      result = result.filter(req => req.status === 'RECHAZADO' || req.status === 'CANCELADA');
-    } else {
-      result = result.filter(req => req.status === 'APROBADO');
-    }
-
-    if (this.searchTerm) {
-      const search = this.searchTerm.toLowerCase();
-      result = result.filter(req =>
-        getTypologyDescription(req.type).toLowerCase().includes(search) ||
-        req.creatorUser.toLowerCase().includes(search) ||
-        req.id.toLowerCase().includes(search)
-      );
-    }
-    this.filteredRequests = result;
-    this.totalFiltered = this.filteredRequests.length;
-
-    if (this.currentOrder) {
-      this.filteredRequests.sort((a, b) => {
-        const valueA = (a as any)[this.currentOrder];
-        const valueB = (b as any)[this.currentOrder];
-        if (valueA < valueB) return this.ascendingOrder ? -1 : 1;
-        if (valueA > valueB) return this.ascendingOrder ? 1 : -1;
-        return 0;
-      });
-    }
-
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    this.displayedRequests = this.filteredRequests.slice(start, start + this.itemsPerPage).map(req => ({
-      ...req,
-      type: getTypologyDescription(req.type)
-    }));
+    const { displayedRequests, totalFiltered } = applyViewLogic(
+      this.approvalsList,
+      this.showOnlyManaged,
+      this.searchTerm,
+      this.currentOrder,
+      this.ascendingOrder,
+      this.itemsPerPage,
+      this.currentPage,
+      this.tipologias,
+      this.allUsers
+    );
+    this.displayedRequests = displayedRequests;
+    this.totalFiltered = totalFiltered;
   }
 
   onToggleManaged(value: boolean): void {

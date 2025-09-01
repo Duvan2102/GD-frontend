@@ -10,20 +10,22 @@ import { ApprovalDocumentView, ApprovalDocumentViewData } from './approval-docum
 import { Usuario } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
 import { ApprovalService } from '../../services/approval.service';
-import { Subscription } from 'rxjs';
+import { Subscription, combineLatest } from 'rxjs';
 import { delay } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { Typology, TypologyService } from '../../services/typology.service';
+import { applyViewLogic } from '../../utils/view.utils';
 
 export interface Approval {
   type: string;
   id: string;
   creationDate: string;
   creatorUser: string;
+  creatorFullName: string;
   position: string;
   lastUpdate: string;
   status: 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA';
-  approvers: string[];
+  approvers: { initials: string; fullName: string }[];
   priority: boolean;
   fullData?: any;
 }
@@ -77,9 +79,7 @@ export class Approvals implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.authService.getCurrentUser().subscribe(user => {
         this.currentUser = user;
-        this.loadUsers();
-        this.loadTypologies();
-        this.subscribeToApprovals();
+        this.loadUsersAndApprovals();
     });
   }
 
@@ -87,29 +87,25 @@ export class Approvals implements OnInit, OnDestroy {
     this.approvalsSubscription?.unsubscribe();
   }
 
-  loadUsers(): void {
-    this.userService.obtenerUsuarios().subscribe(users => {
+  loadUsersAndApprovals(): void {
+    combineLatest([
+      this.userService.obtenerUsuarios(),
+      this.typologyService.getAll()
+    ]).subscribe(([users, typologies]) => {
       this.allUsers = users;
-    });
-  }
-
-  loadTypologies(): void {
-    this.typologyService.getAll().subscribe(data => {
-      this.tipologias = data;
+      this.tipologias = typologies;
+      this.subscribeToApprovals();
     });
   }
 
   subscribeToApprovals(): void {
     if (!this.currentUser) return;
     const uid = this.currentUser.noUsuario;
-    // Pendientes por gestionar
-    this.approvalService.getApprovalsForApprover(uid).subscribe(list => {
+    this.approvalService.getApprovalsForApprover(uid, this.allUsers).subscribe(list => {
       this.pendingApprovals = list || [];
       this.refreshApprovalsSource();
     });
-    // Histrico (gestionadas)
-    this.approvalService.getHistorico(uid).subscribe(list => {
-      // Filtrar slo las gestionadas
+    this.approvalService.getHistorico(uid, this.allUsers).subscribe(list => {
       this.managedApprovals = (list || []).filter(a => ['APROBADO','RECHAZADO','CANCELADA'].includes(a.status));
       this.refreshApprovalsSource();
     });
@@ -123,7 +119,7 @@ export class Approvals implements OnInit, OnDestroy {
   onManage(id: string): void {
     this.isLoadingDetails = true;
     const uid = this.currentUser?.noUsuario;
-    this.approvalService.getApprovalDetails(id, uid).pipe(delay(500))
+    this.approvalService.getApprovalDetails(id, this.allUsers, uid).pipe(delay(500))
       .subscribe(requestDetails => {
       if (requestDetails) {
         if (requestDetails.fullData?.estado === 'Enviada') {
@@ -133,58 +129,34 @@ export class Approvals implements OnInit, OnDestroy {
             }
             this.approvalService.updateApproval(requestDetails);
         }
-        // Mapear al formato del modal con usuarios para mostrar nombres/áreas
         this.successModalData = this.approvalService.mapToSuccessData(requestDetails.fullData, this.allUsers);
         this.isDetailModalVisible = true;
       }
       this.isLoadingDetails = false;
     });
   }
-  
+
   applyViewLogic(): void {
-    const getTypologyDescription = (typeId: string): string => {
-      const typology = this.tipologias.find(t => t.idTipologia.toString() === typeId);
-      return typology ? typology.descripcion : typeId;
-    };
-
-    let result = [...this.approvalsList];
-    if (this.showOnlyManaged) {
-        result = result.filter(req => ['APROBADO', 'RECHAZADO', 'CANCELADA'].includes(req.status));
-    } else {
-        result = result.filter(req => req.status === 'PENDIENTE');
-    }
-
-    if (this.searchTerm) {
-      const search = this.searchTerm.toLowerCase();
-      result = result.filter(req =>
-        getTypologyDescription(req.type).toLowerCase().includes(search) ||
-        req.creatorUser.toLowerCase().includes(search) ||
-        req.id.toLowerCase().includes(search)
-      );
-    }
-    this.filteredRequests = result;
-    this.totalFiltered = this.filteredRequests.length;
-    if (this.currentOrder) {
-      this.filteredRequests.sort((a, b) => {
-        const valueA = (a as any)[this.currentOrder];
-        const valueB = (b as any)[this.currentOrder];
-        if (valueA < valueB) return this.ascendingOrder ? -1 : 1;
-        if (valueA > valueB) return this.ascendingOrder ? 1 : -1;
-        return 0;
-      });
-    }
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    this.displayedRequests = this.filteredRequests.slice(start, start + this.itemsPerPage).map(req => ({
-      ...req,
-      type: getTypologyDescription(req.type)
-    }));
+    const { displayedRequests, totalFiltered } = applyViewLogic(
+      this.approvalsList,
+      this.showOnlyManaged,
+      this.searchTerm,
+      this.currentOrder,
+      this.ascendingOrder,
+      this.itemsPerPage,
+      this.currentPage,
+      this.tipologias,
+      this.allUsers
+    );
+    this.displayedRequests = displayedRequests;
+    this.totalFiltered = totalFiltered;
   }
 
   closeDetailModal() {
     this.isDetailModalVisible = false;
     this.successModalData = null;
   }
-  
+
   handleOpenDocumentToApprove(data: SuccessModalData) {
     if (data && data.documentoAprobacion) {
       this.documentToApproveData = {
@@ -192,8 +164,8 @@ export class Approvals implements OnInit, OnDestroy {
         file: data.documentoAprobacion,
         title: data.nombreSolicitud,
       };
-      this.isDetailModalVisible = false; 
-      this.isApprovalDocumentViewVisible = true; 
+      this.isDetailModalVisible = false;
+      this.isApprovalDocumentViewVisible = true;
     } else if (data) {
       const anyData: any = data as any;
       const url = anyData.documentoUrl || anyData.pdfUrl || anyData.urlDocumento || anyData.url;
@@ -217,7 +189,7 @@ export class Approvals implements OnInit, OnDestroy {
       }
     });
   }
-  
+
   handleRejectRequest(ev: { id: string | number, comentario?: string }) {
     const uid = this.currentUser?.noUsuario;
     if (!uid) return;
@@ -230,7 +202,7 @@ export class Approvals implements OnInit, OnDestroy {
   }
 
   private updateRequestStatus(id: string | number, approvalStatus: 'APROBADO' | 'RECHAZADO', fullDataStatus: 'Aprobada' | 'Rechazada') {
-    this.approvalService.getApprovalDetails(id).subscribe(request => {
+    this.approvalService.getApprovalDetails(id, this.allUsers).subscribe(request => {
       if (request) {
         request.status = approvalStatus;
         if (request.fullData) {
@@ -240,7 +212,7 @@ export class Approvals implements OnInit, OnDestroy {
       }
     });
   }
-  
+
   closeApprovalDocumentView() {
     this.isApprovalDocumentViewVisible = false;
     this.documentToApproveData = null;
