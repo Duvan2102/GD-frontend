@@ -1,18 +1,12 @@
-import { Component, Output, EventEmitter, OnInit, ChangeDetectorRef, Input, ViewChild, ElementRef, HostListener } from '@angular/core';
+import { Component, Output, EventEmitter, OnInit, ChangeDetectorRef, Input, ViewChild, ElementRef, HostListener, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TypologyService, Typology } from '../../../services/typology.service';
 import { UserService } from '../../../services/user.service';
+import { RecipientService, Destinatario } from '../../../services/recipient.service';
 import { Usuario } from '../../../interfaces/common.interfaces';
 import { DocumentView, DocumentViewData } from '../document-view/document-view';
 import { ConfirmModal } from '../../users/confirm-modal/confirm-modal';
-
-interface Destinatario {
-  orden: number;
-  usuario: Usuario | null;
-  searchTerm: string;
-  originalSearchTerm?: string;
-}
 
 export interface SolicitudData {
   nombreSolicitud: string;
@@ -25,6 +19,9 @@ export interface SolicitudData {
   destinatarios: Array<{ usuarioId: string; noUsuarioId?: number; orden?: number }>;
   documentoAprobacion?: File;
   anexos?: File[];
+  // Campos adicionales para la vista de documentos
+  documentoUrl?: string;
+  documentoFileName?: string;
 }
 
 @Component({
@@ -34,9 +31,10 @@ export interface SolicitudData {
   templateUrl: './create-form.html',
   styleUrls: ['./create-form.css']
 })
-export class CreateForm implements OnInit {
+export class CreateForm implements OnInit, OnChanges {
   @ViewChild('docView') docView!: DocumentView;
   @Input() isVisible: boolean = false;
+  @Input() currentUser: Usuario | null = null;
   @Output() onSaved = new EventEmitter<SolicitudData>();
   @Output() close = new EventEmitter<void>();
   @Output() deleteRequest = new EventEmitter<string | number>();
@@ -67,6 +65,7 @@ export class CreateForm implements OnInit {
   constructor(
     private typologyService: TypologyService,
     private userService: UserService,
+    private recipientService: RecipientService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -83,6 +82,23 @@ export class CreateForm implements OnInit {
     this.loadUsers();
   }
 
+  ngOnDestroy(): void {
+    // Limpiar cualquier suscripción si es necesario
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['currentUser'] && changes['currentUser'].currentValue) {
+      // Si hay un dropdown activo, actualizar el filtrado
+      if (this.activeRecipientIndex !== null && this.destinatarios[this.activeRecipientIndex].searchTerm) {
+        const currentRecipient = this.destinatarios[this.activeRecipientIndex];
+        const searchTerm = currentRecipient.searchTerm.toLowerCase();
+        this.filteredUsers = this.filterUsersLocally(searchTerm, this.activeRecipientIndex);
+      }
+    }
+  }
+
+
+
   loadTypologies(): void {
     this.typologyService.getAll().subscribe({
       next: (data) => { this.tipologias = data; },
@@ -92,8 +108,12 @@ export class CreateForm implements OnInit {
 
   loadUsers(): void {
     this.userService.obtenerUsuarios().subscribe({
-      next: (data) => { this.allUsers = data; },
-      error: (error) => { this.errorMessage = 'Error al cargar los usuarios.'; }
+      next: (data) => { 
+        this.allUsers = data; 
+      },
+      error: (error) => { 
+        this.errorMessage = 'Error al cargar los usuarios.'; 
+      }
     });
   }
 
@@ -104,22 +124,66 @@ export class CreateForm implements OnInit {
     this.activeRecipientIndex = index;
     this.highlightedUserIndex = -1;
 
-    const selectedUserIds = this.destinatarios.map(d => d.usuario?.noUsuario).filter(id => id != null);
-
-    if (searchTerm.length > 1) {
-      this.filteredUsers = this.allUsers.filter(user =>
-        !selectedUserIds.includes(user.noUsuario) &&
-        (user.nombres.toLowerCase().includes(searchTerm) ||
-         user.apellidos.toLowerCase().includes(searchTerm) ||
-         user.usuario.toLowerCase().includes(searchTerm))
-      );
-    } else {
-      this.filteredUsers = [];
-    }
+    // Filtrar usuarios directamente en el frontend
+    this.filteredUsers = this.filterUsersLocally(searchTerm, index);
 
     if (this.filteredUsers.length > 0) {
       this.calculateDropdownPosition(inputElement);
     }
+  }
+
+  private filterUsersLocally(searchTerm: string, currentIndex: number): Usuario[] {
+    if (!searchTerm || searchTerm.length <= 1) return [];
+    if (!this.allUsers || this.allUsers.length === 0) return [];
+    
+    // Obtener IDs de usuarios ya seleccionados (excluyendo el campo actual)
+    const selectedUserIds = this.destinatarios
+      .map((d, i) => i !== currentIndex && d.usuario ? this.getUserId(d.usuario) : null)
+      .filter(id => id != null) as number[];
+    
+    const creatorUserId = this.getUserId(this.currentUser);
+    const searchTermLower = searchTerm.toLowerCase();
+
+    console.log('[CreateForm] filterUsersLocally:', {
+      searchTerm,
+      currentIndex,
+      selectedUserIds,
+      creatorUserId,
+      destinatarios: this.destinatarios.map((d, i) => ({
+        index: i,
+        usuario: d.usuario?.usuario,
+        userId: d.usuario ? this.getUserId(d.usuario) : null
+      }))
+    });
+
+    const filtered = this.allUsers.filter(user => {
+      const userId = this.getUserId(user);
+      
+      // 1. Verificar coincidencia de búsqueda
+      const matchesSearch = user.nombres?.toLowerCase().includes(searchTermLower) ||
+                           user.apellidos?.toLowerCase().includes(searchTermLower) ||
+                           user.usuario?.toLowerCase().includes(searchTermLower);
+      
+      if (!matchesSearch) return false;
+
+      // 2. Excluir usuario creador
+      if (creatorUserId && userId === creatorUserId) {
+        console.log('[CreateForm] EXCLUYENDO usuario creador:', user.usuario);
+        return false;
+      }
+
+      // 3. Excluir usuarios ya seleccionados
+      if (userId && selectedUserIds.includes(userId)) {
+        console.log('[CreateForm] EXCLUYENDO usuario ya seleccionado:', user.usuario);
+        return false;
+      }
+
+      console.log('[CreateForm] INCLUYENDO usuario:', user.usuario);
+      return true;
+    });
+
+    console.log('[CreateForm] Usuarios filtrados finales:', filtered.map(u => u.usuario));
+    return filtered;
   }
 
   calculateDropdownPosition(inputElement: HTMLInputElement) {
@@ -175,10 +239,85 @@ export class CreateForm implements OnInit {
     this.highlightedUserIndex = -1;
   }
 
+  // Función auxiliar para obtener el ID del usuario de manera robusta
+  private getUserId(user: Usuario | null): number | null {
+    // Verificar que el usuario no sea null
+    if (!user) return null;
+    
+    // Intentar diferentes propiedades posibles para el ID
+    return user.noUsuario || 
+           (user as any).id || 
+           (user as any).idUsuario || 
+           (user as any).userId || 
+           (user as any).usuarioId || 
+           null;
+  }
+
   selectUser(user: Usuario, index: number): void {
+    const userId = this.getUserId(user);
+    
+    console.log('[CreateForm] selectUser llamado:', {
+      user: user.usuario,
+      userId,
+      userKeys: Object.keys(user),
+      userObject: user,
+      index,
+      destinatarios: this.destinatarios.map((d, i) => ({
+        index: i,
+        usuario: d.usuario?.usuario,
+        userId: this.getUserId(d.usuario)
+      }))
+    });
+
+    // Verificar que no sea el usuario creador
+    const currentUserId = this.getUserId(this.currentUser);
+    if (currentUserId && userId === currentUserId) {
+      alert('No puedes seleccionarte a ti mismo como destinatario');
+      return;
+    }
+
+    // Verificar que no esté ya seleccionado en otro campo (excluyendo el campo actual)
+    const isAlreadySelected = this.destinatarios.some((d, i) => 
+      i !== index && d.usuario && this.getUserId(d.usuario) === userId
+    );
+    
+    console.log('[CreateForm] Verificación de duplicados:', {
+      isAlreadySelected,
+      userId,
+      currentIndex: index
+    });
+    
+    if (isAlreadySelected) {
+      alert('Este usuario ya está seleccionado en otro campo');
+      return;
+    }
+
+    // Si el usuario ya está seleccionado en el campo actual, permitir la selección (para reemplazar)
     this.destinatarios[index].usuario = user;
-    this.destinatarios[index].searchTerm = `${user.nombres} ${user.apellidos} (${user.usuario})`;
-    this.closeDropdown();
+    this.destinatarios[index].searchTerm = `${user.nombres} ${user.apellidos}`;
+    this.destinatarios[index].originalSearchTerm = `${user.nombres} ${user.apellidos}`;
+    this.filteredUsers = [];
+    this.activeRecipientIndex = -1;
+    this.highlightedUserIndex = -1;
+
+    // Agregar nuevo campo automáticamente después de la selección
+    this.addNewUserFieldAfterSelection(index);
+  }
+
+  private addNewUserFieldAfterSelection(selectedIndex: number): void {
+    // Solo agregar un nuevo campo si este es el último campo y no está vacío
+    if (selectedIndex === this.destinatarios.length - 1 && this.destinatarios[selectedIndex].usuario) {
+      const nuevoOrden = this.destinatarios.length + 1;
+      this.destinatarios.push(this.recipientService.createNewRecipient(nuevoOrden));
+      
+      // Enfocar el nuevo campo después de un pequeño delay
+      setTimeout(() => {
+        const newInput = document.querySelector(`input[placeholder*="Escriba aquí los nombres"]:last-of-type`) as HTMLInputElement;
+        if (newInput) {
+          newInput.focus();
+        }
+      }, 100);
+    }
   }
   
   onDocumentoAprobacionChange(event: any): void {
@@ -212,7 +351,7 @@ export class CreateForm implements OnInit {
 
   agregarDestinatario(): void {
     const nuevoOrden = this.destinatarios.length + 1;
-    this.destinatarios.push({ orden: nuevoOrden, usuario: null, searchTerm: '' });
+    this.destinatarios.push(this.recipientService.createNewRecipient(nuevoOrden));
   }
 
   eliminarDestinatario(index: number): void {
@@ -222,10 +361,16 @@ export class CreateForm implements OnInit {
     } else {
       this.destinatarios[0] = { orden: 1, usuario: null, searchTerm: '' };
     }
+    
+    // Si hay un campo activo, actualizar el filtrado
+    if (this.activeRecipientIndex !== null && this.destinatarios[this.activeRecipientIndex]?.searchTerm) {
+      const searchTerm = this.destinatarios[this.activeRecipientIndex].searchTerm.toLowerCase();
+      this.filteredUsers = this.filterUsersLocally(searchTerm, this.activeRecipientIndex);
+    }
   }
 
   private reordenarDestinatarios(): void {
-    this.destinatarios.forEach((dest, index) => { dest.orden = index + 1; });
+    this.recipientService.reorderRecipients(this.destinatarios);
   }
 
   onEstablecerOrdenChange(): void {
@@ -271,14 +416,14 @@ export class CreateForm implements OnInit {
   }
 
   onGuardar(): void {
-    this.resolveTypedRecipients();
+    // Resolver destinatarios
+    this.recipientService.resolveTypedRecipients(this.destinatarios, this.allUsers);
+    
+    // Validar formulario
     if (!this.isFormValid()) {
       alert('Por favor completa todos los campos obligatorios, incluyendo al menos un destinatario válido.');
       return;
     }
-    const destinatariosIds: number[] = this.destinatarios
-        .filter(d => d.usuario)
-        .map(d => d.usuario!.noUsuario);
 
     const solicitudData: SolicitudData = {
       nombreSolicitud: this.nombreSolicitud,
@@ -288,22 +433,18 @@ export class CreateForm implements OnInit {
       enviarRecordatorio: this.enviarRecordatorio,
       documentosAnexos: this.documentosAnexos,
       establecerOrden: this.establecerOrden,
-      destinatarios: this.destinatarios
-          .filter(d => d.usuario)
-          .map(d => ({
-              usuarioId: d.usuario!.usuario,
-              noUsuarioId: d.usuario!.noUsuario,
-              orden: this.establecerOrden ? d.orden : undefined
-          })),
+      destinatarios: this.recipientService.convertDestinatariosToData(this.destinatarios, this.establecerOrden),
       documentoAprobacion: this.documentoAprobacion || undefined,
       anexos: this.anexos.length > 0 ? this.anexos : undefined,
     };
+    
+    console.log('[CreateForm] Datos de solicitud construidos:', solicitudData);
     this.onSaved.emit(solicitudData);
     this.resetForm();
   }
 
   isFormValid(): boolean {
-    return !!(this.nombreSolicitud.trim() && this.tipologia && this.destinatarios.some(d => d.usuario !== null));
+    return !!(this.nombreSolicitud.trim() && this.tipologia && this.recipientService.hasValidRecipients(this.destinatarios));
   }
 
   resetForm(): void {
@@ -316,37 +457,9 @@ export class CreateForm implements OnInit {
     this.establecerOrden = false;
     this.documentoAprobacion = null;
     this.anexos = [];
-    this.destinatarios = [{ orden: 1, usuario: null, searchTerm: '' }];
+    this.destinatarios = [this.recipientService.createNewRecipient(1)];
     this.showDocumentView = false;
   }
 
-  private resolveTypedRecipients(): void {
-    this.destinatarios.forEach((d) => {
-      if (d.usuario) return;
-      const term = (d.searchTerm || '').trim();
-      if (!term) return;
-      const match = term.match(/\(([^)]+)\)/);
-      let user: Usuario | undefined;
-      if (match && match[1]) {
-        const username = match[1].trim();
-        user = this.allUsers.find(u => u.usuario === username);
-      }
-      if (!user && /^\d+$/.test(term)) {
-        const idNum = parseInt(term, 10);
-        user = this.allUsers.find(u => u.noUsuario === idNum);
-      }
-      if (!user) {
-        const t = term.toLowerCase();
-        const matches = this.allUsers.filter(u =>
-          (u.nombres + ' ' + u.apellidos).toLowerCase().includes(t) ||
-          u.usuario.toLowerCase().includes(t)
-        );
-        if (matches.length === 1) user = matches[0];
-      }
-      if (user) {
-        d.usuario = user;
-        d.searchTerm = `${user.nombres} ${user.apellidos} (${user.usuario})`;
-      }
-    });
-  }
+
 }

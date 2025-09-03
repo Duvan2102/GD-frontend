@@ -2,10 +2,18 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from
 import { CommonModule } from '@angular/common';
 import { SolicitudData } from '../create-form/create-form';
 import { Usuario } from '../../../interfaces/common.interfaces';
+import { ConfirmationModal, ConfirmationModalData } from '../../../shared/confirmation-modal/confirmation-modal';
 
 export interface AprobadorState {
   usuarioId: string;
-  estado: 'Enviado' |'Pendiente' | 'Aprobado' | 'Rechazado';
+  estado: 'Enviado' | 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Cancelado';
+  fechaAccion?: Date;
+  comentario?: string;
+  metadata?: {
+    orden?: number;
+    noUsuarioId?: number;
+    timestamp?: string;
+  };
 }
 export interface AprobadorTabla {
   usuarioId: string;
@@ -23,13 +31,16 @@ export interface SuccessModalData extends SolicitudData {
   fechaCreacion?: Date;
   estado?: EstadoSolicitud;
   approverStates?: AprobadorState[];
+  // Campos adicionales para documentos
+  documentoUrl?: string;
+  documentoFileName?: string;
 }
 
 
 @Component({
   selector: 'app-request-success-modal',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ConfirmationModal],
   templateUrl: './request-success-modal.html',
   styleUrls: ['./request-success-modal.css']
 })
@@ -40,10 +51,14 @@ export class RequestSuccessModal implements OnChanges {
   @Input() isApprovalFlow = false; 
 
   @Output() close = new EventEmitter<void>();
-  @Output() cancelRequest = new EventEmitter<{ solicitudId: string | number }>();
+  @Output() cancelRequest = new EventEmitter<{ solicitudId: string | number, comentario?: string }>();
   @Output() manageRequest = new EventEmitter<SuccessModalData>();
 
   approvers: AprobadorTabla[] = [];
+  
+  // Confirmation modal properties
+  isConfirmationModalVisible = false;
+  confirmationModalData: ConfirmationModalData | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
     if ((changes['data'] || changes['usuariosDisponibles']) && this.data) {
@@ -56,8 +71,32 @@ export class RequestSuccessModal implements OnChanges {
       this.approvers = [];
       return;
     }
+    
+    console.log('[RequestSuccessModal] Cargando aprobadores...', {
+      destinatarios: this.data.destinatarios,
+      usuariosDisponibles: this.usuariosDisponibles
+    });
+    
     this.approvers = this.data.destinatarios.map((dest) => {
-      const usuario = this.usuariosDisponibles.find(u => u.usuario === dest.usuarioId);
+      // Buscar usuario por múltiples criterios
+      let usuario = this.usuariosDisponibles.find(u => u.usuario === dest.usuarioId);
+      
+      // Si no se encuentra por usuario, buscar por noUsuarioId
+      if (!usuario && dest.noUsuarioId) {
+        usuario = this.usuariosDisponibles.find(u => u.noUsuario === dest.noUsuarioId);
+      }
+      
+      // Si aún no se encuentra, buscar por ID numérico en usuarioId
+      if (!usuario && /^\d+$/.test(dest.usuarioId)) {
+        const idNum = parseInt(dest.usuarioId, 10);
+        usuario = this.usuariosDisponibles.find(u => u.noUsuario === idNum);
+      }
+      
+      console.log(`[RequestSuccessModal] Destinatario ${dest.usuarioId}:`, {
+        usuarioEncontrado: usuario,
+        noUsuarioId: dest.noUsuarioId
+      });
+      
       return {
         usuarioId: dest.usuarioId,
         nombresApellidos: usuario ? `${usuario.nombres} ${usuario.apellidos}` : 'Usuario no encontrado',
@@ -68,6 +107,8 @@ export class RequestSuccessModal implements OnChanges {
         orden: dest.orden
       };
     }).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    
+    console.log('[RequestSuccessModal] Aprobadores cargados:', this.approvers);
   }
   
   private getEstadoAprobador(usuarioId: string): 'Enviado' | 'Aprobado' | 'Rechazado' | 'Cancelado' | 'Pendiente' {
@@ -110,9 +151,36 @@ export class RequestSuccessModal implements OnChanges {
 
   onCancelRequest(): void {
     if (!this.data?.id) return;
-    if (confirm('¿Está seguro de que desea cancelar esta solicitud? Esta acción no se puede deshacer.')) {
-      this.cancelRequest.emit({ solicitudId: this.data.id });
+    
+    this.confirmationModalData = {
+      title: 'Cancelar Solicitud',
+      message: '¿Está seguro de que desea cancelar esta solicitud? Esta acción no se puede deshacer.',
+      confirmText: 'Sí, Cancelar',
+      cancelText: 'No, Mantener',
+      type: 'danger',
+      showComment: true,
+      commentLabel: 'Motivo de cancelación (obligatorio)',
+      commentPlaceholder: 'Escriba el motivo de la cancelación...',
+      commentRequired: true
+    };
+    
+    this.isConfirmationModalVisible = true;
+  }
+
+  onConfirmationModalConfirm(event: { confirmed: boolean, comment?: string }): void {
+    this.isConfirmationModalVisible = false;
+    
+    if (event.confirmed && this.data?.id) {
+      const comentario = event.comment?.trim() || ''; // Ensure it's a string
+      this.cancelRequest.emit({ 
+        solicitudId: this.data.id,
+        comentario: comentario
+      });
     }
+  }
+
+  onConfirmationModalCancel(): void {
+    this.isConfirmationModalVisible = false;
   }
   
   onClose(): void { this.close.emit(); }
@@ -150,8 +218,19 @@ export class RequestSuccessModal implements OnChanges {
   }
 
   viewDocument(doc?: File) {
-    if (doc) {
-      window.open(URL.createObjectURL(doc), '_blank');
+    if (doc && doc instanceof File && doc.size > 0) {
+      try {
+        const url = URL.createObjectURL(doc);
+        window.open(url, '_blank');
+        // Limpiar la URL después de un tiempo para liberar memoria
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      } catch (error) {
+        console.error('Error al crear URL del documento:', error);
+        alert('Error al abrir el documento. Por favor, inténtalo de nuevo.');
+      }
+    } else {
+      console.warn('Documento no válido para visualizar:', doc);
+      alert('No se puede visualizar el documento. El archivo no es válido.');
     }
   }
 }

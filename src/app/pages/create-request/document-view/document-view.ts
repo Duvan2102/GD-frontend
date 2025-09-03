@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgxExtendedPdfViewerModule, NgxExtendedPdfViewerService } from 'ngx-extended-pdf-viewer';
+import { PdfService } from '../../../services/pdf.service';
 
 export interface DocumentViewData {
   id: string | number;
@@ -33,7 +34,8 @@ export class DocumentView implements OnChanges {
   zoom = 100;
 
   constructor(
-    private pdfService: NgxExtendedPdfViewerService,
+    private pdfViewerService: NgxExtendedPdfViewerService,
+    private pdfService: PdfService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -60,7 +62,7 @@ export class DocumentView implements OnChanges {
 
     try {
       if (this.documentData.file) {
-        this.pdfSrc = await this.documentData.file.arrayBuffer();
+        this.pdfSrc = await this.pdfService.fileToArrayBuffer(this.documentData.file);
       } else if (this.documentData.url) {
         this.pdfSrc = this.documentData.url;
       } else {
@@ -86,20 +88,12 @@ export class DocumentView implements OnChanges {
 
   onDownload(): void {
     if (!this.pdfSrc) return;
-    const blob = new Blob([this.pdfSrc as ArrayBuffer], { type: 'application/pdf' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.style.display = 'none';
-    a.href = url;
-    a.download = this.documentData?.file?.name || 'documento.pdf';
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    a.remove();
+    const filename = this.pdfService.getFileName(this.documentData);
+    this.pdfService.createDownloadBlob(this.pdfSrc, filename);
   }
 
   onPrint(): void {
-    this.pdfService.print();
+    this.pdfViewerService.print();
   }
 
   onDelete(): void {

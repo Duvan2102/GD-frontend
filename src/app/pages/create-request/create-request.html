@@ -39,6 +39,7 @@
 
 <app-create-form
     [isVisible]="isCreateModalVisible"
+    [currentUser]="currentUser"
     (close)="closeCreateModal()"
     (onSaved)="handleSaveRequest($event)"
     (deleteRequest)="handleDeleteRequest($event)">

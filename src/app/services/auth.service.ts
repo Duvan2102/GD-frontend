@@ -29,7 +29,7 @@ export class AuthService {
       },
       permisos: {
         esAdministrador: true,
-        esAuditor: true
+        esAuditor: false
       }
     }
   };

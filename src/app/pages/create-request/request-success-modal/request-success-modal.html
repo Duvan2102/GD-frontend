@@ -1,9 +1,9 @@
-<div class="custom-backdrop" [class.show]="isVisible" (click)="onClose()"></div>
+<div class="custom-backdrop" [class.show]="isVisible && !isConfirmationModalVisible" (click)="onClose()"></div>
 
 <div class="modal"
      tabindex="-1"
-     [class.show]="isVisible"
-     [style.display]="isVisible ? 'block' : 'none'">
+     [class.show]="isVisible && !isConfirmationModalVisible"
+     [style.display]="(isVisible && !isConfirmationModalVisible) ? 'block' : 'none'">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content request-success-modal">
 
@@ -116,3 +116,11 @@
     </div>
   </div>
 </div>
+
+<!-- Confirmation Modal -->
+<app-confirmation-modal
+  [isVisible]="isConfirmationModalVisible"
+  [data]="confirmationModalData"
+  (confirm)="onConfirmationModalConfirm($event)"
+  (cancel)="onConfirmationModalCancel()">
+</app-confirmation-modal>

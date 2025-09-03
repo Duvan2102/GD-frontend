@@ -4,7 +4,7 @@ import { BehaviorSubject, Observable, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { environment } from '../environments/environment';
 import { Approval } from '../pages/approvals/approvals';
-import { SuccessModalData } from '../pages/create-request/request-success-modal/request-success-modal';
+import { SuccessModalData, AprobadorState } from '../pages/create-request/request-success-modal/request-success-modal';
 import { Usuario } from '../interfaces/common.interfaces';
 
 @Injectable({
@@ -14,9 +14,9 @@ export class ApprovalService {
   private approvalsSubject = new BehaviorSubject<Approval[]>([]);
   approvals$: Observable<Approval[]> = this.approvalsSubject.asObservable();
 
-  private readonly baseUrl = (environment.solicitudesUrl.endsWith('/')
-    ? environment.solicitudesUrl.slice(0, -1)
-    : environment.solicitudesUrl);
+  private readonly baseUrl = (environment.apiUrl.endsWith('/')
+    ? environment.apiUrl.slice(0, -1)
+    : environment.apiUrl);
 
   constructor(private http: HttpClient) { }
 
@@ -25,8 +25,83 @@ export class ApprovalService {
     return new HttpHeaders({ 'X-User-Id': String(userId) });
   }
 
+  /**
+   * Mapea el estado del aprobador a un formato estándar
+   */
+  private mapApproverState(estado: any): 'Enviado' | 'Aprobado' | 'Rechazado' | 'Cancelado' | 'Pendiente' {
+    if (!estado) return 'Pendiente';
+    
+    const estadoStr = String(estado).toLowerCase();
+    if (estadoStr.includes('aprobado') || estadoStr === 'approved') return 'Aprobado';
+    if (estadoStr.includes('rechazado') || estadoStr === 'rejected') return 'Rechazado';
+    if (estadoStr.includes('cancelado') || estadoStr === 'cancelled') return 'Cancelado';
+    if (estadoStr.includes('enviado') || estadoStr === 'sent') return 'Enviado';
+    return 'Pendiente';
+  }
+
+  /**
+   * Obtiene la fecha de acción del aprobador
+   */
+  private getApproverActionDate(item: any, usuarioId: string): Date {
+    // Buscar en el historial de acciones
+    const historial = item?.historialAcciones || item?.approvalHistory || [];
+    const accion = historial.find((h: any) => 
+      h.usuarioId === usuarioId || h.usuario === usuarioId
+    );
+    
+    if (accion?.fecha) {
+      return new Date(accion.fecha);
+    }
+    
+    // Si no hay historial, usar fecha de creación como fallback
+    return new Date(item?.createdAt || item?.fechaCreacion || new Date());
+  }
+
+  /**
+   * Obtiene el comentario del aprobador
+   */
+  private getApproverComment(item: any, usuarioId: string): string {
+    const historial = item?.historialAcciones || item?.approvalHistory || [];
+    const accion = historial.find((h: any) => 
+      h.usuarioId === usuarioId || h.usuario === usuarioId
+    );
+    
+    return accion?.comentario || accion?.comment || '';
+  }
+
+  /**
+   * Registra metadata de una acción de aprobación
+   */
+  recordApprovalAction(solicitudId: string, usuarioId: string, action: 'approve' | 'reject' | 'cancel', comentario?: string): Observable<any> {
+    const metadata = {
+      solicitudId,
+      usuarioId,
+      action,
+      comentario,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href
+    };
+
+    console.log('[ApprovalService] Registrando metadata de acción:', metadata);
+
+    // Aquí se podría enviar al backend para persistir la metadata
+    // Por ahora, solo lo logueamos
+    return of(metadata);
+  }
+
+  /**
+   * Obtiene el historial de metadata para una solicitud
+   */
+  getApprovalMetadata(solicitudId: string): Observable<any[]> {
+    // En una implementación real, esto vendría del backend
+    // Por ahora retornamos un array vacío
+    return of([]);
+  }
+
   private mapServerToApproval(item: any, users: Usuario[]): Approval {
-    const id = item?.id ?? item?.numeroRadicado ?? String(Date.now());
+    // Use proper ID from server, fallback to a more descriptive ID if needed
+    const id = item?.id ?? item?.numeroRadicado ?? item?.solicitudId ?? `temp-${Date.now()}`;
     const estado = (item?.estado || 'PENDIENTE').toUpperCase();
     const createdAt = item?.createdAt || item?.fechaCreacion || new Date().toISOString();
     const updatedAt = item?.updatedAt || item?.fechaActualizacion || createdAt;
@@ -84,10 +159,24 @@ export class ApprovalService {
       const username: string | undefined = typeof d === 'string' ? d : (d?.usuario || d?.username);
       const user = idNumber ? findUserById(idNumber) : (username ? findUserByUsername(username) : undefined);
       const usuarioId = user?.usuario || username || String(idNumber ?? '');
+      const noUsuarioId = user?.noUsuario || idNumber;
       const orden = d?.orden ?? (item?.ordenFirma ? index + 1 : undefined);
       const estadoAprob: any = d?.decision || d?.estado || 'Pendiente';
-      return { usuarioId, orden, estado: estadoAprob };
+      return { usuarioId, noUsuarioId, orden, estado: estadoAprob };
     });
+
+    // Mapear estados de aprobadores con metadata
+    const approverStates: AprobadorState[] = destinatarios.map(dest => ({
+      usuarioId: dest.usuarioId,
+      estado: this.mapApproverState(dest.estado),
+      fechaAccion: this.getApproverActionDate(item, dest.usuarioId),
+      comentario: this.getApproverComment(item, dest.usuarioId),
+      metadata: {
+        orden: dest.orden,
+        noUsuarioId: dest.noUsuarioId,
+        timestamp: new Date().toISOString()
+      }
+    }));
 
     return {
       id: String(id),
@@ -99,12 +188,15 @@ export class ApprovalService {
       documentosAnexos: Array.isArray(item?.adjuntos) && item.adjuntos.length > 0,
       establecerOrden: Boolean(item?.ordenFirma),
       destinatarios,
-      documentoAprobacion: undefined,
-      anexos: undefined,
+      documentoAprobacion: item?.documentoAprobacion || item?.pdfPrincipal || item?.archivo,
+      anexos: item?.adjuntos || item?.anexos,
       creador: creador,
       fechaCreacion: new Date(createdAt),
       estado,
-      approverStates: destinatarios.map(d => ({ usuarioId: (d as any).usuarioId, estado: (d as any).estado || 'Pendiente' }))
+      approverStates: destinatarios.map(d => ({ usuarioId: (d as any).usuarioId, estado: (d as any).estado || 'Pendiente' })),
+      // Agregar información del documento para la vista
+      documentoUrl: item?.documentoUrl || item?.pdfUrl || item?.urlDocumento || item?.url,
+      documentoFileName: item?.documentoFileName || item?.pdfFileName || item?.nombreArchivo || item?.fileName
     };
   }
 
@@ -123,10 +215,20 @@ export class ApprovalService {
     }
   }
 
-  deleteApproval(approvalId: string | number) {
-    const currentApprovals = this.approvalsSubject.getValue();
-    const filteredApprovals = currentApprovals.filter(a => a.id.toString() !== approvalId.toString());
-    this.approvalsSubject.next(filteredApprovals);
+  deleteApproval(approvalId: string | number, usuarioId: number): Observable<any> {
+    const headers = this.headersForUser(usuarioId);
+    return this.http.delete<any>(`${this.baseUrl}/solicitudes/${approvalId}`, { headers }).pipe(
+      tap(() => {
+        // Actualizar el estado local después de eliminar exitosamente
+        const currentApprovals = this.approvalsSubject.getValue();
+        const filteredApprovals = currentApprovals.filter(a => a.id.toString() !== approvalId.toString());
+        this.approvalsSubject.next(filteredApprovals);
+      }),
+      catchError((error) => {
+        console.error('Error al eliminar solicitud:', error);
+        throw error;
+      })
+    );
   }
 
   // Backend integrations
@@ -136,7 +238,7 @@ export class ApprovalService {
       .set('page', String(page))
       .set('size', String(size))
       .set('sort', 'createdAt,desc');
-    return this.http.get<any>(this.baseUrl, { headers: this.headersForUser(userId), params }).pipe(
+    return this.http.get<any>(`${this.baseUrl}/solicitudes`, { headers: this.headersForUser(userId), params }).pipe(
       map(res => {
         if (Array.isArray(res)) return res;
         const data = res?.data ?? res;
@@ -153,7 +255,7 @@ export class ApprovalService {
       .set('usuarioId', String(userId))
       .set('page', String(page))
       .set('size', String(size));
-    const url = `${this.baseUrl}/para-gestionar`;
+    const url = `${this.baseUrl}/solicitudes/para-gestionar`;
     return this.http.get<any>(url, { headers: this.headersForUser(userId), params }).pipe(
       map(res => {
         if (Array.isArray(res)) return res;
@@ -169,8 +271,21 @@ export class ApprovalService {
   getApprovalDetails(approvalId: string | number, users: Usuario[], userId?: number): Observable<Approval | undefined> {
     const local = this.approvalsSubject.getValue().find(a => a.id.toString() === approvalId.toString());
     const headers = userId ? this.headersForUser(userId) : undefined;
-    return this.http.get<any>(`${this.baseUrl}/${approvalId}`, { headers }).pipe(
-      map(item => this.mapServerToApproval(item, users)),
+    
+    console.log(`[ApprovalService] Fetching details for approval ID: ${approvalId}, userId: ${userId}`);
+    
+    // Check if the ID looks like a timestamp (invalid for API calls)
+    const idStr = String(approvalId);
+    if (idStr.startsWith('temp-') || /^\d{13}$/.test(idStr)) {
+      console.warn(`[ApprovalService] ID ${approvalId} appears to be a temporary/timestamp ID, returning local data only`);
+      return of(local);
+    }
+    
+    return this.http.get<any>(`${this.baseUrl}/solicitudes/${approvalId}`, { headers }).pipe(
+      map(item => {
+        console.log(`[ApprovalService] Successfully fetched approval details for ID: ${approvalId}`, item);
+        return this.mapServerToApproval(item, users);
+      }),
       tap(appr => {
         if (!local) {
           this.addApproval(appr);
@@ -178,7 +293,33 @@ export class ApprovalService {
           this.updateApproval(appr);
         }
       }),
-      catchError(() => of(local))
+      catchError((error) => {
+        console.error(`[ApprovalService] Error fetching approval details for ID: ${approvalId}`, error);
+        console.log(`[ApprovalService] Returning local approval if available:`, local);
+        return of(local);
+      })
+    );
+  }
+
+  getDocumentPdf(approvalId: string | number, userId: number): Observable<Blob> {
+    const headers = this.headersForUser(userId);
+    return this.http.get(`${this.baseUrl}/solicitudes/${approvalId}/pdf`, { 
+      headers, 
+      responseType: 'blob' 
+    });
+  }
+
+  getApprovalDocument(approvalId: string | number, userId: number): Observable<{ url: string, fileName: string }> {
+    const headers = this.headersForUser(userId);
+    return this.http.get<any>(`${this.baseUrl}/solicitudes/${approvalId}/documento`, { headers }).pipe(
+      map(response => ({
+        url: response.url || response.documentoUrl || response.pdfUrl,
+        fileName: response.fileName || response.documentoFileName || response.nombreArchivo || `documento_${approvalId}.pdf`
+      })),
+      catchError(error => {
+        console.error('Error al obtener documento:', error);
+        throw error;
+      })
     );
   }
 
@@ -204,7 +345,7 @@ export class ApprovalService {
     form.append('pdfPrincipal', payload.pdfPrincipal);
     (payload.adjuntos || []).forEach(a => form.append('adjuntos', a));
 
-    return this.http.post<any>(this.baseUrl, form, { headers: this.headersForUser(payload.idSolicitante) }).pipe(
+    return this.http.post<any>(`${this.baseUrl}/solicitudes`, form, { headers: this.headersForUser(payload.idSolicitante) }).pipe(
       map(item => this.mapServerToApproval(item, [])),
       tap(appr => this.addApproval(appr)),
       catchError(() => of(null))
@@ -214,40 +355,150 @@ export class ApprovalService {
   aprobarSolicitud(id: string | number, usuarioId: number, comentario?: string): Observable<Approval | undefined> {
     const body: any = { usuarioId };
     if (comentario) body.comentario = comentario;
-    const url = `${this.baseUrl}/${id}/aprobar`;
-    return this.http.post<any>(url, body, { headers: this.headersForUser(usuarioId) }).pipe(
-      map(item => this.mapServerToApproval(item, [])),
+    const url = `${this.baseUrl}/solicitudes/${id}/aprobar`;
+    
+    console.log(`[ApprovalService] Aprobando solicitud ${id} con usuario ${usuarioId}`);
+    console.log(`[ApprovalService] URL: ${url}`);
+    console.log(`[ApprovalService] Body:`, body);
+    console.log(`[ApprovalService] Base URL: ${this.baseUrl}`);
+    console.log(`[ApprovalService] Environment API URL: ${environment.apiUrl}`);
+    
+    return this.http.post<any>(url, body).pipe(
+      map(item => {
+        console.log('[ApprovalService] Respuesta exitosa al aprobar:', item);
+        return this.mapServerToApproval(item, []);
+      }),
       tap(appr => this.updateApproval(appr)),
-      catchError(() => this.getApprovalDetails(id, [], usuarioId))
+      catchError((error) => {
+        console.error('[ApprovalService] Error al aprobar solicitud:', error);
+        console.error('[ApprovalService] Error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          url: error.url,
+          body: error.error,
+          headers: error.headers,
+          message: error.message,
+          name: error.name
+        });
+        
+        // Log del error completo para debugging
+        if (error.error) {
+          console.error('[ApprovalService] Error body details:', JSON.stringify(error.error, null, 2));
+        }
+        
+        // Log de la petición que se envió
+        console.error('[ApprovalService] Request details:', {
+          method: 'POST',
+          url: url,
+          body: body,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-Id': String(usuarioId)
+          }
+        });
+        
+        throw error;
+      })
     );
   }
 
   rechazarSolicitud(id: string | number, usuarioId: number, comentario?: string): Observable<Approval | undefined> {
     const body: any = { usuarioId };
     if (comentario) body.comentario = comentario;
-    const url = `${this.baseUrl}/${id}/rechazar`;
-    return this.http.post<any>(url, body, { headers: this.headersForUser(usuarioId) }).pipe(
-      map(item => this.mapServerToApproval(item, [])),
+    const url = `${this.baseUrl}/solicitudes/${id}/rechazar`;
+    
+    console.log(`[ApprovalService] Rechazando solicitud ${id} con usuario ${usuarioId}`);
+    console.log(`[ApprovalService] URL: ${url}`);
+    console.log(`[ApprovalService] Body:`, body);
+    console.log(`[ApprovalService] Base URL: ${this.baseUrl}`);
+    console.log(`[ApprovalService] Environment API URL: ${environment.apiUrl}`);
+    
+    return this.http.post<any>(url, body).pipe(
+      map(item => {
+        console.log('[ApprovalService] Respuesta exitosa al rechazar:', item);
+        return this.mapServerToApproval(item, []);
+      }),
       tap(appr => this.updateApproval(appr)),
-      catchError(() => this.getApprovalDetails(id, [], usuarioId))
+      catchError((error) => {
+        console.error('[ApprovalService] Error al rechazar solicitud:', error);
+        console.error('[ApprovalService] Error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          url: error.url,
+          body: error.error,
+          headers: error.headers,
+          message: error.message,
+          name: error.name
+        });
+        
+        // Log del error completo para debugging
+        if (error.error) {
+          console.error('[ApprovalService] Error body details:', JSON.stringify(error.error, null, 2));
+        }
+        
+        // Log de la petición que se envió
+        console.error('[ApprovalService] Request details:', {
+          method: 'POST',
+          url: url,
+          body: body,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-Id': String(usuarioId)
+          }
+        });
+        
+        throw error;
+      })
     );
   }
 
   cancelarSolicitud(id: string | number, usuarioId: number, comentario?: string): Observable<Approval | undefined> {
-    const headers = this.headersForUser(usuarioId);
-    const body: any = comentario ? { usuarioId, comentario } : { usuarioId };
-    const tryPost = (suffix: string) => this.http.post<any>(`${this.baseUrl}/${id}/${suffix}`, body, { headers }).pipe(
-      map(item => this.mapServerToApproval(item, [])),
-      tap(appr => this.updateApproval(appr))
-    );
-    const tryDelete = () => this.http.delete<any>(`${this.baseUrl}/${id}`, { headers }).pipe(
-      map(item => this.mapServerToApproval(item, [])),
-      tap(appr => this.updateApproval(appr))
-    );
-    return tryPost('cancelar').pipe(
-      catchError(() => tryPost('cancel')),
-      catchError(() => tryDelete()),
-      catchError(() => this.getApprovalDetails(id, [], usuarioId))
+    const body: any = { usuarioId };
+    if (comentario) body.comentario = comentario;
+    const url = `${this.baseUrl}/solicitudes/${id}/cancelar`;
+    
+    console.log(`[ApprovalService] Cancelando solicitud ${id} con usuario ${usuarioId}`);
+    console.log(`[ApprovalService] URL: ${url}`);
+    console.log(`[ApprovalService] Body:`, body);
+    console.log(`[ApprovalService] Base URL: ${this.baseUrl}`);
+    console.log(`[ApprovalService] Environment API URL: ${environment.apiUrl}`);
+    
+    return this.http.post<any>(url, body).pipe(
+      map(item => {
+        console.log('[ApprovalService] Solicitud cancelada exitosamente:', item);
+        return this.mapServerToApproval(item, []);
+      }),
+      tap(appr => this.updateApproval(appr)),
+      catchError((error) => {
+        console.error('[ApprovalService] Error al cancelar solicitud:', error);
+        console.error('[ApprovalService] Error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          url: error.url,
+          body: error.error,
+          headers: error.headers,
+          message: error.message,
+          name: error.name
+        });
+        
+        // Log del error completo para debugging
+        if (error.error) {
+          console.error('[ApprovalService] Error body details:', JSON.stringify(error.error, null, 2));
+        }
+        
+        // Log de la petición que se envió
+        console.error('[ApprovalService] Request details:', {
+          method: 'POST',
+          url: url,
+          body: body,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-Id': String(usuarioId)
+          }
+        });
+        
+        throw error;
+      })
     );
   }
 
@@ -256,7 +507,7 @@ export class ApprovalService {
       .set('usuarioId', String(usuarioId))
       .set('page', String(page))
       .set('size', String(size));
-    const url = `${this.baseUrl}/historico`;
+    const url = `${this.baseUrl}/solicitudes/historico`;
     return this.http.get<any>(url, { headers: this.headersForUser(usuarioId), params }).pipe(
       map(res => {
         if (Array.isArray(res)) return res;
@@ -274,7 +525,7 @@ export class ApprovalService {
       .set('estado', estado)
       .set('page', String(page))
       .set('size', String(size));
-    const url = `${this.baseUrl}/finalizadas`;
+    const url = `${this.baseUrl}/solicitudes/finalizadas`;
     return this.http.get<any>(url, { params }).pipe(
       map(res => {
         if (Array.isArray(res)) return res;
@@ -289,4 +540,6 @@ export class ApprovalService {
   getAllApprovals(): Observable<Approval[]> {
     return this.approvals$;
   }
+
+
 }

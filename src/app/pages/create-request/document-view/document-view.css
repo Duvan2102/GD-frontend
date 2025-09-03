@@ -1,5 +1,6 @@
 .modal-dialog.modal-fullscreen {
-  width: 60%;
+  width: 85%;
+  max-width: 1400px;
   height: auto;
   position: absolute;
   top: 50%;
@@ -84,7 +85,7 @@ font-size: 1rem;
 .document-viewer {
   width: 100%;
   height: 100%;
-  max-width: 900px; /* Ancho máximo para el documento, para que no sea demasiado ancho en pantallas grandes */
+  max-width: 1200px; /* Ancho máximo más amplio para mejor visualización */
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   border: 1px solid #ccc;
 }
@@ -182,4 +183,43 @@ font-size: 1rem;
   min-width: 55px; /* Espacio para "99 / 99" */
   text-align: center;
   user-select: none; /* Evita que el texto se pueda seleccionar */
+}
+
+/* --- Responsividad para diferentes tamaños de pantalla --- */
+@media (max-width: 1200px) {
+  .modal-dialog.modal-fullscreen {
+    width: 90%;
+    max-width: 1000px;
+  }
+  
+  .document-viewer {
+    max-width: 1000px;
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-dialog.modal-fullscreen {
+    width: 95%;
+    max-width: none;
+  }
+  
+  .document-viewer {
+    max-width: none;
+  }
+  
+  .preview-container {
+    padding: 0.5rem;
+  }
+  
+  .bottom-controls {
+    bottom: 10px;
+    padding: 6px 12px;
+    gap: 10px;
+  }
+  
+  .btn-nav, .btn-zoom {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
 }

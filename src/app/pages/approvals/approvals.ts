@@ -163,29 +163,80 @@ export class Approvals implements OnInit, OnDestroy {
         id: data.id!,
         file: data.documentoAprobacion,
         title: data.nombreSolicitud,
+        fileName: data.documentoFileName || data.documentoAprobacion.name
+      };
+      this.isDetailModalVisible = false;
+      this.isApprovalDocumentViewVisible = true;
+    } else if (data && data.documentoUrl) {
+      this.documentToApproveData = {
+        id: data.id!,
+        url: data.documentoUrl,
+        title: data.nombreSolicitud,
+        fileName: data.documentoFileName || 'Documento de la Solicitud'
       };
       this.isDetailModalVisible = false;
       this.isApprovalDocumentViewVisible = true;
     } else if (data) {
+      // Fallback para datos legacy
       const anyData: any = data as any;
       const url = anyData.documentoUrl || anyData.pdfUrl || anyData.urlDocumento || anyData.url;
-      this.documentToApproveData = {
-        id: data.id!,
-        url: url,
-        title: (anyData.titulo || anyData.nombreSolicitud || 'Documento de la Solicitud')
-      };
-      this.isDetailModalVisible = false;
-      this.isApprovalDocumentViewVisible = true;
+      if (url) {
+        this.documentToApproveData = {
+          id: data.id!,
+          url: url,
+          title: (anyData.titulo || anyData.nombreSolicitud || 'Documento de la Solicitud'),
+          fileName: anyData.documentoFileName || anyData.pdfFileName || anyData.nombreArchivo || anyData.fileName
+        };
+        this.isDetailModalVisible = false;
+        this.isApprovalDocumentViewVisible = true;
+      } else {
+        // Si no hay URL directa, intentar obtener el documento del servidor
+        const userId = this.currentUser?.noUsuario;
+        if (userId && data.id) {
+          this.approvalService.getDocumentPdf(data.id, userId).subscribe({
+            next: (blob) => {
+              const url = URL.createObjectURL(blob);
+              this.documentToApproveData = {
+                id: data.id!,
+                url: url,
+                title: data.nombreSolicitud || 'Documento de la Solicitud',
+                fileName: data.documentoFileName || 'documento.pdf'
+              };
+              this.isDetailModalVisible = false;
+              this.isApprovalDocumentViewVisible = true;
+            },
+            error: (error) => {
+              console.error('[Approvals] Error al cargar el documento del servidor:', error);
+              alert('Error al cargar el documento. Por favor, inténtalo de nuevo.');
+            }
+          });
+        } else {
+          console.error('[Approvals] No se encontró documento para mostrar:', data);
+          alert('No se pudo cargar el documento. Verifique que la solicitud tenga un documento asociado.');
+        }
+      }
     }
   }
 
   handleApproveRequest(ev: { id: string | number, comentario?: string }) {
     const uid = this.currentUser?.noUsuario;
     if (!uid) return;
-    this.isApprovalDocumentViewVisible = false;
-    this.approvalService.aprobarSolicitud(ev.id, uid, ev.comentario).subscribe(appr => {
-      if (appr) {
-        this.updateRequestStatus(appr.id, 'APROBADO', 'Aprobada');
+    this.approvalService.aprobarSolicitud(ev.id, uid, ev.comentario).subscribe({
+      next: (appr) => {
+        if (appr) {
+          // Cerrar la modal de documento después del éxito
+          this.isApprovalDocumentViewVisible = false;
+          this.updateRequestStatus(appr.id, 'APROBADO', 'Aprobada');
+          this.subscribeToApprovals(); // Refresh the list
+          // Mostrar mensaje de éxito
+          alert('Solicitud aprobada exitosamente.');
+        }
+      },
+      error: (error) => {
+        console.error('[Approvals] Error al aprobar solicitud:', error);
+        alert('Error al aprobar la solicitud. Por favor, inténtelo de nuevo.');
+        // Reabrir la modal de documento para que el usuario pueda intentar nuevamente
+        this.isApprovalDocumentViewVisible = true;
       }
     });
   }
@@ -193,10 +244,22 @@ export class Approvals implements OnInit, OnDestroy {
   handleRejectRequest(ev: { id: string | number, comentario?: string }) {
     const uid = this.currentUser?.noUsuario;
     if (!uid) return;
-    this.isApprovalDocumentViewVisible = false;
-    this.approvalService.rechazarSolicitud(ev.id, uid, ev.comentario).subscribe(appr => {
-      if (appr) {
-        this.updateRequestStatus(appr.id, 'RECHAZADO', 'Rechazada');
+    this.approvalService.rechazarSolicitud(ev.id, uid, ev.comentario).subscribe({
+      next: (appr) => {
+        if (appr) {
+          // Cerrar la modal de documento después del éxito
+          this.isApprovalDocumentViewVisible = false;
+          this.updateRequestStatus(appr.id, 'RECHAZADO', 'Rechazada');
+          this.subscribeToApprovals(); // Refresh the list
+          // Mostrar mensaje de éxito
+          alert('Solicitud rechazada exitosamente.');
+        }
+      },
+      error: (error) => {
+        console.error('[Approvals] Error al rechazar solicitud:', error);
+        alert('Error al rechazar la solicitud. Por favor, inténtelo de nuevo.');
+        // Reabrir la modal de documento para que el usuario pueda intentar nuevamente
+        this.isApprovalDocumentViewVisible = true;
       }
     });
   }

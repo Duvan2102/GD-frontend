@@ -1,8 +1,8 @@
-<div class="custom-backdrop" [class.show]="isVisible"></div>
+<div class="custom-backdrop" [class.show]="isVisible && !isConfirmationModalVisible"></div>
 
 <div class="modal" tabindex="-1"
-     [class.show]="isVisible"
-     [style.display]="isVisible ? 'block' : 'none'">
+     [class.show]="isVisible && !isConfirmationModalVisible"
+     [style.display]="(isVisible && !isConfirmationModalVisible) ? 'block' : 'none'">
   <div class="modal-dialog modal-fullscreen">
     <div class="modal-content">
 
@@ -44,12 +44,13 @@
               [(page)]="currentPage"
               [zoom]="zoom + '%'"
               (pagesLoaded)="onPagesLoaded($event)"
-              (pdfLoaded)="onPdfLoaded($event)">
+              (pdfLoaded)="onPdfLoaded($event)"
+              [language]="'es'">
             </ngx-extended-pdf-viewer>
           </div>
           
           <div *ngIf="pdfSrc && !isLoading && !error" class="bottom-controls">
-            <button type="button" class="btn-approval btn-reject" [disabled]="!isScrolledToEnd || !comentario || !comentario.trim()" (click)="onReject()">
+            <button type="button" class="btn-approval btn-reject" [disabled]="!isScrolledToEnd" (click)="onReject()">
               <i class="bi bi-x-circle"></i> Rechazar
             </button>
             
@@ -74,13 +75,16 @@
             </button>
           </div>
 
-          <div *ngIf="pdfSrc && !isLoading && !error" class="comment-box mt-3">
-            <label class="form-label">Comentario (opcional)</label>
-            <textarea class="form-control" [(ngModel)]="comentario" rows="3" placeholder="Escribe un comentario para la decisión..."></textarea>
-          </div>
-
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<!-- Confirmation Modal -->
+<app-confirmation-modal
+  [isVisible]="isConfirmationModalVisible"
+  [data]="confirmationModalData"
+  (confirm)="onConfirmationModalConfirm($event)"
+  (cancel)="onConfirmationModalCancel()">
+</app-confirmation-modal>

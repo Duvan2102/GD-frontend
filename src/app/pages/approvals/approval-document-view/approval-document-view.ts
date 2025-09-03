@@ -2,6 +2,9 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, Chang
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgxExtendedPdfViewerModule, PdfLoadedEvent, NgxExtendedPdfViewerService, PagesLoadedEvent } from 'ngx-extended-pdf-viewer';
+import { PdfService } from '../../../services/pdf.service';
+import { ApprovalService } from '../../../services/approval.service';
+import { ConfirmationModal, ConfirmationModalData } from '../../../shared/confirmation-modal/confirmation-modal';
 
 export interface ApprovalDocumentViewData {
   id: string | number;
@@ -14,7 +17,7 @@ export interface ApprovalDocumentViewData {
 @Component({
   selector: 'app-approval-document-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgxExtendedPdfViewerModule],
+  imports: [CommonModule, FormsModule, NgxExtendedPdfViewerModule, ConfirmationModal],
   templateUrl: './approval-document-view.html',
   styleUrls: ['./approval-document-view.css']
 })
@@ -38,11 +41,18 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
   zoom = 100;
   comentario: string = '';
 
+  // Confirmation modal properties
+  isConfirmationModalVisible = false;
+  confirmationModalData: ConfirmationModalData | null = null;
+  pendingAction: 'approve' | 'reject' | null = null;
+
   private scrollListener?: (event: Event) => void;
 
   constructor(
     private cdr: ChangeDetectorRef,
-    private pdfService: NgxExtendedPdfViewerService
+    private pdfViewerService: NgxExtendedPdfViewerService,
+    private pdfService: PdfService,
+    private approvalService: ApprovalService
   ) {}
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -71,7 +81,7 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
 
     try {
       if (this.documentData.file) {
-        this.pdfSrc = await this.documentData.file.arrayBuffer();
+        this.pdfSrc = await this.pdfService.fileToArrayBuffer(this.documentData.file);
       } else if (this.documentData.url) {
         this.pdfSrc = this.documentData.url;
       } else {
@@ -151,15 +161,86 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
   }
 
   onApprove() {
-    if (this.documentData) {
-      this.approve.emit({ id: this.documentData.id, comentario: this.comentario?.trim() || undefined });
-    }
+    if (!this.documentData) return;
+    
+    this.pendingAction = 'approve';
+    this.confirmationModalData = {
+      title: 'Aprobar Solicitud',
+      message: '¿Está seguro de que desea aprobar esta solicitud? Esta acción no se puede deshacer.',
+      confirmText: 'Sí, Aprobar',
+      cancelText: 'Cancelar',
+      type: 'success',
+      showComment: true,
+      commentLabel: 'Comentario (obligatorio)',
+      commentPlaceholder: 'Escriba un comentario para la aprobación...',
+      commentRequired: true
+    };
+    
+    this.isConfirmationModalVisible = true;
   }
 
   onReject() {
-    if (this.documentData) {
-      this.reject.emit({ id: this.documentData.id, comentario: this.comentario?.trim() || undefined });
+    if (!this.documentData) return;
+    
+    this.pendingAction = 'reject';
+    this.confirmationModalData = {
+      title: 'Rechazar Solicitud',
+      message: '¿Está seguro de que desea rechazar esta solicitud? Esta acción no se puede deshacer.',
+      confirmText: 'Sí, Rechazar',
+      cancelText: 'Cancelar',
+      type: 'danger',
+      showComment: true,
+      commentLabel: 'Motivo del rechazo (obligatorio)',
+      commentPlaceholder: 'Escriba el motivo del rechazo...',
+      commentRequired: true
+    };
+    
+    this.isConfirmationModalVisible = true;
+  }
+
+  onConfirmationModalConfirm(event: { confirmed: boolean, comment?: string }): void {
+    this.isConfirmationModalVisible = false;
+    
+    if (event.confirmed && this.documentData && this.pendingAction) {
+      const comentario = event.comment?.trim() || '';
+      
+      // Registrar metadata de la acción
+      this.recordActionMetadata(this.pendingAction, comentario);
+      
+      if (this.pendingAction === 'approve') {
+        this.approve.emit({ id: this.documentData.id, comentario: comentario });
+      } else if (this.pendingAction === 'reject') {
+        this.reject.emit({ id: this.documentData.id, comentario: comentario });
+      }
     }
+    
+    this.pendingAction = null;
+  }
+
+  onConfirmationModalCancel(): void {
+    this.isConfirmationModalVisible = false;
+    this.pendingAction = null;
+  }
+
+  private recordActionMetadata(action: 'approve' | 'reject', comentario?: string): void {
+    if (!this.documentData?.id) return;
+    
+    // Obtener el ID del usuario actual (esto debería venir del auth service)
+    const currentUserId = 'current-user-id'; // TODO: Obtener del AuthService
+    
+    this.approvalService.recordApprovalAction(
+      String(this.documentData.id),
+      currentUserId,
+      action,
+      comentario
+    ).subscribe({
+      next: (metadata) => {
+        console.log('[ApprovalDocumentView] Metadata registrada:', metadata);
+      },
+      error: (error) => {
+        console.error('[ApprovalDocumentView] Error registrando metadata:', error);
+      }
+    });
   }
 
   onBack() {
@@ -168,20 +249,12 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
 
   onDownload(): void {
     if (!this.pdfSrc) return;
-    const blob = new Blob([this.pdfSrc as ArrayBuffer], { type: 'application/pdf' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.style.display = 'none';
-    a.href = url;
-    a.download = this.documentData?.file?.name || 'documento.pdf';
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    a.remove();
+    const filename = this.pdfService.getFileName(this.documentData);
+    this.pdfService.createDownloadBlob(this.pdfSrc, filename);
   }
 
   onPrint(): void {
-    this.pdfService.print();
+    this.pdfViewerService.print();
   }
 
   onPreviousPage() { if (this.currentPage > 1) this.currentPage--; }
@@ -191,15 +264,7 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
   onZoomReset() { this.zoom = 100; }
 
   getFileName(): string {
-    if (this.documentData?.fileName) {
-      return this.documentData.fileName;
-    }
-    if (this.documentData?.file?.name) {
-      return this.documentData.file.name;
-    }
-    if (this.documentData?.title) {
-      return this.documentData.title;
-    }
-    return 'Documento';
+    return this.pdfService.getFileName(this.documentData);
   }
 }
+

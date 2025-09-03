@@ -1,0 +1,55 @@
+<div class="custom-backdrop" [class.show]="isVisible"></div>
+
+<div class="modal"
+     tabindex="-1"
+     [class.show]="isVisible"
+     [style.display]="isVisible ? 'block' : 'none'">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi" [ngClass]="getIconClass()"></i>
+          {{ data?.title || 'Confirmación' }}
+        </h5>
+        <button type="button" class="btn-close" (click)="onCancel()" aria-label="Close">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <p>{{ data?.message || '¿Está seguro de realizar esta acción?' }}</p>
+        
+        <div *ngIf="data?.showComment">
+          <label class="form-label">
+            {{ data?.commentLabel || 'Comentario' }}
+            <span *ngIf="data?.commentRequired" class="text-danger">*</span>
+          </label>
+          <textarea 
+            class="form-control" 
+            [(ngModel)]="comment" 
+            [placeholder]="data?.commentPlaceholder || 'Escriba un comentario...'"
+            rows="3"
+            [class.is-invalid]="data?.commentRequired && !comment.trim()">
+          </textarea>
+          <div *ngIf="data?.commentRequired && !comment.trim()" class="invalid-feedback">
+            El comentario es obligatorio
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">
+          {{ data?.cancelText || 'Cancelar' }}
+        </button>
+        <button 
+          type="button" 
+          class="btn" 
+          [ngClass]="getButtonClass()" 
+          [disabled]="!canConfirm()"
+          (click)="onConfirm()">
+          {{ data?.confirmText || 'Confirmar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

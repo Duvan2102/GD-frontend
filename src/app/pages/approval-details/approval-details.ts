@@ -12,7 +12,7 @@ import { Typology, TypologyService } from '../../services/typology.service';
 import { AuthService } from '../../services/auth.service';
 import { Usuario, UsuarioRequest, ApiResponse, ErrorResponse, DobleAutenticacionTipo } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
-import { applyViewLogic } from '../../utils/view.utils';
+import { applyApprovalDetailsViewLogic } from '../../utils/view.utils';
 
 @Component({
   selector: 'app-approval-details',
@@ -89,7 +89,7 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   }
 
   applyViewLogic(): void {
-    const { displayedRequests, totalFiltered } = applyViewLogic(
+    const { displayedRequests, totalFiltered } = applyApprovalDetailsViewLogic(
       this.approvalsList,
       this.showOnlyManaged,
       this.searchTerm,

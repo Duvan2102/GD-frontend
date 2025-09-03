@@ -63,6 +63,7 @@ export class CreateRequest implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.authService.getCurrentUser().subscribe(user => {
       this.currentUser = user;
+      console.log('[CreateRequest] Usuario actual cargado:', user);
       this.loadInitialData();
     });
   }
@@ -106,12 +107,17 @@ export class CreateRequest implements OnInit, OnDestroy {
 
     const idSolicitante = this.currentUser.noUsuario;
     const idTipologia = Number(solicitudData.tipologia);
+    console.log('[CreateRequest] Destinatarios recibidos:', solicitudData.destinatarios);
+    
     const destinatariosIds: number[] = solicitudData.destinatarios
-      .filter(d => d.noUsuarioId)
+      .filter(d => d.noUsuarioId && d.noUsuarioId > 0)
       .map(d => d.noUsuarioId as number);
+
+    console.log('[CreateRequest] Destinatarios IDs extraídos:', destinatariosIds);
 
     if (destinatariosIds.length === 0) {
       console.error('[CreateRequest] Error: no se pudieron resolver destinatarios a IDs numéricos');
+      console.error('[CreateRequest] Destinatarios originales:', solicitudData.destinatarios);
       alert('Debes seleccionar al menos un destinatario válido. Si el listado de usuarios no carga, intenta recargar la página.');
       return;
     }
@@ -146,17 +152,44 @@ export class CreateRequest implements OnInit, OnDestroy {
     this.successModalData = null;
   }
 
-  handleCancelRequest(event: { solicitudId: string | number }): void {
+  handleCancelRequest(event: { solicitudId: string | number, comentario?: string }): void {
     const uid = this.currentUser?.noUsuario;
     if (!uid) return;
-    this.approvalService.cancelarSolicitud(event.solicitudId, uid).subscribe(() => {
-      this.closeDetailModal();
-      this.subscribeToApprovals();
+    this.approvalService.cancelarSolicitud(event.solicitudId, uid, event.comentario).subscribe({
+      next: () => {
+        // Cerrar la modal de gestión después del éxito
+        this.closeDetailModal();
+        this.subscribeToApprovals();
+        // Mostrar mensaje de éxito
+        alert('Solicitud cancelada exitosamente.');
+      },
+      error: (error) => {
+        console.error('[CreateRequest] Error al cancelar solicitud:', error);
+        // Mostrar mensaje de error y reabrir la modal de gestión
+        alert('Error al cancelar la solicitud. Por favor, inténtelo de nuevo.');
+        // Reabrir la modal de gestión para que el usuario pueda intentar nuevamente
+        this.isDetailModalVisible = true;
+      }
     });
   }
 
   handleDeleteRequest(solicitudId: string | number): void {
-    this.approvalService.deleteApproval(solicitudId);
+    const uid = this.currentUser?.noUsuario;
+    if (!uid) {
+      console.error('[CreateRequest] No hay usuario actual para eliminar solicitud');
+      return;
+    }
+    
+    this.approvalService.deleteApproval(solicitudId, uid).subscribe({
+      next: () => {
+        console.log('[CreateRequest] Solicitud eliminada exitosamente');
+        this.subscribeToApprovals(); // Recargar la lista
+      },
+      error: (error) => {
+        console.error('[CreateRequest] Error al eliminar solicitud:', error);
+        alert('Error al eliminar la solicitud. Por favor, inténtalo de nuevo.');
+      }
+    });
   }
 
   onManage(id: string): void {
