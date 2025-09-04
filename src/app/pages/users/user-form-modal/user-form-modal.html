@@ -77,7 +77,6 @@
             
             <!-- Dropdown jerárquico personalizado -->
             <div class="hierarchical-dropdown" [class.is-invalid]="userForm.get('cargo')?.invalid && userForm.get('cargo')?.touched">
-              <!-- Campo de visualización -->
               <div class="dropdown-display" 
                    (click)="toggleDropdown()"
                    [class.open]="isDropdownOpen">
@@ -202,6 +201,33 @@
             </div>
           </div>
         </div>
+
+<!-- Separador -->
+        <hr class="my-4">
+
+        <!-- Perfiles -->
+        <h6 class="mb-3">Perfiles</h6>
+        <div formGroupName="perfiles" class="mb-3">
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="administrador" formControlName="administrador">
+            <label class="form-check-label" for="administrador">
+              ADMINISTRADOR
+            </label>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="funcionarioCreador" formControlName="funcionarioCreador">
+            <label class="form-check-label" for="funcionarioCreador">
+              FUNCIONARIO (creador)
+            </label>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="funcionarios" formControlName="funcionarios">
+            <label class="form-check-label" for="funcionarios">
+              FUNCIONARIOS
+            </label>
+          </div>
+        </div>
+      </div>
 
       <!-- Footer -->
       <div class="modal-footer">

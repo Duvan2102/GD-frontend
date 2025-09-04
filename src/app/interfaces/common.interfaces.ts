@@ -29,14 +29,16 @@ export interface Cargo {
 
 export interface Usuario {
   noUsuario?: number;
+  idUsuario?: number;
   identificacion: string;
   nombres: string;
   apellidos: string;
   usuario: string;
-  estado: string;
+  estado: string | { idEstado: number; descripcion: string; };
   activo: boolean;
   cargo?: string | number;
   cargoDescripcion?: string;
+  rol?: { idRol: number; descripcion: string; };
   correoEmpresarial?: string;
   correoPersonal?: string;
   celular?: string;
@@ -55,6 +57,14 @@ export interface UsuarioRequest {
   usuario: string;
   cargo: {
     idCargo: number;
+  };
+  estado: {
+    idEstado: number;
+    descripcion: string;
+  };
+  rol: {
+    idRol: number;
+    descripcion: string;
   };
   correoEmpresarial: string;
   correoPersonal?: string;

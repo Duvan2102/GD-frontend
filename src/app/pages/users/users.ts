@@ -70,53 +70,28 @@ export class Users implements OnInit, OnDestroy {
   }
 
   cargarUsuarios(): void {
-    this.isLoading = true;
-    this.errorMessage = '';
-    
-    this.userService.obtenerUsuarios()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (usuarios) => {
-          this.usuarios = usuarios;
-          this.filtrarUsuarios();
-          this.isLoading = false;
-        },
-        error: (error) => {
-          console.error('Error cargando usuarios:', error);
-          this.errorMessage = 'Error al cargar los usuarios. Usando datos de ejemplo.';
-          this.isLoading = false;
-          this.cargarDatosDeEjemplo();
-        }
-      });
+  this.isLoading = true;
+  this.errorMessage = '';
+  this.usuarios = [];
+  
+  this.userService.obtenerUsuarios()
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (usuarios) => {
+        this.usuarios = usuarios;
+        this.filtrarUsuarios();
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error cargando usuarios:', error);
+        this.errorMessage = 'No se pudo conectar con el servidor. Verifique la conexión.';
+        this.isLoading = false;
+        this.usuarios = [];
+        this.filtrarUsuarios();
+      }
+    });
   }
-
-  private cargarDatosDeEjemplo(): void {
-    for (let i = 1; i <= 52; i++) {
-      this.usuarios.push({
-        noUsuario: i,
-        identificacion: `12345678${i.toString().padStart(2, '0')}`,
-        nombres: `Nombre${i}`,
-        apellidos: `Apellido${i}`,
-        usuario: `usuario${i}`,
-        estado: i % 2 === 0 ? 'Activo' : 'Inactivo',
-        activo: i % 2 === 0,
-        cargo: 'Funcionario',
-        correoEmpresarial: `usuario${i}@empresa.com`,
-        correoPersonal: `usuario${i}@personal.com`,
-        celular: `300${i.toString().padStart(7, '0')}`,
-        telefono: `5005566677`,
-        direccion: `Calle 45 # 22-18`,
-        dobleAutenticacion: 'Google Authenticator',
-        perfiles: {
-          administrador: i === 1,
-          funcionarioCreador: i <= 5,
-          funcionarios: i > 5
-        }
-      } as Usuario);
-    }
-    this.filtrarUsuarios();
-  }
-
+  
   mostrarModalConfirmacion(mensaje: string, textoBtn: string = 'Aceptar') {
     this.modalSuccessMessage = mensaje;
     this.modalSuccessBtn = textoBtn;
@@ -150,7 +125,13 @@ export class Users implements OnInit, OnDestroy {
   }
 
   filtrarUsuarios() {
-    let filtrados = this.usuarios.filter(u => this.activos ? u.activo : true);
+    let filtrados = this.usuarios.filter(u => {
+  if (this.activos) {
+    return u.activo === true;
+  } else {
+    return true;
+  }
+  });
 
     if (this.searchTerm.trim()) {
       const t = this.searchTerm.trim().toLowerCase();
@@ -302,7 +283,10 @@ export class Users implements OnInit, OnDestroy {
 
       case 'inactivar':
         if (this.currentUser) {
-          const usuarioInactivado = { ...this.currentUser, estado: 'Inactivo', activo: false };
+          const usuarioInactivado = { 
+          ...this.currentUser, 
+          estado: { idEstado: 6, descripcion: 'INACTIVO' }
+          };
           this.userService.actualizarUsuario(usuarioInactivado)
             .pipe(takeUntil(this.destroy$))
             .subscribe({

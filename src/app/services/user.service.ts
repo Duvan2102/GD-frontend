@@ -185,7 +185,6 @@ export class UserService {
   
   if (usuario.cargo) {
     if (typeof usuario.cargo === 'object') {
-      // Guardar tanto el ID como la descripción
       cargoId = usuario.cargo.idCargo || '';
       cargoDescripcion = usuario.cargo.descripcion || '';
     } else if (typeof usuario.cargo === 'string' || typeof usuario.cargo === 'number') {
@@ -196,44 +195,47 @@ export class UserService {
 
   return {
     ...usuario,
-    idUsuario: usuario.idUsuario, // MANTENER el idUsuario original
+    idUsuario: usuario.idUsuario,
     noUsuario: usuario.idUsuario || usuario.noUsuario || (index !== undefined ? index + 1 : 0),
     cargo: cargoId || cargoDescripcion,
     cargoDescripcion: cargoDescripcion,
-    estado: usuario.estado || 'Activo',
-    activo: usuario.activo !== undefined ? usuario.activo : true,
+    estado: typeof usuario.estado === 'object' ? usuario.estado.descripcion : (usuario.estado || 'ACTIVO'),
+    activo: typeof usuario.estado === 'object' ? usuario.estado.descripcion === 'ACTIVO' : (usuario.activo !== false),
+    rol: usuario.rol || { idRol: 2, descripcion: 'USUARIO' },
     correoEmpresarial: usuario.correoEmpresarial || '',
     celular: usuario.telefono1 || usuario.celular || '',
     telefono: usuario.telefono2 || usuario.telefono || '',
-    direccion: usuario.direccion || '', // AGREGAR valor por defecto
-    correoPersonal: usuario.correoPersonal || '', // AGREGAR valor por defecto
+    direccion: usuario.direccion || '',
+    correoPersonal: usuario.correoPersonal || '',
     dobleAutenticacion: typeof usuario.dobleAutenticacion === 'boolean' 
       ? (usuario.dobleAutenticacion ? 'Google Authenticator' : '') 
-      : (usuario.dobleAutenticacion || 'Google Authenticator'),
-    perfiles: usuario.perfiles || {
-      administrador: false,
-      funcionarioCreador: false,
-      funcionarios: true
-    }
+      : (usuario.dobleAutenticacion || 'Google Authenticator')
   };
 }
 
   private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest {
-    return {
-      identificacion: usuario.identificacion?.trim() || '',
-      nombres: usuario.nombres?.trim() || '',
-      apellidos: usuario.apellidos?.trim() || '',
-      usuario: usuario.usuario?.trim() || '',
-      cargo: {
-        idCargo: this.obtenerIdCargo(usuario.cargo)
-      },
-      correoEmpresarial: usuario.correoEmpresarial?.trim() || '',
-      correoPersonal: usuario.correoPersonal?.trim() || '',
-      telefono1: usuario.celular?.trim() || '',
-      telefono2: usuario.telefono?.trim() || '',
-      direccion: usuario.direccion?.trim() || '',
-      dobleAutenticacion: this.convertirDobleAutenticacion(usuario.dobleAutenticacion)
-    };
+  return {
+    identificacion: usuario.identificacion?.trim() || '',
+    nombres: usuario.nombres?.trim() || '',
+    apellidos: usuario.apellidos?.trim() || '',
+    usuario: usuario.usuario?.trim() || '',
+    cargo: {
+      idCargo: this.obtenerIdCargo(usuario.cargo)
+    },
+    estado: typeof usuario.estado === 'object' 
+      ? usuario.estado 
+      : { idEstado: 5, descripcion: 'ACTIVO' },
+    rol: {
+      idRol: 2,
+      descripcion: 'USUARIO'
+    },
+    correoEmpresarial: usuario.correoEmpresarial?.trim() || '',
+    correoPersonal: usuario.correoPersonal?.trim() || '',
+    telefono1: usuario.celular?.trim() || '',
+    telefono2: usuario.telefono?.trim() || '',
+    direccion: usuario.direccion?.trim() || '',
+    dobleAutenticacion: this.convertirDobleAutenticacion(usuario.dobleAutenticacion)
+  };
   }
 
   private obtenerIdCargo(cargo: string | number | undefined): number {
