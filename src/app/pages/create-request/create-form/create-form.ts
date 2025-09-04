@@ -144,18 +144,6 @@ export class CreateForm implements OnInit, OnChanges {
     const creatorUserId = this.getUserId(this.currentUser);
     const searchTermLower = searchTerm.toLowerCase();
 
-    console.log('[CreateForm] filterUsersLocally:', {
-      searchTerm,
-      currentIndex,
-      selectedUserIds,
-      creatorUserId,
-      destinatarios: this.destinatarios.map((d, i) => ({
-        index: i,
-        usuario: d.usuario?.usuario,
-        userId: d.usuario ? this.getUserId(d.usuario) : null
-      }))
-    });
-
     const filtered = this.allUsers.filter(user => {
       const userId = this.getUserId(user);
       
@@ -168,21 +156,17 @@ export class CreateForm implements OnInit, OnChanges {
 
       // 2. Excluir usuario creador
       if (creatorUserId && userId === creatorUserId) {
-        console.log('[CreateForm] EXCLUYENDO usuario creador:', user.usuario);
         return false;
       }
 
       // 3. Excluir usuarios ya seleccionados
       if (userId && selectedUserIds.includes(userId)) {
-        console.log('[CreateForm] EXCLUYENDO usuario ya seleccionado:', user.usuario);
         return false;
       }
 
-      console.log('[CreateForm] INCLUYENDO usuario:', user.usuario);
       return true;
     });
 
-    console.log('[CreateForm] Usuarios filtrados finales:', filtered.map(u => u.usuario));
     return filtered;
   }
 

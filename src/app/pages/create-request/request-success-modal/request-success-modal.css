@@ -1,13 +1,16 @@
+/* Importar variables CSS */
+@import '../../../styles/variables.css';
+
 /* anula el padding global de la modal para esta vista */
 .modal-content.request-success-modal .modal-body { padding: 0 !important; }
 
 /* contenedor principal */
 .modal-dialog { max-width: 980px; width: 95%; }
 .modal-content.request-success-modal{
-  background: rgb(61, 107, 99);
-  border-radius: 12px;
-  border: 1px solid #d6d9d8;
-  box-shadow: 0 6px 18px rgba(0,0,0,.18);
+  background: var(--color-primary);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
 
@@ -16,7 +19,7 @@
   content:"";
   display:block;
   height: 60px;
-  background: linear-gradient(135deg, rgb(61, 107, 99) 0%, rgb(74, 128, 115) 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
 }
 
 /* cabecera de iconos sobre la barra */
@@ -27,7 +30,7 @@
   right: 14px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
   z-index: 10;
 }
 
@@ -41,9 +44,9 @@
   border: 1px solid rgba(255,255,255,0.3);
   border-radius: 50%;
   font-size: 18px;
-  color: #2c3e38;
+  color: var(--color-primary-dark);
   cursor: pointer;
-  transition: all .15s ease;
+  transition: all var(--transition-fast);
   backdrop-filter: blur(10px);
 }
 
@@ -355,4 +358,92 @@
   text-align: center;
   color: #666;
   font-style: italic;
+}
+
+/* Mejoras a la tabla de aprobadores */
+.approvers-table th:first-child,
+.approvers-table td:first-child {
+  width: 60px;
+  text-align: center;
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* Estilos mejorados para los estados */
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.text-bg-success {
+  background-color: var(--color-success) !important;
+  color: var(--color-text-white) !important;
+}
+
+.text-bg-danger {
+  background-color: var(--color-danger) !important;
+  color: var(--color-text-white) !important;
+}
+
+.text-bg-warning {
+  background-color: var(--color-warning) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.text-bg-info {
+  background-color: var(--color-info) !important;
+  color: var(--color-text-white) !important;
+}
+
+/* Historial de Gestiones */
+.historial-section { margin-top: 2rem; }
+.historial-timeline { position: relative; padding-left: 2rem; }
+.historial-timeline::before { content: ''; position: absolute; left: 1rem; top: 0; bottom: 0; width: 2px; background: #dee2e6; }
+.historial-item { position: relative; margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #dee2e6; }
+.historial-item::before { content: ''; position: absolute; left: -1.75rem; top: 1.5rem; width: 12px; height: 12px; border-radius: 50%; background: #6c757d; border: 3px solid white; box-shadow: 0 0 0 2px #dee2e6; }
+.historial-item.gestion-aprobacion { border-left-color: #28a745; }
+.historial-item.gestion-aprobacion::before { background: #28a745; box-shadow: 0 0 0 2px #28a745; }
+.historial-item.gestion-rechazo { border-left-color: #dc3545; }
+.historial-item.gestion-rechazo::before { background: #dc3545; box-shadow: 0 0 0 2px #dc3545; }
+.historial-item.gestion-cancelacion { border-left-color: #ffc107; }
+.historial-item.gestion-cancelacion::before { background: #ffc107; box-shadow: 0 0 0 2px #ffc107; }
+.historial-item.gestion-envio { border-left-color: #007bff; }
+.historial-item.gestion-envio::before { background: #007bff; box-shadow: 0 0 0 2px #007bff; }
+
+.historial-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.historial-type { display: flex; align-items: center; gap: 0.5rem; }
+.historial-type i { font-size: 1.25rem; }
+.historial-type .type-label { font-weight: 600; font-size: 0.9rem; text-transform: uppercase; }
+.gestion-aprobacion .historial-type i { color: #28a745; }
+.gestion-rechazo .historial-type i { color: #dc3545; }
+.gestion-cancelacion .historial-type i { color: #ffc107; }
+.gestion-envio .historial-type i { color: #007bff; }
+.historial-meta { display: flex; flex-direction: column; align-items: flex-end; }
+.historial-user { font-weight: 500; color: #495057; font-size: 0.875rem; }
+.historial-date { font-size: 0.75rem; color: #6c757d; }
+.historial-comment { margin-bottom: 0.75rem; }
+.comment-preview { margin: 0; padding: 0.75rem; background: #f8f9fa; border-radius: 6px; border-left: 3px solid #007bff; cursor: pointer; position: relative; }
+.comment-preview:hover { background: #e9ecef; }
+.comment-expand-icon { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); color: #007bff; font-size: 1rem; }
+.historial-status-change { display: flex; align-items: center; gap: 0.5rem; }
+.status-change { display: flex; align-items: center; gap: 0.5rem; }
+.status-badge { padding: var(--spacing-xs) var(--spacing-sm); border-radius: var(--border-radius-sm); font-size: 0.75rem; font-weight: 500; }
+.status-old { background: var(--color-danger-bg); color: var(--color-danger); }
+.status-new { background: var(--color-success-bg); color: var(--color-success); }
+@media (max-width: 768px) {
+  .historial-timeline { padding-left: 1.5rem; }
+  .historial-timeline::before { left: 0.75rem; }
+  .historial-item::before { left: -1.25rem; }
+  .historial-header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .historial-meta { align-items: flex-start; }
+}
+
+.text-bg-secondary {
+  background-color: var(--color-secondary) !important;
+  color: var(--color-text-white) !important;
 }

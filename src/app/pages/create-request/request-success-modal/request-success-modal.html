@@ -20,11 +20,11 @@
         <div class="modal-body-content" *ngIf="data">
           <div class="left-panel">
             <h2 class="section-title">APROBACIÓN</h2>
-            <p class="request-name">{{ data.nombreSolicitud }}</p>
+            <p class="request-name">{{ data.nombreSolicitud || 'Nombre de solicitud no disponible' }}</p>
 
             <h3 class="section-subtitle">DESCRIPCIÓN</h3>
             <p class="description-text">
-              {{ data.detallesAdicionales || 'En este apartado se colocará la descripción del documento adjunto para que las personas involucradas se hagan una idea de la solicitud.' }}
+              {{ data.detallesAdicionales || 'No se proporcionaron detalles adicionales para esta solicitud.' }}
             </p>
 
             <div class="document-link" *ngIf="data.documentoAprobacion" (click)="viewDocument(data.documentoAprobacion)">
@@ -87,15 +87,17 @@
                 <table class="approvers-table">
                   <thead>
                     <tr>
+                      <th *ngIf="shouldShowOrderColumn()">Orden</th>
                       <th>Nombres y Apellidos</th>
                       <th>Correo Electrónico</th>
-                      <th>Área</th>
+                      <th>Cargo</th>
                       <th>Fecha</th>
                       <th>Estado</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr *ngFor="let approver of approvers; trackBy: trackByApprover">
+                      <td *ngIf="shouldShowOrderColumn()" class="text-center">{{ approver.orden || '-' }}</td>
                       <td>{{ approver.nombresApellidos }}</td>
                       <td>{{ approver.correo }}</td>
                       <td>{{ approver.area }}</td>
@@ -108,6 +110,43 @@
                     </tr>
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            <!-- Historial de Gestiones -->
+            <div *ngIf="hasHistorialGestiones()" class="historial-section">
+              <h2 class="section-title">HISTORIAL DE GESTIONES</h2>
+              <div class="historial-timeline">
+                <div *ngFor="let gestion of getHistorialGestiones(); trackBy: trackByGestion" 
+                     class="historial-item" 
+                     [ngClass]="getGestionTypeClass(gestion.tipo)">
+                  <div class="historial-header">
+                    <div class="historial-type">
+                      <i class="bi" [ngClass]="getGestionTypeIcon(gestion.tipo)"></i>
+                      <span class="type-label">{{ gestion.tipo }}</span>
+                    </div>
+                    <div class="historial-meta">
+                      <span class="historial-user">{{ gestion.usuarioNombre }}</span>
+                      <span class="historial-date">{{ formatDate(gestion.fecha) }}</span>
+                    </div>
+                  </div>
+                  
+                  <div *ngIf="gestion.comentario" class="historial-comment">
+                    <p class="comment-preview" (click)="showCommentModal(gestion)">
+                      {{ getCommentPreview(gestion.comentario) }}
+                      <i *ngIf="gestion.comentario && gestion.comentario.length > 50" 
+                         class="bi bi-arrow-right-circle-fill comment-expand-icon"></i>
+                    </p>
+                  </div>
+                  
+                  <div *ngIf="gestion.estadoAnterior && gestion.estadoNuevo" class="historial-status-change">
+                    <span class="status-change">
+                      <span class="status-badge status-old">{{ gestion.estadoAnterior }}</span>
+                      <i class="bi bi-arrow-right"></i>
+                      <span class="status-badge status-new">{{ gestion.estadoNuevo }}</span>
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -124,3 +163,10 @@
   (confirm)="onConfirmationModalConfirm($event)"
   (cancel)="onConfirmationModalCancel()">
 </app-confirmation-modal>
+
+<!-- Comment Modal -->
+<app-comment-modal
+  [isVisible]="isCommentModalVisible"
+  [data]="commentModalData"
+  (close)="onCommentModalClose()">
+</app-comment-modal>

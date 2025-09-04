@@ -129,7 +129,8 @@ export class Approvals implements OnInit, OnDestroy {
             }
             this.approvalService.updateApproval(requestDetails);
         }
-        this.successModalData = this.approvalService.mapToSuccessData(requestDetails.fullData, this.allUsers);
+        // Usar directamente los datos ya procesados en lugar de mapear nuevamente
+        this.successModalData = requestDetails.fullData;
         this.isDetailModalVisible = true;
       }
       this.isLoadingDetails = false;
@@ -206,12 +207,10 @@ export class Approvals implements OnInit, OnDestroy {
               this.isApprovalDocumentViewVisible = true;
             },
             error: (error) => {
-              console.error('[Approvals] Error al cargar el documento del servidor:', error);
               alert('Error al cargar el documento. Por favor, inténtalo de nuevo.');
             }
           });
         } else {
-          console.error('[Approvals] No se encontró documento para mostrar:', data);
           alert('No se pudo cargar el documento. Verifique que la solicitud tenga un documento asociado.');
         }
       }
@@ -233,7 +232,6 @@ export class Approvals implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        console.error('[Approvals] Error al aprobar solicitud:', error);
         alert('Error al aprobar la solicitud. Por favor, inténtelo de nuevo.');
         // Reabrir la modal de documento para que el usuario pueda intentar nuevamente
         this.isApprovalDocumentViewVisible = true;
@@ -256,7 +254,6 @@ export class Approvals implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        console.error('[Approvals] Error al rechazar solicitud:', error);
         alert('Error al rechazar la solicitud. Por favor, inténtelo de nuevo.');
         // Reabrir la modal de documento para que el usuario pueda intentar nuevamente
         this.isApprovalDocumentViewVisible = true;

@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { BehaviorSubject, Observable, of } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, of, throwError, forkJoin } from 'rxjs';
+import { catchError, map, tap, switchMap } from 'rxjs/operators';
 import { environment } from '../environments/environment';
 import { Approval } from '../pages/approvals/approvals';
 import { SuccessModalData, AprobadorState } from '../pages/create-request/request-success-modal/request-success-modal';
 import { Usuario } from '../interfaces/common.interfaces';
+import { UserService } from './user.service';
 
 @Injectable({
   providedIn: 'root'
@@ -18,7 +19,7 @@ export class ApprovalService {
     ? environment.apiUrl.slice(0, -1)
     : environment.apiUrl);
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private userService: UserService) { }
 
   // Helpers
   private headersForUser(userId: number): HttpHeaders {
@@ -83,7 +84,6 @@ export class ApprovalService {
       url: window.location.href
     };
 
-    console.log('[ApprovalService] Registrando metadata de acción:', metadata);
 
     // Aquí se podría enviar al backend para persistir la metadata
     // Por ahora, solo lo logueamos
@@ -124,7 +124,7 @@ export class ApprovalService {
       creationDate: createdAt,
       creatorUser: creador?.usuario || 'desconocido',
       creatorFullName: `${creador?.nombres} ${creador?.apellidos}`.trim() || 'Desconocido',
-      position: creador?.cargo || 'Funcionario',
+      position: this.extractAreaString(creador) || 'Funcionario',
       lastUpdate: updatedAt,
       status: ['APROBADO', 'RECHAZADO', 'PENDIENTE', 'CANCELADA'].includes(estado) ? estado : 'PENDIENTE',
       approvers: approvers,
@@ -132,10 +132,213 @@ export class ApprovalService {
       fullData: item
     };
   }
+
+  private extractAreaString(user: Usuario | undefined): string | null {
+    if (!user) return null;
+    
+    // Intentar múltiples estrategias para extraer el área como string
+    if (typeof user.cargo === 'string') return user.cargo;
+    if (user.cargo && typeof user.cargo === 'object') {
+      if ((user.cargo as any).nombre) return (user.cargo as any).nombre;
+      if ((user.cargo as any).descripcion) return (user.cargo as any).descripcion;
+      if ((user.cargo as any).name) return (user.cargo as any).name;
+    }
+    
+    if ((user as any).area) {
+      if (typeof (user as any).area === 'string') return (user as any).area;
+      if ((user as any).area.nombre) return (user as any).area.nombre;
+      if ((user as any).area.descripcion) return (user as any).area.descripcion;
+      if ((user as any).area.name) return (user as any).area.name;
+    }
+    
+    if ((user as any).departamento) {
+      if (typeof (user as any).departamento === 'string') return (user as any).departamento;
+      if ((user as any).departamento.nombre) return (user as any).departamento.nombre;
+    }
+    
+    return null;
+  }
+
+  private extractRequestName(item: any, id: string | number): string {
+    // Intentar múltiples estrategias para extraer el nombre de la solicitud
+    if (item?.titulo && typeof item.titulo === 'string' && item.titulo.trim()) {
+      return item.titulo;
+    }
+    if (item?.nombreSolicitud && typeof item.nombreSolicitud === 'string' && item.nombreSolicitud.trim()) {
+      return item.nombreSolicitud;
+    }
+    if (item?.nombre && typeof item.nombre === 'string' && item.nombre.trim()) {
+      return item.nombre;
+    }
+    if (item?.descripcion && typeof item.descripcion === 'string' && item.descripcion.trim()) {
+      return item.descripcion;
+    }
+    if (item?.comentarioInicial && typeof item.comentarioInicial === 'string' && item.comentarioInicial.trim()) {
+      return item.comentarioInicial;
+    }
+    if (item?.pdfOriginalName && typeof item.pdfOriginalName === 'string' && item.pdfOriginalName.trim()) {
+      return item.pdfOriginalName;
+    }
+    if (item?.documentoFileName && typeof item.documentoFileName === 'string' && item.documentoFileName.trim()) {
+      return item.documentoFileName;
+    }
+    if (item?.fileName && typeof item.fileName === 'string' && item.fileName.trim()) {
+      return item.fileName;
+    }
+    
+    // Si no se encuentra un nombre específico, generar uno basado en la tipología
+    if (item?.tipologiaId || item?.idTipologia) {
+      const tipologiaId = item.tipologiaId || item.idTipologia;
+      return `Solicitud de ${tipologiaId} - ${id}`;
+    }
+    
+    return `Solicitud ${id}`;
+  }
+
+  private extractRequestDescription(item: any): string {
+    // Intentar múltiples estrategias para extraer la descripción/comentario
+    if (item?.descripcionSolicitud && typeof item.descripcionSolicitud === 'string' && item.descripcionSolicitud.trim()) {
+      return item.descripcionSolicitud;
+    }
+    if (item?.comentarioInicial && typeof item.comentarioInicial === 'string' && item.comentarioInicial.trim()) {
+      return item.comentarioInicial;
+    }
+    if (item?.detalles && typeof item.detalles === 'string' && item.detalles.trim()) {
+      return item.detalles;
+    }
+    if (item?.descripcion && typeof item.descripcion === 'string' && item.descripcion.trim()) {
+      return item.descripcion;
+    }
+    if (item?.comentario && typeof item.comentario === 'string' && item.comentario.trim()) {
+      return item.comentario;
+    }
+    if (item?.observaciones && typeof item.observaciones === 'string' && item.observaciones.trim()) {
+      return item.observaciones;
+    }
+    if (item?.justificacion && typeof item.justificacion === 'string' && item.justificacion.trim()) {
+      return item.justificacion;
+    }
+    if (item?.motivo && typeof item.motivo === 'string' && item.motivo.trim()) {
+      return item.motivo;
+    }
+    
+    // Buscar en otros campos posibles
+    if (item?.notes && typeof item.notes === 'string' && item.notes.trim()) {
+      return item.notes;
+    }
+    if (item?.description && typeof item.description === 'string' && item.description.trim()) {
+      return item.description;
+    }
+    if (item?.message && typeof item.message === 'string' && item.message.trim()) {
+      return item.message;
+    }
+    if (item?.text && typeof item.text === 'string' && item.text.trim()) {
+      return item.text;
+    }
+    
+    // Buscar cualquier campo que contenga texto y no sea un ID o fecha
+    const textFields = Object.keys(item || {}).filter(key => {
+      const value = item[key];
+      return typeof value === 'string' && 
+             value.trim() && 
+             !key.toLowerCase().includes('id') && 
+             !key.toLowerCase().includes('date') && 
+             !key.toLowerCase().includes('time') &&
+             !key.toLowerCase().includes('created') &&
+             !key.toLowerCase().includes('updated') &&
+             !key.toLowerCase().includes('estado') &&
+             !key.toLowerCase().includes('tipologia') &&
+             !key.toLowerCase().includes('nombre') &&
+             !key.toLowerCase().includes('solicitud') &&
+             !key.toLowerCase().includes('pdf') &&
+             !key.toLowerCase().includes('file') &&
+             !key.toLowerCase().includes('documento') &&
+             !key.toLowerCase().includes('original') &&
+             value.length > 10 &&
+             !value.match(/^\d{4}-\d{2}-\d{2}/) &&
+             !value.match(/^\d+$/) &&
+             !value.match(/\.pdf$/i) &&
+             !value.match(/\.doc$/i) &&
+             !value.match(/\.docx$/i) &&
+             !value.match(/\.xls$/i) &&
+             !value.match(/\.xlsx$/i);
+    });
+    
+    if (textFields.length > 0) {
+      return item[textFields[0]];
+    }
+    
+    return 'No se proporcionaron detalles adicionales para esta solicitud.';
+  }
+
+  private mapearHistorialGestiones(gestiones: any[], users: Usuario[]): any[] {
+    if (!Array.isArray(gestiones) || gestiones.length === 0) {
+      return [];
+    }
+
+    const findUserById = (id?: number): Usuario | undefined => {
+      if (!id) return undefined;
+      return users.find(u => u.noUsuario === id || (u as any).idUsuario === id);
+    };
+
+    return gestiones.map((gestion, index) => {
+      const usuario = findUserById(gestion.usuarioId || gestion.idUsuario);
+      
+      return {
+        id: gestion.id || `gestion-${index}`,
+        tipo: this.mapearTipoGestion(gestion.tipo || gestion.accion),
+        usuarioId: String(gestion.usuarioId || gestion.idUsuario || ''),
+        usuarioNombre: usuario ? `${usuario.nombres} ${usuario.apellidos}`.trim() : (gestion.usuarioNombre || 'Usuario desconocido'),
+        fecha: new Date(gestion.fecha || gestion.timestamp || gestion.createdAt),
+        comentario: gestion.comentario || gestion.observacion || gestion.descripcion,
+        comentarioCompleto: gestion.comentarioCompleto || gestion.comentario || gestion.observacion || gestion.descripcion,
+        orden: gestion.orden || gestion.ordenIndex,
+        estadoAnterior: gestion.estadoAnterior || gestion.estadoPrevio,
+        estadoNuevo: gestion.estadoNuevo || gestion.estado || gestion.estadoActual
+      };
+    }).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+  }
+
+  private mapearTipoGestion(tipo: string): 'ENVIO' | 'APROBACION' | 'RECHAZO' | 'CANCELACION' {
+    if (!tipo) return 'ENVIO';
+    
+    const tipoUpper = tipo.toUpperCase();
+    if (tipoUpper.includes('APROB') || tipoUpper === 'APPROVE') return 'APROBACION';
+    if (tipoUpper.includes('RECHAZ') || tipoUpper === 'REJECT') return 'RECHAZO';
+    if (tipoUpper.includes('CANCEL') || tipoUpper === 'CANCEL') return 'CANCELACION';
+    if (tipoUpper.includes('ENVI') || tipoUpper === 'SEND') return 'ENVIO';
+    
+    return 'ENVIO';
+  }
   
   mapToSuccessData(item: any, users: Usuario[]): SuccessModalData {
-    const findUserById = (id?: number): Usuario | undefined => users.find(u => u.noUsuario === id);
-    const findUserByUsername = (username?: string): Usuario | undefined => users.find(u => u.usuario === username);
+    const findUserById = (id?: number): Usuario | undefined => {
+      if (!id) return undefined;
+      
+      // Buscar por noUsuario (ID numérico)
+      let user = users.find(u => u.noUsuario === id);
+      
+      // Si no se encuentra, buscar por idUsuario (para usuarios resueltos)
+      if (!user) {
+        user = users.find(u => (u as any).idUsuario === id);
+      }
+      
+      // Si no se encuentra, buscar por usuario (string)
+      if (!user) {
+        user = users.find(u => u.usuario === String(id));
+      }
+      
+      // Si aún no se encuentra, buscar por ID en otros campos
+      if (!user) {
+        user = users.find(u => (u as any).id === id || (u as any).usuarioId === id);
+      }
+      
+      return user;
+    };
+    
+    const findUserByUsername = (username?: string): Usuario | undefined => {
+      return users.find(u => u.usuario === username);
+    };
 
     const id = item?.id ?? item?.numeroRadicado ?? '';
     const createdAt = item?.createdAt || item?.fechaCreacion || new Date().toISOString();
@@ -149,20 +352,40 @@ export class ApprovalService {
       return 'Pendiente';
     })();
 
-    const creadorId: number | undefined = item?.creador?.noUsuario || item?.creadorId || item?.idSolicitante;
+    const creadorId: number | undefined = item?.creador?.noUsuario || item?.creadorId || item?.idSolicitante || item?.createdBy;
     const creadorUser: string | undefined = item?.creador?.usuario || item?.creadorUsuario;
     const creador = findUserById(creadorId) || findUserByUsername(creadorUser) || null;
-
+    
     const destinatariosRaw: any[] = item?.destinatarios || [];
     const destinatarios = destinatariosRaw.map((d: any, index: number) => {
-      const idNumber: number | undefined = typeof d === 'number' ? d : (d?.noUsuario || d?.usuarioId || d?.idUsuario || d?.destinatarioId);
-      const username: string | undefined = typeof d === 'string' ? d : (d?.usuario || d?.username);
-      const user = idNumber ? findUserById(idNumber) : (username ? findUserByUsername(username) : undefined);
-      const usuarioId = user?.usuario || username || String(idNumber ?? '');
-      const noUsuarioId = user?.noUsuario || idNumber;
-      const orden = d?.orden ?? (item?.ordenFirma ? index + 1 : undefined);
-      const estadoAprob: any = d?.decision || d?.estado || 'Pendiente';
-      return { usuarioId, noUsuarioId, orden, estado: estadoAprob };
+      // Mapear según la estructura real de la API: { usuarioId: 5, ordenIndex: 0, nombre: null, decision: "PENDIENTE" }
+      const usuarioId = d?.usuarioId;
+      let user = usuarioId ? findUserById(usuarioId) : undefined;
+      
+      // Usar siempre orden secuencial basado en el índice (1, 2, 3, ...)
+      const orden = index + 1;
+      const estadoAprob: any = d?.decision || d?.estado || 'PENDIENTE';
+      
+      // Si no se encuentra el usuario en la lista local, intentar obtenerlo por ID
+      if (!user && usuarioId) {
+        // Nota: En este punto no podemos hacer llamadas asíncronas, 
+        // pero podemos marcar que necesita ser resuelto
+      }
+      
+      // Incluir información adicional del usuario si está disponible
+      return { 
+        usuarioId: String(usuarioId),
+        noUsuarioId: usuarioId,
+        orden, 
+        estado: estadoAprob,
+        nombre: user ? `${user.nombres} ${user.apellidos}`.trim() : null,
+        nombresApellidos: user ? `${user.nombres} ${user.apellidos}`.trim() : null,
+        correo: user?.correoEmpresarial || null,
+        correoEmpresarial: user?.correoEmpresarial || null,
+        area: this.extractAreaString(user),
+        cargo: this.extractAreaString(user),
+        needsUserResolution: !user && !!usuarioId
+      };
     });
 
     // Mapear estados de aprobadores con metadata
@@ -178,13 +401,13 @@ export class ApprovalService {
       }
     }));
 
-    return {
+    const result = {
       id: String(id),
-      nombreSolicitud: item?.titulo || item?.nombreSolicitud || `Solicitud ${id}`,
-      detallesAdicionales: item?.comentarioInicial || item?.detalles || '',
-      prioridad: item?.prioridad === true || item?.prioridad === 'IMPORTANTE' ? 'IMPORTANTE' : 'NORMAL',
+      nombreSolicitud: this.extractRequestName(item, id),
+      detallesAdicionales: this.extractRequestDescription(item),
+      prioridad: (item?.prioridad === true || item?.prioridad === 'IMPORTANTE' ? 'IMPORTANTE' : 'NORMAL') as any,
       tipologia: String(item?.tipologiaId ?? item?.idTipologia ?? ''),
-      enviarRecordatorio: 'NUNCA',
+      enviarRecordatorio: 'NUNCA' as any,
       documentosAnexos: Array.isArray(item?.adjuntos) && item.adjuntos.length > 0,
       establecerOrden: Boolean(item?.ordenFirma),
       destinatarios,
@@ -192,12 +415,15 @@ export class ApprovalService {
       anexos: item?.adjuntos || item?.anexos,
       creador: creador,
       fechaCreacion: new Date(createdAt),
-      estado,
+      estado: estado as any,
       approverStates: destinatarios.map(d => ({ usuarioId: (d as any).usuarioId, estado: (d as any).estado || 'Pendiente' })),
       // Agregar información del documento para la vista
       documentoUrl: item?.documentoUrl || item?.pdfUrl || item?.urlDocumento || item?.url,
-      documentoFileName: item?.documentoFileName || item?.pdfFileName || item?.nombreArchivo || item?.fileName
+      documentoFileName: item?.documentoFileName || item?.pdfFileName || item?.nombreArchivo || item?.fileName,
+      historialGestiones: this.mapearHistorialGestiones(item?.historialGestiones || item?.gestiones || [], users)
     };
+    
+    return result;
   }
 
   // Mutations on local cache
@@ -225,7 +451,6 @@ export class ApprovalService {
         this.approvalsSubject.next(filteredApprovals);
       }),
       catchError((error) => {
-        console.error('Error al eliminar solicitud:', error);
         throw error;
       })
     );
@@ -272,19 +497,74 @@ export class ApprovalService {
     const local = this.approvalsSubject.getValue().find(a => a.id.toString() === approvalId.toString());
     const headers = userId ? this.headersForUser(userId) : undefined;
     
-    console.log(`[ApprovalService] Fetching details for approval ID: ${approvalId}, userId: ${userId}`);
-    
     // Check if the ID looks like a timestamp (invalid for API calls)
     const idStr = String(approvalId);
     if (idStr.startsWith('temp-') || /^\d{13}$/.test(idStr)) {
-      console.warn(`[ApprovalService] ID ${approvalId} appears to be a temporary/timestamp ID, returning local data only`);
       return of(local);
     }
     
     return this.http.get<any>(`${this.baseUrl}/solicitudes/${approvalId}`, { headers }).pipe(
-      map(item => {
-        console.log(`[ApprovalService] Successfully fetched approval details for ID: ${approvalId}`, item);
-        return this.mapServerToApproval(item, users);
+      switchMap(item => {
+        // Usar mapToSuccessData para obtener la estructura correcta
+        const initialData = this.mapToSuccessData(item, users);
+        
+        // Identificar usuarios que necesitan resolución
+        const usersToResolve = initialData.destinatarios
+          .filter((dest: any) => dest.needsUserResolution && dest.noUsuarioId)
+          .map((dest: any) => dest.noUsuarioId);
+        
+        if (usersToResolve.length === 0) {
+          return of(this.mapSuccessDataToApproval(initialData));
+        }
+        
+        // Obtener información de usuarios faltantes
+        const userRequests = usersToResolve.map(userId => 
+          this.userService.obtenerUsuarioPorId(userId).pipe(
+            catchError(error => {
+              return of(null);
+            })
+          )
+        );
+        
+        return forkJoin(userRequests).pipe(
+          map(resolvedUsers => {
+            // Filtrar usuarios nulos y combinar con usuarios existentes
+            const validUsers = resolvedUsers.filter(user => user !== null) as Usuario[];
+            
+            // Crear un mapa de usuarios para evitar duplicados
+            const userMap = new Map<string, Usuario>();
+            
+            // Agregar usuarios existentes
+            users.forEach(user => {
+              const key = user.noUsuario ? String(user.noUsuario) : user.usuario;
+              if (key) {
+                userMap.set(key, user);
+              }
+            });
+            
+            // Agregar usuarios resueltos (sobrescribir si existen)
+            validUsers.forEach(user => {
+              // Intentar múltiples estrategias para crear la clave
+              let key = user.noUsuario ? String(user.noUsuario) : user.usuario;
+              
+              // Si no hay clave válida, usar idUsuario para usuarios resueltos
+              if (!key) {
+                key = (user as any).idUsuario ? String((user as any).idUsuario) : (user as any).id ? String((user as any).id) : `resolved-${Math.random()}`;
+              }
+              
+              if (key) {
+                userMap.set(key, user);
+              } else {
+              }
+            });
+            
+            const allUsers = Array.from(userMap.values());
+            
+            // Remapear con todos los usuarios disponibles
+            const successData = this.mapToSuccessData(item, allUsers);
+            return this.mapSuccessDataToApproval(successData);
+          })
+        );
       }),
       tap(appr => {
         if (!local) {
@@ -294,8 +574,6 @@ export class ApprovalService {
         }
       }),
       catchError((error) => {
-        console.error(`[ApprovalService] Error fetching approval details for ID: ${approvalId}`, error);
-        console.log(`[ApprovalService] Returning local approval if available:`, local);
         return of(local);
       })
     );
@@ -317,7 +595,6 @@ export class ApprovalService {
         fileName: response.fileName || response.documentoFileName || response.nombreArchivo || `documento_${approvalId}.pdf`
       })),
       catchError(error => {
-        console.error('Error al obtener documento:', error);
         throw error;
       })
     );
@@ -357,46 +634,12 @@ export class ApprovalService {
     if (comentario) body.comentario = comentario;
     const url = `${this.baseUrl}/solicitudes/${id}/aprobar`;
     
-    console.log(`[ApprovalService] Aprobando solicitud ${id} con usuario ${usuarioId}`);
-    console.log(`[ApprovalService] URL: ${url}`);
-    console.log(`[ApprovalService] Body:`, body);
-    console.log(`[ApprovalService] Base URL: ${this.baseUrl}`);
-    console.log(`[ApprovalService] Environment API URL: ${environment.apiUrl}`);
-    
     return this.http.post<any>(url, body).pipe(
       map(item => {
-        console.log('[ApprovalService] Respuesta exitosa al aprobar:', item);
         return this.mapServerToApproval(item, []);
       }),
       tap(appr => this.updateApproval(appr)),
       catchError((error) => {
-        console.error('[ApprovalService] Error al aprobar solicitud:', error);
-        console.error('[ApprovalService] Error details:', {
-          status: error.status,
-          statusText: error.statusText,
-          url: error.url,
-          body: error.error,
-          headers: error.headers,
-          message: error.message,
-          name: error.name
-        });
-        
-        // Log del error completo para debugging
-        if (error.error) {
-          console.error('[ApprovalService] Error body details:', JSON.stringify(error.error, null, 2));
-        }
-        
-        // Log de la petición que se envió
-        console.error('[ApprovalService] Request details:', {
-          method: 'POST',
-          url: url,
-          body: body,
-          headers: {
-            'Content-Type': 'application/json',
-            'X-User-Id': String(usuarioId)
-          }
-        });
-        
         throw error;
       })
     );
@@ -407,46 +650,12 @@ export class ApprovalService {
     if (comentario) body.comentario = comentario;
     const url = `${this.baseUrl}/solicitudes/${id}/rechazar`;
     
-    console.log(`[ApprovalService] Rechazando solicitud ${id} con usuario ${usuarioId}`);
-    console.log(`[ApprovalService] URL: ${url}`);
-    console.log(`[ApprovalService] Body:`, body);
-    console.log(`[ApprovalService] Base URL: ${this.baseUrl}`);
-    console.log(`[ApprovalService] Environment API URL: ${environment.apiUrl}`);
-    
     return this.http.post<any>(url, body).pipe(
       map(item => {
-        console.log('[ApprovalService] Respuesta exitosa al rechazar:', item);
         return this.mapServerToApproval(item, []);
       }),
       tap(appr => this.updateApproval(appr)),
       catchError((error) => {
-        console.error('[ApprovalService] Error al rechazar solicitud:', error);
-        console.error('[ApprovalService] Error details:', {
-          status: error.status,
-          statusText: error.statusText,
-          url: error.url,
-          body: error.error,
-          headers: error.headers,
-          message: error.message,
-          name: error.name
-        });
-        
-        // Log del error completo para debugging
-        if (error.error) {
-          console.error('[ApprovalService] Error body details:', JSON.stringify(error.error, null, 2));
-        }
-        
-        // Log de la petición que se envió
-        console.error('[ApprovalService] Request details:', {
-          method: 'POST',
-          url: url,
-          body: body,
-          headers: {
-            'Content-Type': 'application/json',
-            'X-User-Id': String(usuarioId)
-          }
-        });
-        
         throw error;
       })
     );
@@ -457,46 +666,12 @@ export class ApprovalService {
     if (comentario) body.comentario = comentario;
     const url = `${this.baseUrl}/solicitudes/${id}/cancelar`;
     
-    console.log(`[ApprovalService] Cancelando solicitud ${id} con usuario ${usuarioId}`);
-    console.log(`[ApprovalService] URL: ${url}`);
-    console.log(`[ApprovalService] Body:`, body);
-    console.log(`[ApprovalService] Base URL: ${this.baseUrl}`);
-    console.log(`[ApprovalService] Environment API URL: ${environment.apiUrl}`);
-    
     return this.http.post<any>(url, body).pipe(
       map(item => {
-        console.log('[ApprovalService] Solicitud cancelada exitosamente:', item);
         return this.mapServerToApproval(item, []);
       }),
       tap(appr => this.updateApproval(appr)),
       catchError((error) => {
-        console.error('[ApprovalService] Error al cancelar solicitud:', error);
-        console.error('[ApprovalService] Error details:', {
-          status: error.status,
-          statusText: error.statusText,
-          url: error.url,
-          body: error.error,
-          headers: error.headers,
-          message: error.message,
-          name: error.name
-        });
-        
-        // Log del error completo para debugging
-        if (error.error) {
-          console.error('[ApprovalService] Error body details:', JSON.stringify(error.error, null, 2));
-        }
-        
-        // Log de la petición que se envió
-        console.error('[ApprovalService] Request details:', {
-          method: 'POST',
-          url: url,
-          body: body,
-          headers: {
-            'Content-Type': 'application/json',
-            'X-User-Id': String(usuarioId)
-          }
-        });
-        
         throw error;
       })
     );
@@ -541,5 +716,42 @@ export class ApprovalService {
     return this.approvals$;
   }
 
+  /**
+   * Convierte SuccessModalData a Approval para mantener compatibilidad
+   */
+  private mapSuccessDataToApproval(successData: SuccessModalData): Approval {
+    return {
+      type: 'solicitud',
+      id: String(successData.id || ''),
+      creationDate: successData.fechaCreacion?.toISOString() || new Date().toISOString(),
+      creatorUser: successData.creador?.usuario || '',
+      creatorFullName: successData.creador ? `${successData.creador.nombres} ${successData.creador.apellidos}`.trim() : '',
+      position: this.extractAreaString(successData.creador || undefined) || '',
+      lastUpdate: successData.fechaCreacion?.toISOString() || new Date().toISOString(),
+      status: this.mapEstadoToStatus(successData.estado || 'Pendiente'),
+      approvers: (successData.destinatarios || []).map(dest => ({
+        initials: this.getInitials((dest as any).nombresApellidos || ''),
+        fullName: (dest as any).nombresApellidos || ''
+      })),
+      priority: successData.prioridad === 'IMPORTANTE',
+      fullData: successData as any // Incluir todos los datos para el modal
+    };
+  }
 
+  private mapEstadoToStatus(estado: string): 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA' {
+    const estadoUpper = estado.toUpperCase();
+    if (estadoUpper.includes('APROBADO')) return 'APROBADO';
+    if (estadoUpper.includes('RECHAZADO')) return 'RECHAZADO';
+    if (estadoUpper.includes('CANCELADO') || estadoUpper.includes('CANCELADA')) return 'CANCELADA';
+    return 'PENDIENTE';
+  }
+
+  private getInitials(fullName: string): string {
+    if (!fullName) return '??';
+    const names = fullName.trim().split(' ');
+    if (names.length >= 2) {
+      return (names[0][0] + names[1][0]).toUpperCase();
+    }
+    return fullName.substring(0, 2).toUpperCase();
+  }
 }

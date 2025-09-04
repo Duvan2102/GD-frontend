@@ -174,7 +174,6 @@ export class UserService {
           errorMessage = error.error?.message || errorMessage;
       }
     }
-    console.error('Error en UserService:', error);
     return throwError(() => ({
       status: error.status,
       message: errorMessage,

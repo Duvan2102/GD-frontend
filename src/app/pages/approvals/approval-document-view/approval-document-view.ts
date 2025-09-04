@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { NgxExtendedPdfViewerModule, PdfLoadedEvent, NgxExtendedPdfViewerService, PagesLoadedEvent } from 'ngx-extended-pdf-viewer';
 import { PdfService } from '../../../services/pdf.service';
 import { ApprovalService } from '../../../services/approval.service';
-import { ConfirmationModal, ConfirmationModalData } from '../../../shared/confirmation-modal/confirmation-modal';
+import { ConfirmationModal, ConfirmationModalData } from '../confirmation-modal/confirmation-modal';
 
 export interface ApprovalDocumentViewData {
   id: string | number;
@@ -235,10 +235,8 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
       comentario
     ).subscribe({
       next: (metadata) => {
-        console.log('[ApprovalDocumentView] Metadata registrada:', metadata);
       },
       error: (error) => {
-        console.error('[ApprovalDocumentView] Error registrando metadata:', error);
       }
     });
   }
