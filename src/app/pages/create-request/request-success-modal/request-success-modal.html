@@ -12,7 +12,6 @@
           <i class="bi bi-x"></i>
         </button>
         <div class="checkmark-icon-wrapper">
-          <i class="bi bi-check2-circle"></i>
         </div>
       </div>
 
@@ -75,14 +74,27 @@
 
               <div class="request-status" *ngIf="data.estado">
                 <span class="section-subtitle">Estado:</span>
-                <span class="badge rounded-pill" [ngClass]="getStatusClass(data.estado)">
-                  {{ data.estado }}
-                </span>
+                <span class="badge rounded-pill" [ngClass]="{
+                  'text-bg-success': data.estado === 'Aprobada',
+                  'text-bg-warning': data.estado === 'Pendiente',
+                  'text-bg-danger': data.estado === 'Rechazada',
+                  'text-bg-secondary': data.estado === 'Cancelada'
+                }">{{ data.estado }}</span>
               </div>
             </div>
 
             <div class="approvers-section">
               <h2 class="section-title">APROBADORES</h2>
+              <div class="approvers-summary" *ngIf="data">
+                <div class="summary-item">
+                  <span class="summary-label">Total destinatarios:</span>
+                  <span class="summary-value">{{ data.destinatariosTotal || data.destinatarios.length || 0 }}</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Aprobados:</span>
+                  <span class="summary-value">{{ data.destinatariosAprobados || 0 }}</span>
+                </div>
+              </div>
               <div class="table-responsive">
                 <table class="approvers-table">
                   <thead>
@@ -91,8 +103,9 @@
                       <th>Nombres y Apellidos</th>
                       <th>Correo Electrónico</th>
                       <th>Cargo</th>
-                      <th>Fecha</th>
+                      <th>Fecha Decisión</th>
                       <th>Estado</th>
+                      <th>Comentario</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -103,8 +116,21 @@
                       <td>{{ approver.area }}</td>
                       <td>{{ formatDate(approver.fecha) }}</td>
                       <td>
-                        <span class="badge rounded-pill" [ngClass]="getStatusClass(approver.estado)">
-                          {{ approver.estado }}
+                        <span class="badge rounded-pill" [ngClass]="{
+                          'text-bg-success': approver.estado === 'APROBADO',
+                          'text-bg-warning': approver.estado === 'PENDIENTE',
+                          'text-bg-danger': approver.estado === 'RECHAZADO',
+                          'text-bg-secondary': approver.estado === 'CANCELADA'
+                        }">{{ approver.estado }}</span>
+                      </td>
+                      <td class="comment-cell">
+                        <span *ngIf="getApproverComment(approver.usuarioId)" 
+                              class="comment-preview" 
+                              (click)="showApproverComment(approver)">
+                          {{ getApproverComment(approver.usuarioId) }}
+                        </span>
+                        <span *ngIf="!getApproverComment(approver.usuarioId)" class="no-comment">
+                          Sin comentarios
                         </span>
                       </td>
                     </tr>

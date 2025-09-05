@@ -27,9 +27,29 @@ export class AuthService {
           descripcion: 'Tecnología'
         }
       },
+
+/*noUsuario: 9,
+identificacion: '40912127',
+nombres: 'maria paula',
+apellidos: 'suarez',
+usuario: 'maria.suarez',
+estado: 'Activo',
+activo: true,
+cargo: 'Desarrollador Senior',
+cargoCompleto: {
+  idCargo: 2,
+  descripcion: 'Desarrollador Senior',
+  area: {
+    idArea: 1,
+    descripcion: 'Desarrollo',
+    departamento: {
+      idDepartamento: 1,
+      descripcion: 'Tecnología'
+    }
+  },*/
       permisos: {
         esAdministrador: true,
-        esAuditor: false
+        esAuditor: true
       }
     }
   };

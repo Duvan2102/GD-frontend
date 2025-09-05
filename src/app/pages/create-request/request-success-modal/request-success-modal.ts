@@ -7,7 +7,7 @@ import { CommentModal, CommentModalData } from './comment-modal';
 
 export interface AprobadorState {
   usuarioId: string;
-  estado: 'Enviado' | 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Cancelado';
+  estado: 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA';
   fechaAccion?: Date;
   comentario?: string;
   metadata?: {
@@ -22,13 +22,25 @@ export interface AprobadorTabla {
   correo: string;
   area: string;
   fecha: Date;
-  estado: 'Enviado' | 'Aprobado' | 'Rechazado' | 'Cancelado' | 'Pendiente';
+  estado: 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA';
   orden?: number;
+}
+
+export interface DestinatarioData {
+  usuarioId: string;
+  noUsuarioId?: number;
+  orden?: number;
+  ordenIndex?: number;
+  estado?: string;
+  decision?: string;
+  nombre?: string;
+  fechaDecision?: string;
+  comentario?: string;
 }
 export type EstadoSolicitud = 'Cancelada' | 'Aprobada' | 'Rechazada' | 'Pendiente' | 'Enviada';
 export interface GestionHistorial {
   id: string;
-  tipo: 'ENVIO' | 'APROBACION' | 'RECHAZO' | 'CANCELACION';
+  tipo: 'ENVIO' | 'APROBACION' | 'RECHAZO' | 'CANCELACION' | 'COMENTARIO';
   usuarioId: string;
   usuarioNombre: string;
   fecha: Date;
@@ -39,17 +51,34 @@ export interface GestionHistorial {
   estadoNuevo: string;
 }
 
-export interface SuccessModalData extends SolicitudData {
+export interface SuccessModalData {
   id?: string | number;
+  nombreSolicitud: string;
+  detallesAdicionales: string;
+  prioridad: 'NORMAL' | 'IMPORTANTE';
+  tipologia: string;
+  enviarRecordatorio: 'NUNCA' | 'SEMANALMENTE' | 'CADA_3_DIAS' | 'TODOS_LOS_DIAS';
+  documentosAnexos: boolean;
+  establecerOrden: boolean;
+  destinatarios: DestinatarioData[];
+  documentoAprobacion?: File;
+  anexos?: File[];
+  // Campos adicionales para documentos
+  documentoUrl?: string;
+  documentoFileName?: string;
+  // Campos del modal
   creador: Usuario | null;
   fechaCreacion?: Date;
   estado?: EstadoSolicitud;
   approverStates?: AprobadorState[];
-  // Campos adicionales para documentos
-  documentoUrl?: string;
-  documentoFileName?: string;
   historialGestiones?: GestionHistorial[];
-  establecerOrden: boolean;
+  // Campos adicionales de la API
+  destinatariosTotal?: number;
+  destinatariosAprobados?: number;
+  pdfOriginalName?: string;
+  pdfSizeBytes?: number;
+  adjuntos?: any[];
+  ordenFirma?: boolean;
 }
 
 
@@ -90,7 +119,8 @@ export class RequestSuccessModal implements OnChanges {
       return;
     }
     
-    this.approvers = this.data.destinatarios.map((dest) => {
+    // Mapear destinatarios y asignar orden secuencial
+    const mappedApprovers = this.data.destinatarios.map((dest: DestinatarioData, index: number) => {
       // Usar la misma lógica de búsqueda que ApprovalService
       const findUserById = (id?: number): any => {
         if (!id) return undefined;
@@ -120,16 +150,27 @@ export class RequestSuccessModal implements OnChanges {
       const usuarioId = typeof dest.usuarioId === 'string' ? parseInt(dest.usuarioId, 10) : dest.usuarioId;
       const usuario = findUserById(usuarioId);
       
+      // Mapear el estado correctamente según la respuesta de la API
+      const estadoAprobador = this.mapEstadoFromAPI(dest.decision || dest.estado || 'PENDIENTE');
+      
       return {
         usuarioId: dest.usuarioId,
-        nombresApellidos: usuario ? `${usuario.nombres} ${usuario.apellidos}` : 'Usuario no encontrado',
+        nombresApellidos: usuario ? `${usuario.nombres} ${usuario.apellidos}` : (dest.nombre || 'Usuario no encontrado'),
         correo: usuario?.correoEmpresarial || 'correo@ejemplo.com',
         area: this.extractAreaString(usuario),
-        fecha: this.data?.fechaCreacion || new Date(),
-        estado: this.getEstadoAprobador(dest.usuarioId),
-        orden: dest.orden
+        fecha: dest.fechaDecision ? new Date(dest.fechaDecision) : (this.data?.fechaCreacion || new Date()),
+        estado: estadoAprobador,
+        orden: dest.ordenIndex ?? dest.orden ?? (index + 1) // Usar ordenIndex de la API o asignar secuencial
       };
-    }).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    });
+    
+    // Ordenar por orden y luego por índice para mantener consistencia
+    this.approvers = mappedApprovers.sort((a, b) => {
+      if (a.orden !== b.orden) {
+        return (a.orden || 0) - (b.orden || 0);
+      }
+      return 0;
+    });
     
   }
   
@@ -294,17 +335,27 @@ export class RequestSuccessModal implements OnChanges {
     return area ? area.trim() : 'Área no especificada';
   }
 
-  private getEstadoAprobador(usuarioId: string): 'Enviado' | 'Aprobado' | 'Rechazado' | 'Cancelado' | 'Pendiente' {
-    if (this.data?.estado === 'Cancelada') return 'Cancelado';
+  private mapEstadoFromAPI(estado: string): 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA' {
+    if (!estado) return 'PENDIENTE';
+    
+    const estadoUpper = estado.toUpperCase();
+    if (estadoUpper.includes('APROBADO') || estadoUpper === 'APPROVED') return 'APROBADO';
+    if (estadoUpper.includes('RECHAZADO') || estadoUpper === 'REJECTED') return 'RECHAZADO';
+    if (estadoUpper.includes('CANCELADO') || estadoUpper === 'CANCELLED' || estadoUpper.includes('CANCELADA')) return 'CANCELADA';
+    return 'PENDIENTE';
+  }
+
+  private getEstadoAprobador(usuarioId: string): 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA' {
+    if (this.data?.estado === 'Cancelada') return 'CANCELADA';
     const approverState = this.data?.approverStates?.find(s => s.usuarioId === usuarioId);
     if (this.data?.estado === 'Rechazada') {
-        return approverState?.estado === 'Aprobado' ? 'Aprobado' : 'Rechazado';
+        return approverState?.estado === 'APROBADO' ? 'APROBADO' : 'RECHAZADO';
     }
     if (approverState) {
         return approverState.estado;
     }
-    if (this.data?.estado === 'Pendiente') return 'Pendiente';
-    return 'Enviado';
+    if (this.data?.estado === 'Pendiente') return 'PENDIENTE';
+    return 'PENDIENTE';
   }
 
   handleMainAction(): void {
@@ -368,15 +419,6 @@ export class RequestSuccessModal implements OnChanges {
   
   onClose(): void { this.close.emit(); }
   
-  getStatusClass(estado: string): string {
-    switch (estado) {
-      case 'APROBADO': case 'Aprobada': return 'text-bg-success';
-      case 'RECHAZADO': case 'Rechazada': return 'text-bg-danger';
-      case 'CANCELADA': case 'Cancelada': return 'text-bg-secondary';
-      case 'PENDIENTE': case 'Pendiente': return 'text-bg-warning';
-      default: return 'text-bg-info';
-    }
-  }
 
   canCancelRequest(): boolean {
     const estado = this.data?.estado;
@@ -442,7 +484,7 @@ export class RequestSuccessModal implements OnChanges {
       comentario: gestion.comentarioCompleto || gestion.comentario || 'Sin comentarios',
       usuario: gestion.usuarioNombre,
       fecha: gestion.fecha,
-      tipo: gestion.tipo
+      tipo: gestion.tipo === 'COMENTARIO' ? 'ENVIO' : gestion.tipo as 'APROBACION' | 'RECHAZO' | 'CANCELACION' | 'ENVIO'
     };
     this.isCommentModalVisible = true;
   }
@@ -455,6 +497,27 @@ export class RequestSuccessModal implements OnChanges {
   getCommentPreview(comentario: string | undefined): string {
     if (!comentario) return 'Sin comentarios';
     return comentario.length > 100 ? comentario.substring(0, 100) + '...' : comentario;
+  }
+
+  getApproverComment(usuarioId: string): string {
+    if (!this.data?.destinatarios) return '';
+    
+    const destinatario = this.data.destinatarios.find((d: DestinatarioData) => d.usuarioId === usuarioId);
+    return destinatario?.comentario || '';
+  }
+
+  showApproverComment(approver: AprobadorTabla): void {
+    const comentario = this.getApproverComment(approver.usuarioId);
+    if (comentario) {
+      this.commentModalData = {
+        titulo: `Comentario - ${approver.nombresApellidos}`,
+        comentario: comentario,
+        usuario: approver.nombresApellidos,
+        fecha: approver.fecha,
+        tipo: 'ENVIO' // Using ENVIO as fallback since COMENTARIO is not in the original type
+      };
+      this.isCommentModalVisible = true;
+    }
   }
 
   viewDocument(doc?: File) {

@@ -65,14 +65,14 @@ export interface CommentModalData {
       display: flex;
       justify-content: center;
       align-items: center;
-      z-index: 1050;
+      z-index: 9999;
     }
 
     .modal-content {
       background: white;
       border-radius: 8px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-      max-width: 500px;
+      max-width: 600px;
       width: 90%;
       max-height: 80vh;
       overflow: hidden;

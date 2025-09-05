@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  apiUrl: '/api',
+  apiUrl: 'http://200.7.99.74:8080/api',
   apiKey: '',
   enableLogging: true
 };

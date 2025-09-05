@@ -4,7 +4,7 @@ import { BehaviorSubject, Observable, of, throwError, forkJoin } from 'rxjs';
 import { catchError, map, tap, switchMap } from 'rxjs/operators';
 import { environment } from '../environments/environment';
 import { Approval } from '../pages/approvals/approvals';
-import { SuccessModalData, AprobadorState } from '../pages/create-request/request-success-modal/request-success-modal';
+import { SuccessModalData, AprobadorState, DestinatarioData } from '../pages/create-request/request-success-modal/request-success-modal';
 import { Usuario } from '../interfaces/common.interfaces';
 import { UserService } from './user.service';
 
@@ -29,15 +29,14 @@ export class ApprovalService {
   /**
    * Mapea el estado del aprobador a un formato estándar
    */
-  private mapApproverState(estado: any): 'Enviado' | 'Aprobado' | 'Rechazado' | 'Cancelado' | 'Pendiente' {
-    if (!estado) return 'Pendiente';
+  private mapApproverState(estado: any): 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA' {
+    if (!estado) return 'PENDIENTE';
     
     const estadoStr = String(estado).toLowerCase();
-    if (estadoStr.includes('aprobado') || estadoStr === 'approved') return 'Aprobado';
-    if (estadoStr.includes('rechazado') || estadoStr === 'rejected') return 'Rechazado';
-    if (estadoStr.includes('cancelado') || estadoStr === 'cancelled') return 'Cancelado';
-    if (estadoStr.includes('enviado') || estadoStr === 'sent') return 'Enviado';
-    return 'Pendiente';
+    if (estadoStr.includes('aprobado') || estadoStr === 'approved') return 'APROBADO';
+    if (estadoStr.includes('rechazado') || estadoStr === 'rejected') return 'RECHAZADO';
+    if (estadoStr.includes('cancelado') || estadoStr === 'cancelled' || estadoStr.includes('cancelada')) return 'CANCELADA';
+    return 'PENDIENTE';
   }
 
   /**
@@ -357,13 +356,13 @@ export class ApprovalService {
     const creador = findUserById(creadorId) || findUserByUsername(creadorUser) || null;
     
     const destinatariosRaw: any[] = item?.destinatarios || [];
-    const destinatarios = destinatariosRaw.map((d: any, index: number) => {
+    const destinatarios: DestinatarioData[] = destinatariosRaw.map((d: any, index: number) => {
       // Mapear según la estructura real de la API: { usuarioId: 5, ordenIndex: 0, nombre: null, decision: "PENDIENTE" }
       const usuarioId = d?.usuarioId;
       let user = usuarioId ? findUserById(usuarioId) : undefined;
       
-      // Usar siempre orden secuencial basado en el índice (1, 2, 3, ...)
-      const orden = index + 1;
+      // Usar el ordenIndex de la API o el índice como fallback
+      const orden = d?.ordenIndex !== undefined ? d.ordenIndex + 1 : (index + 1);
       const estadoAprob: any = d?.decision || d?.estado || 'PENDIENTE';
       
       // Si no se encuentra el usuario en la lista local, intentar obtenerlo por ID
@@ -377,13 +376,17 @@ export class ApprovalService {
         usuarioId: String(usuarioId),
         noUsuarioId: usuarioId,
         orden, 
+        ordenIndex: d?.ordenIndex,
         estado: estadoAprob,
-        nombre: user ? `${user.nombres} ${user.apellidos}`.trim() : null,
-        nombresApellidos: user ? `${user.nombres} ${user.apellidos}`.trim() : null,
+        decision: d?.decision,
+        nombre: user ? `${user.nombres} ${user.apellidos}`.trim() : d?.nombre || null,
+        nombresApellidos: user ? `${user.nombres} ${user.apellidos}`.trim() : d?.nombre || null,
         correo: user?.correoEmpresarial || null,
         correoEmpresarial: user?.correoEmpresarial || null,
         area: this.extractAreaString(user),
         cargo: this.extractAreaString(user),
+        fechaDecision: d?.fechaDecision,
+        comentario: d?.comentario,
         needsUserResolution: !user && !!usuarioId
       };
     });
@@ -391,11 +394,11 @@ export class ApprovalService {
     // Mapear estados de aprobadores con metadata
     const approverStates: AprobadorState[] = destinatarios.map(dest => ({
       usuarioId: dest.usuarioId,
-      estado: this.mapApproverState(dest.estado),
+      estado: this.mapApproverState(dest.decision || dest.estado),
       fechaAccion: this.getApproverActionDate(item, dest.usuarioId),
       comentario: this.getApproverComment(item, dest.usuarioId),
       metadata: {
-        orden: dest.orden,
+        orden: dest.ordenIndex || dest.orden,
         noUsuarioId: dest.noUsuarioId,
         timestamp: new Date().toISOString()
       }
@@ -420,7 +423,14 @@ export class ApprovalService {
       // Agregar información del documento para la vista
       documentoUrl: item?.documentoUrl || item?.pdfUrl || item?.urlDocumento || item?.url,
       documentoFileName: item?.documentoFileName || item?.pdfFileName || item?.nombreArchivo || item?.fileName,
-      historialGestiones: this.mapearHistorialGestiones(item?.historialGestiones || item?.gestiones || [], users)
+      historialGestiones: this.mapearHistorialGestiones(item?.historialGestiones || item?.gestiones || [], users),
+      // Campos adicionales de la API
+      destinatariosTotal: item?.destinatariosTotal || destinatarios.length,
+      destinatariosAprobados: item?.destinatariosAprobados || 0,
+      pdfOriginalName: item?.pdfOriginalName,
+      pdfSizeBytes: item?.pdfSizeBytes,
+      adjuntos: item?.adjuntos || [],
+      ordenFirma: Boolean(item?.ordenFirma)
     };
     
     return result;
@@ -509,7 +519,7 @@ export class ApprovalService {
         const initialData = this.mapToSuccessData(item, users);
         
         // Identificar usuarios que necesitan resolución
-        const usersToResolve = initialData.destinatarios
+        const usersToResolve = (initialData.destinatarios || [])
           .filter((dest: any) => dest.needsUserResolution && dest.noUsuarioId)
           .map((dest: any) => dest.noUsuarioId);
         
