@@ -22,13 +22,11 @@ export class UserService {
   private readonly apiUrl = `${this.baseUrl}/usuarios`;
   
   private readonly httpOptions = {
-    headers: new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-    })
-  };
+  headers: new HttpHeaders({
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  })
+};
 
   constructor(
     private http: HttpClient,
@@ -139,13 +137,25 @@ export class UserService {
   }
 
   actualizarUsuario(usuario: Usuario): Observable<ApiResponse> {
-  const userId = usuario['noUsuario'] || usuario.noUsuario;
+  const userId = usuario.idUsuario || usuario.noUsuario;
   if (!userId) {
     return throwError(() => new Error('ID de usuario requerido para actualización'));
   }
+  
   const usuarioRequest: UsuarioRequest = this.transformarUsuarioParaApi(usuario);
+  
+  console.log('=== DEBUG ACTUALIZAR USUARIO ===');
+  console.log('Usuario original:', usuario);
+  console.log('Usuario transformado:', usuarioRequest);
+  console.log('URL:', `${this.apiUrl}/${userId}`);
+  
   const url = `${this.apiUrl}/${userId}`;
   return this.http.put<ApiResponse>(url, usuarioRequest, this.httpOptions).pipe(
+    map(response => {
+      console.log('=== RESPUESTA DEL SERVIDOR ===');
+      console.log('Response:', response);
+      return response;
+    }),
     catchError(this.handleError)
   );
 }
@@ -193,6 +203,10 @@ export class UserService {
     }
   }
 
+  const estadoActivo = typeof usuario.estado === 'object' 
+    ? usuario.estado.descripcion === 'ACTIVO' 
+    : usuario.estado === 'ACTIVO';
+
   return {
     ...usuario,
     idUsuario: usuario.idUsuario,
@@ -214,6 +228,15 @@ export class UserService {
 }
 
   private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest {
+  const rolUsuario = usuario.rol || { idRol: 2, descripcion: 'USUARIO' };
+  
+  let estadoUsuario;
+  if (typeof usuario.estado === 'object') {
+    estadoUsuario = usuario.estado;
+  } else {
+    estadoUsuario = { idEstado: 5, descripcion: 'ACTIVO' };
+  }
+
   return {
     identificacion: usuario.identificacion?.trim() || '',
     nombres: usuario.nombres?.trim() || '',
@@ -222,13 +245,8 @@ export class UserService {
     cargo: {
       idCargo: this.obtenerIdCargo(usuario.cargo)
     },
-    estado: typeof usuario.estado === 'object' 
-      ? usuario.estado 
-      : { idEstado: 5, descripcion: 'ACTIVO' },
-    rol: {
-      idRol: 2,
-      descripcion: 'USUARIO'
-    },
+    estado: estadoUsuario,
+    rol: rolUsuario,
     correoEmpresarial: usuario.correoEmpresarial?.trim() || '',
     correoPersonal: usuario.correoPersonal?.trim() || '',
     telefono1: usuario.celular?.trim() || '',
@@ -236,7 +254,7 @@ export class UserService {
     direccion: usuario.direccion?.trim() || '',
     dobleAutenticacion: this.convertirDobleAutenticacion(usuario.dobleAutenticacion)
   };
-  }
+}
 
   private obtenerIdCargo(cargo: string | number | undefined): number {
     if (typeof cargo === 'number') {
@@ -276,7 +294,6 @@ export class UserService {
     if (error.error instanceof ErrorEvent) {
       errorMessage = `Error de conexión: ${error.error.message}`;
     } else {
-      // Error del lado del servidor
       switch (error.status) {
         case 0:
           errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
@@ -324,4 +341,36 @@ export class UserService {
       timestamp: new Date().toISOString()
     }));
   }
+
+desactivarUsuario(usuarioId: number): Observable<any> {
+  const url = `${this.apiUrl}/${usuarioId}/desactivar`;
+  return this.http.put<any>(url, {}, this.httpOptions).pipe(
+    catchError(this.handleError)
+  );
+}
+
+activarUsuario(usuarioId: number): Observable<any> {
+  const url = `${this.apiUrl}/${usuarioId}/activar`;
+  return this.http.put<any>(url, {}, this.httpOptions).pipe(
+    catchError(this.handleError)
+  );
+}
+
+cambiarPasswordUsuario(usuarioId: number, nuevaPassword: string): Observable<any> {
+  const url = `${this.apiUrl}/${usuarioId}/password`;
+  const body = { nuevaPassword: nuevaPassword };
+  return this.http.put<any>(url, body, this.httpOptions).pipe(
+    catchError(this.handleError)
+  );
+}
+
+validarPasswordActual(usuarioId: number, passwordActual: string): Observable<boolean> {
+  const url = `${this.baseUrl}/auth/login`;
+  const body = { usuario: '', password: passwordActual };
+  
+  return this.http.post<any>(url, body, this.httpOptions).pipe(
+    map(response => !!response),
+    catchError(() => of(false))
+  );
+}
 }

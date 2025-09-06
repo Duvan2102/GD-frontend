@@ -56,7 +56,7 @@ export class Users implements OnInit, OnDestroy {
 
   confirmModalVisible = false;
   confirmModalMessage = '';
-  confirmModalAction: 'inactivar' | 'eliminarQR' | null = null;
+  confirmModalAction: 'inactivar' | 'activar' | 'eliminarQR' | null = null;
 
   constructor(private userService: UserService) {}
 
@@ -282,25 +282,40 @@ export class Users implements OnInit, OnDestroy {
         break;
 
       case 'inactivar':
-        if (this.currentUser) {
-          const usuarioInactivado = { 
-          ...this.currentUser, 
-          estado: { idEstado: 6, descripcion: 'INACTIVO' }
-          };
-          this.userService.actualizarUsuario(usuarioInactivado)
-            .pipe(takeUntil(this.destroy$))
-            .subscribe({
-              next: () => {
-                this.mostrarModalSuccess('Usuario inactivado con éxito', 'Aceptar');
-                this.cargarUsuarios();
-              },
-              error: (error) => {
-                console.error('Error inactivando usuario:', error);
-                alert('Error al inactivar el usuario: ' + (error.message || 'Error desconocido'));
-              }
-            });
+      if (this.currentUser && this.currentUser.idUsuario) {
+      this.userService.desactivarUsuario(this.currentUser.idUsuario)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          console.log('Usuario desactivado exitosamente:', response);
+          this.mostrarModalSuccess('Usuario inactivado con éxito', 'Aceptar');
+          this.cargarUsuarios();
+        },
+        error: (error) => {
+          console.error('Error desactivando usuario:', error);
+          alert('Error al inactivar el usuario: ' + (error.message || 'Error desconocido'));
         }
-        break;
+      });
+      }
+      break;
+
+      case 'activar':
+      if (this.currentUser && this.currentUser.idUsuario) {
+      this.userService.activarUsuario(this.currentUser.idUsuario)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          console.log('Usuario activado exitosamente:', response);
+          this.mostrarModalSuccess('Usuario activado con éxito', 'Aceptar');
+          this.cargarUsuarios();
+        },
+        error: (error) => {
+          console.error('Error activando usuario:', error);
+          alert('Error al activar el usuario: ' + (error.message || 'Error desconocido'));
+        }
+      });
+      }
+      break;
 
       case 'cambiarContraseña':
         this.isPasswordModalVisible = false;
@@ -342,40 +357,80 @@ export class Users implements OnInit, OnDestroy {
     this.currentAction = '';
   }
 
-  handlePasswordChanged(): void {
-    this.isChangePasswordModalVisible = false;
-    this.currentUser = null;
-    this.currentAction = '';
-    this.mostrarModalSuccess('Contraseña cambiada con éxito', 'Aceptar');
-    this.filtrarUsuarios();
-  }
+  handlePasswordChanged(nuevaPassword: string): void {
+  this.isChangePasswordModalVisible = false;
+  this.currentUser = null;
+  this.currentAction = '';
+  this.mostrarModalSuccess('Contraseña cambiada con éxito', 'Aceptar');
+  this.cargarUsuarios();
+}
 
-  abrirConfirmModal(tipo: 'inactivar' | 'eliminarQR', usuario: Usuario) {
-    this.confirmModalAction = tipo;
-    this.currentUser = usuario;
-    this.confirmModalMessage =
-      tipo === 'inactivar'
-        ? '¿Está seguro de que desea inactivar el usuario?'
-        : '¿Está seguro de que desea eliminar el código QR?';
-    this.confirmModalVisible = true;
+  abrirConfirmModal(tipo: 'inactivar' | 'activar' | 'eliminarQR', usuario: Usuario) {
+  this.confirmModalAction = tipo;
+  this.currentUser = usuario;
+  
+  switch(tipo) {
+    case 'inactivar':
+      this.confirmModalMessage = '¿Está seguro de que desea inactivar el usuario?';
+      break;
+    case 'activar':
+      this.confirmModalMessage = '¿Está seguro de que desea activar el usuario?';
+      break;
+    case 'eliminarQR':
+      this.confirmModalMessage = '¿Está seguro de que desea eliminar el código QR?';
+      break;
   }
+  
+  this.confirmModalVisible = true;
+}
 
-  onAceptarConfirmacion() {
-    this.confirmModalVisible = false;
-    if (this.confirmModalAction === 'inactivar') {
+onAceptarConfirmacion() {
+  this.confirmModalVisible = false;
+  
+  switch(this.confirmModalAction) {
+    case 'inactivar':
       this.mensajePasswordModal = 'Ingrese su contraseña para inactivar el usuario.';
       this.isPasswordModalVisible = true;
       this.currentAction = 'inactivar';
-    } else if (this.confirmModalAction === 'eliminarQR') {
+      break;
+    case 'activar':
+      this.mensajePasswordModal = 'Ingrese su contraseña para activar el usuario.';
+      this.isPasswordModalVisible = true;
+      this.currentAction = 'activar';
+      break;
+    case 'eliminarQR':
       this.mensajePasswordModal = 'Ingrese su contraseña para eliminar el código QR.';
       this.isPasswordModalVisible = true;
       this.currentAction = 'eliminarQR';
-    }
+      break;
   }
+}
 
   onCancelarConfirmacion() {
     this.confirmModalVisible = false;
     this.confirmModalAction = null;
     this.currentUser = null;
   }
+
+  handlePasswordChange(nuevaPassword: string): void {
+  if (!nuevaPassword.trim()) {
+    return alert('La nueva contraseña no puede estar vacía');
+  }
+
+  if (this.currentUser && this.currentUser.idUsuario) {
+    this.userService.cambiarPasswordUsuario(this.currentUser.idUsuario, nuevaPassword)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          console.log('Contraseña cambiada exitosamente:', response);
+          this.mostrarModalSuccess('Contraseña cambiada con éxito', 'Aceptar');
+          this.cargarUsuarios();
+        },
+        error: (error) => {
+          console.error('Error cambiando contraseña:', error);
+          alert('Error al cambiar la contraseña: ' + (error.message || 'Error desconocido'));
+        }
+      });
+  }
+}
 }

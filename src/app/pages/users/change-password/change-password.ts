@@ -1,6 +1,8 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, Inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { UserService } from '../../../services/user.service';
+import { Usuario } from '../../../interfaces/common.interfaces';
 
 @Component({
   selector: 'app-change-password',
@@ -12,16 +14,17 @@ import { CommonModule } from '@angular/common';
 export class ChangePassword implements OnChanges {
   @Input() isVisible: boolean = false;
   @Input() skipValidation: boolean = false;
+  @Input() user: Usuario | null = null;
   @Output() close = new EventEmitter<void>();
-  @Output() passwordChanged = new EventEmitter<void>();
+  @Output() passwordChanged = new EventEmitter<string>();
 
-  // MODAL 1: Validar contraseña actual
+  constructor(private userService: UserService) {}
+
   isValidatePasswordModalVisible = true;
   password = '';
   passwordVisible = false;
   validateError = '';
 
-  // MODAL 2: Cambiar contraseña nueva
   isPasswordChangeModalVisible = false;
   newPassword = '';
   confirmPassword = '';
@@ -53,21 +56,32 @@ export class ChangePassword implements OnChanges {
     this.confirmPasswordVisible = false;
   }
 
-  // 1. Validar la contraseña actual
   onValidatePassword() {
-    if (!this.password || this.password.length < 6) {
-      this.validateError = 'Ingrese una contraseña válida.';
-      return;
-    }
-    // Aquí iría la llamada a API para validar la contraseña
-    // Si es correcta:
-    this.isValidatePasswordModalVisible = false;
-    this.isPasswordChangeModalVisible = true;
-    this.validateError = '';
-    this.password = '';
+  if (!this.password || this.password.length < 1) {
+    this.validateError = 'Ingrese su contraseña actual.';
+    return;
   }
+  
+  if (this.user && this.user.idUsuario) {
+    this.userService.validarPasswordActual(this.user.idUsuario, this.password)
+      .subscribe({
+        next: (isValid) => {
+          if (isValid) {
+            this.isValidatePasswordModalVisible = false;
+            this.isPasswordChangeModalVisible = true;
+            this.validateError = '';
+            this.password = '';
+          } else {
+            this.validateError = 'Contraseña incorrecta.';
+          }
+        },
+        error: (error) => {
+          this.validateError = 'Error al validar la contraseña.';
+        }
+      });
+  }
+}
 
-  // 2. Cambiar contraseña
   onChangePassword() {
     if (!this.newPassword || !this.confirmPassword) {
       this.changePasswordError = 'Debes completar ambos campos.';
@@ -81,12 +95,24 @@ export class ChangePassword implements OnChanges {
       this.changePasswordError = 'La nueva contraseña debe tener al menos 6 caracteres.';
       return;
     }
-    // Aquí iría la llamada a API para cambiar la contraseña
-    // Si es exitosa:
-    this.passwordChanged.emit();
+
+    if (this.user && this.user.idUsuario) {
+      this.userService.cambiarPasswordUsuario(this.user.idUsuario, this.newPassword)
+        .subscribe({
+          next: (response) => {
+            console.log('Contraseña cambiada exitosamente:', response);
+            this.passwordChanged.emit(this.newPassword);
+          },
+          error: (error) => {
+            console.error('Error cambiando contraseña:', error);
+            this.changePasswordError = 'Error al cambiar la contraseña: ' + (error.message || 'Error desconocido');
+          }
+        });
+    } else {
+      this.changePasswordError = 'Usuario no válido';
+    }
   }
 
-  // 3. Mostrar/ocultar contraseña en ambas modales
   togglePasswordVisibility() {
     this.passwordVisible = !this.passwordVisible;
   }
@@ -97,7 +123,6 @@ export class ChangePassword implements OnChanges {
     this.confirmPasswordVisible = !this.confirmPasswordVisible;
   }
 
-  // 4. Cancelar
   onCancelValidate() {
     this.close.emit();
   }
