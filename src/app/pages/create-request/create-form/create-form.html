@@ -135,7 +135,7 @@
   </ul>
 </div>
 
-<app-document-view #docView [isVisible]="showDocumentView" [documentData]="documentViewData" (close)="onCloseView()" (edit)="onEditFromView()" (send)="onSendFromView()" (deleteRequest)="onDeleteFromView($event)"></app-document-view>
+<app-document-view #docView [isVisible]="showDocumentView" [documentData]="documentViewData" [hidePrintButton]="true" (close)="onCloseView()" (edit)="onEditFromView()" (send)="onSendFromView()" (deleteRequest)="onDeleteFromView($event)" (discard)="onDiscardFromView()"></app-document-view>
 
 <app-confirm-modal
   [visible]="confirmVisible"

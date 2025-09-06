@@ -11,14 +11,14 @@
           {{ documentData?.file?.name || documentData?.fileName || documentData?.title || 'Vista Previa del Documento' }}
         </h5>
         <div class="header-actions-right">
-          <button type="button" class="btn btn-outline-light btn-sm btn-print-header" (click)="onPrint()" title="Imprimir documento">
+          <button *ngIf="!hidePrintButton" type="button" class="btn btn-outline-light btn-sm btn-print-header" (click)="onPrint()" title="Imprimir documento">
             <i class="bi bi-printer"></i> Imprimir
           </button>
           <button *ngIf="!hideManagementButtons" type="button" class="btn btn-outline-light btn-sm btn-edit" (click)="onEdit()">
             <i class="bi bi-pencil-square"></i> Editar Solicitud
           </button>
           <button *ngIf="!hideManagementButtons" type="button" class="btn btn-outline-danger btn-sm btn-delete" (click)="onDelete()">
-            <i class="bi bi-trash3"></i> Eliminar solicitud
+            <i class="bi bi-x-circle"></i> Descartar solicitud
           </button>
           <button type="button" class="btn-close btn-close-white" (click)="onClose()" aria-label="Close"></button>
         </div>

@@ -24,10 +24,12 @@ export class DocumentView implements OnChanges {
   @Input() documentData: DocumentViewData | null = null;
   @Input() hideManagementButtons = false; // Nuevo input para ocultar botones de gestión
   @Input() hideSendButton = false; // Nuevo input para ocultar botón de envío
+  @Input() hidePrintButton = false; // Nuevo input para ocultar botón de imprimir
   @Output() close = new EventEmitter<void>();
   @Output() edit = new EventEmitter<void>();
   @Output() send = new EventEmitter<void>();
   @Output() deleteRequest = new EventEmitter<string | number>();
+  @Output() discard = new EventEmitter<void>();
 
   pdfSrc: string | ArrayBuffer | null = null;
   isLoading = true;
@@ -111,9 +113,7 @@ export class DocumentView implements OnChanges {
   }
 
   onDelete(): void {
-    if (this.documentData?.id && confirm('¿Seguro que deseas eliminar esta solicitud?')) {
-      this.deleteRequest.emit(this.documentData.id);
-    }
+    this.discard.emit();
   }
 
   formatFileSize(bytes?: number): string {

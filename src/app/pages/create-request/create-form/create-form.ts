@@ -377,6 +377,14 @@ export class CreateForm implements OnInit, OnChanges {
     this.onCloseView();
   }
 
+  onDiscardFromView(): void {
+    // Cerrar la vista de documento
+    this.showDocumentView = false;
+    // Cerrar la modal de creación y limpiar todo
+    this.resetForm();
+    this.close.emit();
+  }
+
   onCancelar(): void {
     this.close.emit();
     this.resetForm();
