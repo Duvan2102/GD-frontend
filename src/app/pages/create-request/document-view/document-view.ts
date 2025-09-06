@@ -66,6 +66,13 @@ export class DocumentView implements OnChanges {
       return;
     }
 
+    // Verificar si hay un error en los metadatos
+    if (this.documentData.metadata?.error) {
+      this.isLoading = false;
+      this.error = this.documentData.metadata.error;
+      return;
+    }
+
     try {
       if (this.documentData.file) {
         this.pdfSrc = await this.pdfService.fileToArrayBuffer(this.documentData.file);
@@ -75,7 +82,8 @@ export class DocumentView implements OnChanges {
         this.error = 'No hay un archivo o URL para mostrar.';
       }
     } catch (e) {
-      this.error = 'Error al cargar el documento.';
+      console.error('Error al cargar el documento:', e);
+      this.error = 'Error al cargar el documento. Por favor, verifique que el archivo no esté corrupto.';
     } finally {
       this.isLoading = false;
       this.cdr.detectChanges();

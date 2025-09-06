@@ -4,6 +4,7 @@ import { SolicitudData } from '../create-form/create-form';
 import { Usuario } from '../../../interfaces/common.interfaces';
 import { ConfirmationModal, ConfirmationModalData } from '../../approvals/confirmation-modal/confirmation-modal';
 import { CommentModal, CommentModalData } from './comment-modal';
+import { ApprovalService } from '../../../services/approval.service';
 
 export interface AprobadorState {
   usuarioId: string;
@@ -96,6 +97,7 @@ export class RequestSuccessModal implements OnChanges {
   @Input() isApprovalFlow = false;
   @Input() hideManageButton = false;
   @Input() hideViewDocumentButton = false; // Nuevo input para ocultar el botón de visualizar documento 
+  @Input() currentUser: Usuario | null = null; // Usuario actual para las llamadas al servicio
 
   @Output() close = new EventEmitter<void>();
   @Output() cancelRequest = new EventEmitter<{ solicitudId: string | number, comentario?: string }>();
@@ -109,6 +111,12 @@ export class RequestSuccessModal implements OnChanges {
   confirmationModalData: ConfirmationModalData | null = null;
   isCommentModalVisible = false;
   commentModalData: CommentModalData | null = null;
+
+  // Adjuntos properties
+  attachments: any[] = [];
+  isLoadingAttachments = false;
+
+  constructor(private approvalService: ApprovalService) {}
 
   ngOnChanges(changes: SimpleChanges): void {
     if ((changes['data'] || changes['usuariosDisponibles']) && this.data) {
@@ -448,6 +456,10 @@ export class RequestSuccessModal implements OnChanges {
     return this.data?.estado === 'Aprobada';
   }
 
+  isCancelledOrRejected(): boolean {
+    return this.data?.estado === 'Cancelada' || this.data?.estado === 'Rechazada';
+  }
+
   hasDocument(): boolean {
     // Verificar si hay algún documento disponible (archivo, URL, o metadatos PDF)
     return !!(this.data?.documentoAprobacion || 
@@ -459,6 +471,110 @@ export class RequestSuccessModal implements OnChanges {
               (this.data as any)?.documento ||
               (this.data as any)?.archivo ||
               (this.data as any)?.file);
+  }
+
+  hasMainDocument(): boolean {
+    // El recuadro rojo es específicamente para adjuntos/anexos
+    // No debe mostrar documento principal (ese va en el botón "VISUALIZAR DOCUMENTO")
+    return !!(this.data?.adjuntos && this.data.adjuntos.length > 0) ||
+           !!this.data?.documentosAnexos ||
+           !!(this.data?.anexos && this.data.anexos.length > 0);
+  }
+
+  hasOnlyAnexos(): boolean {
+    // Solo mostrar anexos si NO hay documento principal
+    return !this.hasMainDocument() && 
+           !!(this.data?.anexos && this.data.anexos.length > 0);
+  }
+
+  hasAttachments(): boolean {
+    // Verificar si hay adjuntos disponibles para mostrar en el recuadro rojo
+    return !!(this.data?.adjuntos && this.data.adjuntos.length > 0) ||
+           !!this.data?.documentosAnexos ||
+           !!(this.data?.anexos && this.data.anexos.length > 0);
+  }
+
+  getMainDocumentName(): string {
+    // Para el recuadro rojo, siempre mostrar información de adjuntos/anexos
+    if (this.data?.adjuntos && this.data.adjuntos.length > 0) {
+      return `Adjunto: ${this.data.adjuntos[0].originalName || 'Documento adjunto'}`;
+    }
+    if (this.data?.anexos && this.data.anexos.length > 0) {
+      return `Anexo: ${this.getDocumentName(this.data.anexos[0])}`;
+    }
+    if (this.data?.documentosAnexos) {
+      return 'Documento Adjunto';
+    }
+    return 'Documento Adjunto';
+  }
+
+  viewMainDocument(): void {
+    // El recuadro rojo siempre maneja adjuntos, no documento principal
+    this.handleAttachmentsDownload();
+  }
+
+  private handleAttachmentsDownload(): void {
+    if (!this.data?.id || !this.currentUser?.noUsuario) {
+      alert('No se puede acceder a los adjuntos. Usuario no disponible.');
+      return;
+    }
+
+    this.isLoadingAttachments = true;
+    
+    // Primero listar los adjuntos
+    this.approvalService.getAttachments(this.data.id, this.currentUser.noUsuario).subscribe({
+      next: (attachments) => {
+        this.attachments = attachments;
+        this.isLoadingAttachments = false;
+        
+        if (attachments.length === 0) {
+          alert('No hay adjuntos disponibles para esta solicitud.');
+          return;
+        }
+        
+        // Si hay adjuntos, descargar el primero (o el principal si se puede identificar)
+        const attachmentToDownload = this.findMainAttachment(attachments) || attachments[0];
+        this.downloadAttachment(attachmentToDownload);
+      },
+      error: (error) => {
+        this.isLoadingAttachments = false;
+        console.error('Error al cargar adjuntos:', error);
+        alert('Error al cargar los adjuntos. Por favor, inténtelo de nuevo.');
+      }
+    });
+  }
+
+  private findMainAttachment(attachments: any[]): any {
+    // Buscar el adjunto principal (puede ser el primero o uno con nombre específico)
+    return attachments.find(att => 
+      att.originalName?.toLowerCase().includes('principal') ||
+      att.originalName?.toLowerCase().includes('documento') ||
+      att.mime === 'application/pdf'
+    ) || attachments[0];
+  }
+
+  private downloadAttachment(attachment: any): void {
+    if (!this.data?.id || !this.currentUser?.noUsuario) {
+      return;
+    }
+
+    this.approvalService.downloadAttachment(this.data.id, attachment.id, this.currentUser.noUsuario).subscribe({
+      next: (blob) => {
+        // Crear URL del blob y descargar
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = attachment.originalName || `adjunto_${attachment.id}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (error) => {
+        console.error('Error al descargar adjunto:', error);
+        alert('Error al descargar el adjunto. Por favor, inténtelo de nuevo.');
+      }
+    });
   }
 
   onViewApprovedDocument(): void {
@@ -484,6 +600,7 @@ export class RequestSuccessModal implements OnChanges {
   }
 
   hasHistorialGestiones(): boolean {
+    // Solo mostrar si hay gestiones válidas (ya filtradas por el servicio)
     return !!(this.data?.historialGestiones && this.data.historialGestiones.length > 0);
   }
 
@@ -541,6 +658,144 @@ export class RequestSuccessModal implements OnChanges {
     
     const destinatario = this.data.destinatarios.find((d: DestinatarioData) => d.usuarioId === usuarioId);
     return destinatario?.comentario || '';
+  }
+
+  getCancellationInfo(): { fecha: Date, comentario: string } | null {
+    console.log('getCancellationInfo - Estado:', this.data?.estado);
+    console.log('getCancellationInfo - Historial:', this.data?.historialGestiones);
+    console.log('getCancellationInfo - Data completa:', this.data);
+    
+    if (this.data?.estado !== 'Cancelada') {
+      console.log('getCancellationInfo - No está cancelada');
+      return null;
+    }
+
+    // Buscar en el historial de gestiones
+    if (this.data?.historialGestiones && this.data.historialGestiones.length > 0) {
+      const cancelacion = this.data.historialGestiones.find(gestion => 
+        gestion.tipo === 'CANCELACION' || 
+        (gestion as any).accion === 'CANCELAR' ||
+        (gestion as any).accion === 'CANCELACION'
+      );
+
+      console.log('getCancellationInfo - Cancelación en historialGestiones:', cancelacion);
+
+      if (cancelacion) {
+        return {
+          fecha: cancelacion.fecha,
+          comentario: cancelacion.comentario || cancelacion.comentarioCompleto || 'Sin motivo especificado'
+        };
+      }
+    }
+
+    // Buscar en otros campos posibles del historial
+    const historialRaw = (this.data as any)?.historial || (this.data as any)?.historialAcciones || (this.data as any)?.gestiones;
+    if (Array.isArray(historialRaw)) {
+      console.log('getCancellationInfo - Historial raw:', historialRaw);
+      
+      const cancelacion = historialRaw.find((item: any) => 
+        item.accion === 'CANCELAR' || 
+        item.accion === 'CANCELACION' ||
+        item.tipo === 'CANCELAR' ||
+        item.tipo === 'CANCELACION'
+      );
+
+      console.log('getCancellationInfo - Cancelación en historial raw:', cancelacion);
+
+      if (cancelacion) {
+        return {
+          fecha: new Date(cancelacion.fecha),
+          comentario: cancelacion.comentario || 'Sin motivo especificado'
+        };
+      }
+    }
+
+    // Fallback: Si no hay historial pero está cancelada, mostrar información básica
+    console.log('getCancellationInfo - No se encontró información de cancelación en historial');
+    
+    // Buscar información de cancelación en otros campos de la solicitud
+    const fechaCancelacion = (this.data as any)?.fechaCancelacion || (this.data as any)?.fechaActualizacion || this.data?.fechaCreacion;
+    const comentarioCancelacion = (this.data as any)?.comentarioCancelacion || (this.data as any)?.motivoCancelacion;
+    
+    if (fechaCancelacion) {
+      console.log('getCancellationInfo - Usando información de fallback:', { fechaCancelacion, comentarioCancelacion });
+      return {
+        fecha: new Date(fechaCancelacion),
+        comentario: comentarioCancelacion || 'Solicitud cancelada'
+      };
+    }
+    
+    console.log('getCancellationInfo - No se encontró información de cancelación');
+    return null;
+  }
+
+  getRejectionInfo(): { fecha: Date, comentario: string } | null {
+    console.log('getRejectionInfo - Estado:', this.data?.estado);
+    console.log('getRejectionInfo - Historial:', this.data?.historialGestiones);
+    console.log('getRejectionInfo - Data completa:', this.data);
+    
+    if (this.data?.estado !== 'Rechazada') {
+      console.log('getRejectionInfo - No está rechazada');
+      return null;
+    }
+
+    // Buscar en el historial de gestiones
+    if (this.data?.historialGestiones && this.data.historialGestiones.length > 0) {
+      const rechazo = this.data.historialGestiones.find(gestion => 
+        gestion.tipo === 'RECHAZO' || 
+        (gestion as any).accion === 'RECHAZAR' ||
+        (gestion as any).accion === 'RECHAZO'
+      );
+
+      console.log('getRejectionInfo - Rechazo en historialGestiones:', rechazo);
+
+      if (rechazo) {
+        return {
+          fecha: rechazo.fecha,
+          comentario: rechazo.comentario || rechazo.comentarioCompleto || 'Sin motivo especificado'
+        };
+      }
+    }
+
+    // Buscar en otros campos posibles del historial
+    const historialRaw = (this.data as any)?.historial || (this.data as any)?.historialAcciones || (this.data as any)?.gestiones;
+    if (Array.isArray(historialRaw)) {
+      console.log('getRejectionInfo - Historial raw:', historialRaw);
+      
+      const rechazo = historialRaw.find((item: any) => 
+        item.accion === 'RECHAZAR' || 
+        item.accion === 'RECHAZO' ||
+        item.tipo === 'RECHAZAR' ||
+        item.tipo === 'RECHAZO'
+      );
+
+      console.log('getRejectionInfo - Rechazo en historial raw:', rechazo);
+
+      if (rechazo) {
+        return {
+          fecha: new Date(rechazo.fecha),
+          comentario: rechazo.comentario || 'Sin motivo especificado'
+        };
+      }
+    }
+
+    // Fallback: Si no hay historial pero está rechazada, mostrar información básica
+    console.log('getRejectionInfo - No se encontró información de rechazo en historial');
+    
+    // Buscar información de rechazo en otros campos de la solicitud
+    const fechaRechazo = (this.data as any)?.fechaRechazo || (this.data as any)?.fechaActualizacion || this.data?.fechaCreacion;
+    const comentarioRechazo = (this.data as any)?.comentarioRechazo || (this.data as any)?.motivoRechazo;
+    
+    if (fechaRechazo) {
+      console.log('getRejectionInfo - Usando información de fallback:', { fechaRechazo, comentarioRechazo });
+      return {
+        fecha: new Date(fechaRechazo),
+        comentario: comentarioRechazo || 'Solicitud rechazada'
+      };
+    }
+    
+    console.log('getRejectionInfo - No se encontró información de rechazo');
+    return null;
   }
 
   showApproverComment(approver: AprobadorTabla): void {

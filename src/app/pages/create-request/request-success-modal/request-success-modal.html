@@ -26,52 +26,59 @@
               {{ data.detallesAdicionales || 'No se proporcionaron detalles adicionales para esta solicitud.' }}
             </p>
 
-            <div class="document-link" *ngIf="data.documentoAprobacion" (click)="viewDocument(data.documentoAprobacion)">
-              <i class="bi bi-file-earmark-pdf-fill pdf-icon"></i>
-              <div class="doc-info">
-                <span>{{ getDocumentName(data.documentoAprobacion) }}</span>
-                <small>DAR CLICK PARA VISUALIZAR</small>
-              </div>
-            </div>
+            <!-- Botones y documentos - solo se muestran si NO está cancelada o rechazada -->
+            <div *ngIf="!isCancelledOrRejected()">
+              <button
+                *ngIf="!hideManageButton"
+                id="btn-manage-request"
+                class="btn-cancel"
+                type="button"
+                (click)="handleMainAction()"
+                [disabled]="!canPerformMainAction()">
+                {{ getMainActionText() }}
+              </button>
 
-            <div *ngIf="data.anexos && data.anexos.length > 0">
-              <h3 class="section-subtitle">ANEXOS</h3>
-              <div class="document-link" *ngFor="let anexo of data.anexos" (click)="viewDocument(anexo)">
-                <i class="bi bi-file-earmark-fill pdf-icon"></i>
+              <button
+                *ngIf="hideManageButton && isApproved()"
+                id="btn-view-approved-document"
+                class="btn-cancel"
+                type="button"
+                (click)="onViewApprovedDocument()">
+                <i class="bi bi-file-earmark-pdf"></i> Visualizar Documento Aprobado
+              </button>
+
+              <button
+                *ngIf="!hideManageButton && !hideViewDocumentButton && hasDocument()"
+                id="btn-view-document"
+                class="btn-cancel"
+                type="button"
+                (click)="onViewApprovedDocument()">
+                <i class="bi bi-file-earmark-pdf"></i> Visualizar Documento
+              </button>
+
+              <!-- Adjuntos - recuadro rojo para adjuntos/anexos -->
+              <div class="document-link" *ngIf="hasAttachments()" (click)="viewMainDocument()">
+                <i class="bi bi-file-earmark-pdf-fill pdf-icon" *ngIf="!isLoadingAttachments"></i>
+                <i class="bi bi-hourglass-split pdf-icon" *ngIf="isLoadingAttachments"></i>
                 <div class="doc-info">
-                  <span>{{ getDocumentName(anexo) }}</span>
-                  <small>DAR CLICK PARA VISUALIZAR</small>
+                  <span>{{ getMainDocumentName() }}</span>
+                  <small *ngIf="!isLoadingAttachments">DAR CLICK PARA DESCARGAR ADJUNTO</small>
+                  <small *ngIf="isLoadingAttachments">CARGANDO ADJUNTOS...</small>
+                </div>
+              </div>
+
+              <!-- Anexos - solo se muestran si hay anexos y no hay documento principal -->
+              <div *ngIf="hasOnlyAnexos()">
+                <h3 class="section-subtitle">ANEXOS</h3>
+                <div class="document-link" *ngFor="let anexo of data.anexos" (click)="viewDocument(anexo)">
+                  <i class="bi bi-file-earmark-fill pdf-icon"></i>
+                  <div class="doc-info">
+                    <span>{{ getDocumentName(anexo) }}</span>
+                    <small>DAR CLICK PARA VISUALIZAR ANEXO</small>
+                  </div>
                 </div>
               </div>
             </div>
-
-            <button
-              *ngIf="!hideManageButton"
-              id="btn-manage-request"
-              class="btn-cancel"
-              type="button"
-              (click)="handleMainAction()"
-              [disabled]="!canPerformMainAction()">
-              {{ getMainActionText() }}
-            </button>
-
-            <button
-              *ngIf="hideManageButton && isApproved()"
-              id="btn-view-approved-document"
-              class="btn-cancel"
-              type="button"
-              (click)="onViewApprovedDocument()">
-              <i class="bi bi-file-earmark-pdf"></i> Visualizar Documento Aprobado
-            </button>
-
-            <button
-              *ngIf="!hideManageButton && !hideViewDocumentButton && hasDocument()"
-              id="btn-view-document"
-              class="btn-cancel"
-              type="button"
-              (click)="onViewApprovedDocument()">
-              <i class="bi bi-file-earmark-pdf"></i> Visualizar Documento
-            </button>
           </div>
 
           <div class="right-panel">
@@ -99,6 +106,34 @@
                   'text-bg-danger': data.estado === 'Rechazada',
                   'text-bg-secondary': data.estado === 'Cancelada'
                 }">{{ data.estado }}</span>
+              </div>
+
+              <!-- Información de cancelación -->
+              <div class="cancellation-info" *ngIf="data.estado === 'Cancelada' && getCancellationInfo()">
+                <div class="cancellation-details">
+                  <div class="cancellation-date">
+                    <span class="cancellation-label">Fecha de cancelación:</span>
+                    <span class="cancellation-value">{{ formatDate(getCancellationInfo()?.fecha) }}</span>
+                  </div>
+                  <div class="cancellation-comment" *ngIf="getCancellationInfo()?.comentario">
+                    <span class="cancellation-label">Motivo:</span>
+                    <span class="cancellation-value">{{ getCancellationInfo()?.comentario }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Información de rechazo -->
+              <div class="rejection-info" *ngIf="data.estado === 'Rechazada' && getRejectionInfo()">
+                <div class="rejection-details">
+                  <div class="rejection-date">
+                    <span class="rejection-label">Fecha de rechazo:</span>
+                    <span class="rejection-value">{{ formatDate(getRejectionInfo()?.fecha) }}</span>
+                  </div>
+                  <div class="rejection-comment" *ngIf="getRejectionInfo()?.comentario">
+                    <span class="rejection-label">Motivo:</span>
+                    <span class="rejection-value">{{ getRejectionInfo()?.comentario }}</span>
+                  </div>
+                </div>
               </div>
             </div>
 

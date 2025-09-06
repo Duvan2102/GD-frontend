@@ -270,43 +270,144 @@ export class ApprovalService {
     return 'No se proporcionaron detalles adicionales para esta solicitud.';
   }
 
-  private mapearHistorialGestiones(gestiones: any[], users: Usuario[]): any[] {
-    if (!Array.isArray(gestiones) || gestiones.length === 0) {
-      return [];
-    }
-
+  private mapearHistorialGestiones(gestiones: any[], users: Usuario[], destinatarios?: any[]): any[] {
+    console.log('mapearHistorialGestiones - Input historial:', gestiones);
+    console.log('mapearHistorialGestiones - Input destinatarios:', destinatarios);
+    
     const findUserById = (id?: number): Usuario | undefined => {
       if (!id) return undefined;
       return users.find(u => u.noUsuario === id || (u as any).idUsuario === id);
     };
 
-    return gestiones.map((gestion, index) => {
-      const usuario = findUserById(gestion.usuarioId || gestion.idUsuario);
+    const allGestiones: any[] = [];
+
+    // 1. Mapear gestiones del campo "historial"
+    if (Array.isArray(gestiones) && gestiones.length > 0) {
+      const gestionesHistorial = gestiones.map((gestion, index) => {
+        const usuario = findUserById(gestion.actorUsuarioId);
+        
+        return {
+          id: `historial-${gestion.id}`,
+          tipo: this.mapearTipoGestion(gestion.accion),
+          usuarioId: String(gestion.actorUsuarioId || ''),
+          usuarioNombre: usuario ? `${usuario.nombres} ${usuario.apellidos}`.trim() : 'Usuario desconocido',
+          fecha: new Date(gestion.fecha),
+          comentario: gestion.comentario || '',
+          comentarioCompleto: gestion.comentario || '',
+          orden: index + 1,
+          estadoAnterior: null,
+          estadoNuevo: gestion.accion,
+          accionOriginal: gestion.accion,
+          actorUsuarioId: gestion.actorUsuarioId,
+          fuente: 'historial'
+        };
+      });
       
-      return {
-        id: gestion.id || `gestion-${index}`,
-        tipo: this.mapearTipoGestion(gestion.tipo || gestion.accion),
-        usuarioId: String(gestion.usuarioId || gestion.idUsuario || ''),
-        usuarioNombre: usuario ? `${usuario.nombres} ${usuario.apellidos}`.trim() : (gestion.usuarioNombre || 'Usuario desconocido'),
-        fecha: new Date(gestion.fecha || gestion.timestamp || gestion.createdAt),
-        comentario: gestion.comentario || gestion.observacion || gestion.descripcion,
-        comentarioCompleto: gestion.comentarioCompleto || gestion.comentario || gestion.observacion || gestion.descripcion,
-        orden: gestion.orden || gestion.ordenIndex,
-        estadoAnterior: gestion.estadoAnterior || gestion.estadoPrevio,
-        estadoNuevo: gestion.estadoNuevo || gestion.estado || gestion.estadoActual
-      };
-    }).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+      allGestiones.push(...gestionesHistorial);
+      console.log('mapearHistorialGestiones - Gestiones del historial:', gestionesHistorial);
+    }
+
+    // 2. Mapear gestiones de destinatarios con decisiones (evitando duplicados de cancelado/rechazado)
+    if (Array.isArray(destinatarios) && destinatarios.length > 0) {
+      console.log('mapearHistorialGestiones - Filtrando destinatarios:', destinatarios.map(d => ({
+        usuarioId: d.usuarioId,
+        decision: d.decision,
+        fechaDecision: d.fechaDecision,
+        comentario: d.comentario,
+        cumpleFiltros: d.decision && d.decision !== 'PENDIENTE' && d.fechaDecision !== null && d.comentario !== null
+      })));
+      
+      const gestionesDestinatarios = destinatarios
+        .filter(dest => 
+          dest.decision && 
+          dest.decision !== 'PENDIENTE' && 
+          dest.fechaDecision !== null && 
+          dest.comentario !== null
+        )
+        .map((dest, index) => {
+          const usuario = findUserById(dest.usuarioId);
+          const fechaDestinatario = new Date(dest.fechaDecision);
+          const tipoDestinatario = this.mapearTipoGestion(dest.decision);
+          
+          // Verificar duplicados específicos para cancelado y rechazado
+          const esCanceladoORechazado = tipoDestinatario === 'CANCELACION' || tipoDestinatario === 'RECHAZO';
+          
+          if (esCanceladoORechazado) {
+            // Para cancelado/rechazado, verificar si ya existe en el historial
+            const yaExisteEnHistorial = allGestiones.some(g => {
+              const mismoTipo = g.tipo === tipoDestinatario;
+              const mismaFecha = Math.abs(g.fecha.getTime() - fechaDestinatario.getTime()) < 300000; // 5 minutos de diferencia
+              
+              return mismoTipo && mismaFecha;
+            });
+            
+            if (yaExisteEnHistorial) {
+              console.log(`Gestion de destinatario ${dest.usuarioId} (${dest.decision}) ya existe en historial, omitiendo`);
+              return null;
+            }
+          } else {
+            // Para otros tipos (APROBACION, ENVIO), verificar duplicados más estrictos
+            const yaExisteEnHistorial = allGestiones.some(g => {
+              const mismoUsuario = g.actorUsuarioId === dest.usuarioId;
+              const mismaFecha = Math.abs(g.fecha.getTime() - fechaDestinatario.getTime()) < 60000; // 1 minuto de diferencia
+              const mismoTipo = g.accionOriginal === dest.decision || g.tipo === tipoDestinatario;
+              
+              return mismoUsuario && (mismaFecha || mismoTipo);
+            });
+            
+            if (yaExisteEnHistorial) {
+              console.log(`Gestion de destinatario ${dest.usuarioId} (${dest.decision}) ya existe en historial, omitiendo`);
+              return null;
+            }
+          }
+          
+          return {
+            id: `destinatario-${dest.usuarioId}-${index}`,
+            tipo: tipoDestinatario,
+            usuarioId: String(dest.usuarioId || ''),
+            usuarioNombre: usuario ? `${usuario.nombres} ${usuario.apellidos}`.trim() : (dest.nombre || 'Usuario desconocido'),
+            fecha: fechaDestinatario,
+            comentario: dest.comentario || '',
+            comentarioCompleto: dest.comentario || '',
+            orden: dest.ordenIndex !== undefined ? dest.ordenIndex + 1 : (index + 1),
+            estadoAnterior: 'PENDIENTE',
+            estadoNuevo: dest.decision,
+            accionOriginal: dest.decision,
+            actorUsuarioId: dest.usuarioId,
+            fuente: 'destinatarios'
+          };
+        })
+        .filter(gestion => gestion !== null); // Filtrar nulos
+      
+      allGestiones.push(...gestionesDestinatarios);
+      console.log('mapearHistorialGestiones - Gestiones de destinatarios:', gestionesDestinatarios);
+    }
+
+    // Ordenar por fecha (más reciente primero)
+    const result = allGestiones.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+    console.log('mapearHistorialGestiones - Total gestiones combinadas:', result.length);
+    console.log('mapearHistorialGestiones - Output:', result);
+    return result;
   }
 
   private mapearTipoGestion(tipo: string): 'ENVIO' | 'APROBACION' | 'RECHAZO' | 'CANCELACION' {
     if (!tipo) return 'ENVIO';
     
     const tipoUpper = tipo.toUpperCase();
-    if (tipoUpper.includes('APROB') || tipoUpper === 'APPROVE') return 'APROBACION';
-    if (tipoUpper.includes('RECHAZ') || tipoUpper === 'REJECT') return 'RECHAZO';
-    if (tipoUpper.includes('CANCEL') || tipoUpper === 'CANCEL') return 'CANCELACION';
+    
+    // Mapear acciones específicas del backend
+    if (tipoUpper === 'CREAR' || tipoUpper === 'CREATE') return 'ENVIO';
+    if (tipoUpper === 'CANCELAR' || tipoUpper === 'CANCEL') return 'CANCELACION';
+    if (tipoUpper === 'APROBAR' || tipoUpper === 'APPROVE') return 'APROBACION';
+    if (tipoUpper === 'RECHAZAR' || tipoUpper === 'REJECT') return 'RECHAZO';
+    
+    // Mapeos genéricos como fallback
+    if (tipoUpper.includes('APROB') || tipoUpper === 'APPROVED') return 'APROBACION';
+    if (tipoUpper.includes('RECHAZ') || tipoUpper === 'REJECTED') return 'RECHAZO';
+    if (tipoUpper.includes('CANCEL') || tipoUpper === 'CANCELLED') return 'CANCELACION';
     if (tipoUpper.includes('ENVI') || tipoUpper === 'SEND') return 'ENVIO';
     
+    // Por defecto, si no se reconoce, mantener como ENVIO
     return 'ENVIO';
   }
   
@@ -423,7 +524,7 @@ export class ApprovalService {
       // Agregar información del documento para la vista
       documentoUrl: item?.documentoUrl || item?.pdfUrl || item?.urlDocumento || item?.url,
       documentoFileName: item?.documentoFileName || item?.pdfFileName || item?.nombreArchivo || item?.fileName,
-      historialGestiones: this.mapearHistorialGestiones(item?.historialGestiones || item?.gestiones || [], users),
+      historialGestiones: this.mapearHistorialGestiones(item?.historial || [], users, destinatarios),
       // Campos adicionales de la API
       destinatariosTotal: item?.destinatariosTotal || destinatarios.length,
       destinatariosAprobados: item?.destinatariosAprobados || 0,
@@ -592,6 +693,23 @@ export class ApprovalService {
   getDocumentPdf(approvalId: string | number, userId: number): Observable<Blob> {
     const headers = this.headersForUser(userId);
     return this.http.get(`${this.baseUrl}/solicitudes/${approvalId}/pdf`, { 
+      headers, 
+      responseType: 'blob' 
+    });
+  }
+
+  getAttachments(approvalId: string | number, userId: number): Observable<any[]> {
+    const headers = this.headersForUser(userId);
+    return this.http.get<any[]>(`${this.baseUrl}/solicitudes/${approvalId}/adjuntos`, { 
+      headers 
+    }).pipe(
+      catchError(() => of([]))
+    );
+  }
+
+  downloadAttachment(approvalId: string | number, attachmentId: number, userId: number): Observable<Blob> {
+    const headers = this.headersForUser(userId);
+    return this.http.get(`${this.baseUrl}/solicitudes/${approvalId}/adjuntos/${attachmentId}/download`, { 
       headers, 
       responseType: 'blob' 
     });
