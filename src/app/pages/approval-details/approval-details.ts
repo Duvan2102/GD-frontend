@@ -8,6 +8,7 @@ import { FooterControls } from '../approvals/footer-controls/footer-controls';
 import { RequestSuccessModal, SuccessModalData } from '../create-request/request-success-modal/request-success-modal';
 import { DocumentView, DocumentViewData } from '../create-request/document-view/document-view';
 import { ApprovalService } from '../../services/approval.service';
+import { SuccessModalService } from '../../services/success-modal.service';
 import { Subscription, combineLatest } from 'rxjs';
 import { Approval } from '../approvals/approvals';
 import { Typology, TypologyService } from '../../services/typology.service';
@@ -63,6 +64,7 @@ export class ApprovalDetails implements OnInit, OnDestroy {
 
   constructor(
     private approvalService: ApprovalService,
+    private successModalService: SuccessModalService,
     private typologyService: TypologyService,
     private authService: AuthService,
     private userService: UserService

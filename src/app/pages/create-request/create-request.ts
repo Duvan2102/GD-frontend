@@ -12,6 +12,7 @@ import { Usuario } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
 import { TypologyService, Typology } from '../../services/typology.service';
 import { ApprovalService } from '../../services/approval.service';
+import { SuccessModalService } from '../../services/success-modal.service';
 import { Observable, of, Subscription, combineLatest } from 'rxjs';
 import { Approval } from '../approvals/approvals';
 import { AuthService } from '../../services/auth.service';
@@ -59,11 +60,16 @@ export class CreateRequest implements OnInit, OnDestroy {
   isDocumentViewVisible = false;
   documentViewData: DocumentViewData | null = null;
   hideSendButtonInDocumentView = true; // Por defecto oculto, se cambia según el contexto
+  
+  // Flags para controlar cuándo mostrar modal de éxito
+  private wasRequestCreatedSuccessfully = false;
+  private wasRequestCancelledSuccessfully = false;
 
   constructor(
     private userService: UserService,
     private typologyService: TypologyService,
     private approvalService: ApprovalService,
+    private successModalService: SuccessModalService,
     private authService: AuthService
   ) {}
 
@@ -72,6 +78,7 @@ export class CreateRequest implements OnInit, OnDestroy {
       this.currentUser = user;
       this.loadInitialData();
     });
+
   }
 
   loadInitialData(): void {
@@ -137,6 +144,8 @@ export class CreateRequest implements OnInit, OnDestroy {
       adjuntos: adjuntos
     }).subscribe(appr => {
       if (appr) {
+        this.wasRequestCreatedSuccessfully = true; // Marcar que se creó exitosamente
+        // Preparar datos para la success-modal
         const ensureUsers$ = this.allUsers.length > 0 ? of(this.allUsers) : this.userService.obtenerUsuarios();
         ensureUsers$.subscribe((users: Usuario[]) => {
           this.allUsers = users;
@@ -151,6 +160,15 @@ export class CreateRequest implements OnInit, OnDestroy {
   closeDetailModal(): void {
     this.isDetailModalVisible = false;
     this.successModalData = null;
+    
+    // Mostrar modal de éxito como última acción en todos los casos
+    if (this.wasRequestCreatedSuccessfully) {
+      this.successModalService.showSuccess('Solicitud enviada', 'Tu solicitud ha sido creada y enviada exitosamente. Los aprobadores han sido notificados para su revisión.');
+      this.wasRequestCreatedSuccessfully = false; // Resetear el flag
+    } else if (this.wasRequestCancelledSuccessfully) {
+      this.successModalService.showSuccess('Solicitud cancelada', 'La solicitud ha sido cancelada exitosamente y notificada a los aprobadores.');
+      this.wasRequestCancelledSuccessfully = false; // Resetear el flag
+    }
   }
 
   handleViewApprovedDocument(data: SuccessModalData): void {
@@ -234,11 +252,11 @@ export class CreateRequest implements OnInit, OnDestroy {
     if (!uid) return;
     this.approvalService.cancelarSolicitud(event.solicitudId, uid, event.comentario).subscribe({
       next: () => {
+        // Marcar que se canceló exitosamente para mostrar modal de éxito al cerrar
+        this.wasRequestCancelledSuccessfully = true;
         // Cerrar la modal de gestión después del éxito
         this.closeDetailModal();
         this.subscribeToApprovals();
-        // Mostrar mensaje de éxito
-        alert('Solicitud cancelada exitosamente.');
       },
       error: (error) => {
         // Mostrar mensaje de error y reabrir la modal de gestión

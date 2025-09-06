@@ -65,7 +65,7 @@
             </button>
 
             <button
-              *ngIf="!hideManageButton && hasDocument()"
+              *ngIf="!hideManageButton && !hideViewDocumentButton && hasDocument()"
               id="btn-view-document"
               class="btn-cancel"
               type="button"

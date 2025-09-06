@@ -11,6 +11,7 @@ import { DocumentView, DocumentViewData } from '../create-request/document-view/
 import { Usuario } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
 import { ApprovalService } from '../../services/approval.service';
+import { SuccessModalService } from '../../services/success-modal.service';
 import { Subscription, combineLatest } from 'rxjs';
 import { delay } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
@@ -78,6 +79,7 @@ export class Approvals implements OnInit, OnDestroy {
   constructor(
     private userService: UserService,
     private approvalService: ApprovalService,
+    private successModalService: SuccessModalService,
     private authService: AuthService,
     private typologyService: TypologyService
   ) {}
@@ -308,8 +310,8 @@ export class Approvals implements OnInit, OnDestroy {
           this.isApprovalDocumentViewVisible = false;
           this.updateRequestStatus(appr.id, 'APROBADO', 'Aprobada');
           this.subscribeToApprovals(); // Refresh the list
-          // Mostrar mensaje de éxito
-          alert('Solicitud aprobada exitosamente.');
+          // Mostrar mensaje de éxito como última acción
+          this.successModalService.showSuccess('Aprobación completada', 'La solicitud ha sido aprobada exitosamente y notificada a los usuarios correspondientes.');
         }
       },
       error: (error) => {
@@ -330,8 +332,8 @@ export class Approvals implements OnInit, OnDestroy {
           this.isApprovalDocumentViewVisible = false;
           this.updateRequestStatus(appr.id, 'RECHAZADO', 'Rechazada');
           this.subscribeToApprovals(); // Refresh the list
-          // Mostrar mensaje de éxito
-          alert('Solicitud rechazada exitosamente.');
+          // Mostrar mensaje de éxito como última acción
+          this.successModalService.showSuccess('Rechazo completado', 'La solicitud ha sido rechazada exitosamente y notificada al solicitante.');
         }
       },
       error: (error) => {
@@ -357,6 +359,12 @@ export class Approvals implements OnInit, OnDestroy {
   closeApprovalDocumentView() {
     this.isApprovalDocumentViewVisible = false;
     this.documentToApproveData = null;
+  }
+
+  handleBackFromDocumentView() {
+    this.isApprovalDocumentViewVisible = false;
+    this.documentToApproveData = null;
+    this.isDetailModalVisible = true;
   }
 
   onToggleManaged(value: boolean): void { this.showOnlyManaged = value; this.currentPage = 1; this.refreshApprovalsSource(); }

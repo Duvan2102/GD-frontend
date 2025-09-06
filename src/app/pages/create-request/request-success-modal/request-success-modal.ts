@@ -94,7 +94,8 @@ export class RequestSuccessModal implements OnChanges {
   @Input() data: SuccessModalData | null = null;
   @Input() usuariosDisponibles: Usuario[] = [];
   @Input() isApprovalFlow = false;
-  @Input() hideManageButton = false; // Nuevo input para ocultar el botón de gestionar 
+  @Input() hideManageButton = false;
+  @Input() hideViewDocumentButton = false; // Nuevo input para ocultar el botón de visualizar documento 
 
   @Output() close = new EventEmitter<void>();
   @Output() cancelRequest = new EventEmitter<{ solicitudId: string | number, comentario?: string }>();

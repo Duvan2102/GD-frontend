@@ -39,6 +39,7 @@
   [usuariosDisponibles]="allUsers"
   [isApprovalFlow]="true"
   [hideManageButton]="showOnlyManaged"
+  [hideViewDocumentButton]="true"
   (close)="closeDetailModal()"
   (manageRequest)="handleOpenDocumentToApprove($event)"
   (viewApprovedDocument)="handleViewApprovedDocument($event)"> 
@@ -48,6 +49,7 @@
   [isVisible]="isApprovalDocumentViewVisible"
   [documentData]="documentToApproveData"
   (close)="closeApprovalDocumentView()"
+  (back)="handleBackFromDocumentView()"
   (approve)="handleApproveRequest($event)"
   (reject)="handleRejectRequest($event)">
 </app-approval-document-view>

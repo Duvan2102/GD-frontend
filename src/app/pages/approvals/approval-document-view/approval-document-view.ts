@@ -28,7 +28,6 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
   @Output() approve = new EventEmitter<{ id: string | number, comentario?: string }>();
   @Output() reject = new EventEmitter<{ id: string | number, comentario?: string }>();
   
-  @Output() download = new EventEmitter<ApprovalDocumentViewData>();
   @Output() print = new EventEmitter<ApprovalDocumentViewData>();
   @Output() back = new EventEmitter<void>();
 
@@ -245,11 +244,6 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
     this.back.emit();
   }
 
-  onDownload(): void {
-    if (!this.pdfSrc) return;
-    const filename = this.pdfService.getFileName(this.documentData);
-    this.pdfService.createDownloadBlob(this.pdfSrc, filename);
-  }
 
   onPrint(): void {
     this.pdfViewerService.print();
