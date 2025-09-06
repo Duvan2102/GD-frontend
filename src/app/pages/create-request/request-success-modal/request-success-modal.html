@@ -1,0 +1,252 @@
+<div class="custom-backdrop" [class.show]="isVisible && !isConfirmationModalVisible" (click)="onClose()"></div>
+
+<div class="modal"
+     tabindex="-1"
+     [class.show]="isVisible && !isConfirmationModalVisible"
+     [style.display]="(isVisible && !isConfirmationModalVisible) ? 'block' : 'none'">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content request-success-modal">
+
+      <div class="modal-header-icons">
+        <button class="icon-btn close-icon" (click)="onClose()" title="Cerrar" type="button">
+          <i class="bi bi-x"></i>
+        </button>
+        <div class="checkmark-icon-wrapper">
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-body-content" *ngIf="data">
+          <div class="left-panel">
+            <h2 class="section-title">APROBACIÓN</h2>
+            <p class="request-name">{{ data.nombreSolicitud || 'Nombre de solicitud no disponible' }}</p>
+
+            <h3 class="section-subtitle">DESCRIPCIÓN</h3>
+            <p class="description-text">
+              {{ data.detallesAdicionales || 'No se proporcionaron detalles adicionales para esta solicitud.' }}
+            </p>
+
+            <!-- Botones y documentos - solo se muestran si NO está cancelada o rechazada -->
+            <div *ngIf="!isCancelledOrRejected()">
+              <button
+                *ngIf="!hideManageButton"
+                id="btn-manage-request"
+                class="btn-cancel"
+                type="button"
+                (click)="handleMainAction()"
+                [disabled]="!canPerformMainAction()">
+                {{ getMainActionText() }}
+              </button>
+
+              <button
+                *ngIf="hideManageButton && isApproved()"
+                id="btn-view-approved-document"
+                class="btn-cancel"
+                type="button"
+                (click)="onViewApprovedDocument()">
+                <i class="bi bi-file-earmark-pdf"></i> Visualizar Documento Aprobado
+              </button>
+
+              <button
+                *ngIf="!hideManageButton && !hideViewDocumentButton && hasDocument()"
+                id="btn-view-document"
+                class="btn-cancel"
+                type="button"
+                (click)="onViewApprovedDocument()">
+                <i class="bi bi-file-earmark-pdf"></i> Visualizar Documento
+              </button>
+
+              <!-- Adjuntos - recuadro rojo para adjuntos/anexos -->
+              <div class="document-link" *ngIf="hasAttachments()" (click)="viewMainDocument()">
+                <i class="bi bi-file-earmark-pdf-fill pdf-icon" *ngIf="!isLoadingAttachments"></i>
+                <i class="bi bi-hourglass-split pdf-icon" *ngIf="isLoadingAttachments"></i>
+                <div class="doc-info">
+                  <span>{{ getMainDocumentName() }}</span>
+                  <small *ngIf="!isLoadingAttachments">DAR CLICK PARA DESCARGAR ADJUNTO</small>
+                  <small *ngIf="isLoadingAttachments">CARGANDO ADJUNTOS...</small>
+                </div>
+              </div>
+
+              <!-- Anexos - solo se muestran si hay anexos y no hay documento principal -->
+              <div *ngIf="hasOnlyAnexos()">
+                <h3 class="section-subtitle">ANEXOS</h3>
+                <div class="document-link" *ngFor="let anexo of data.anexos" (click)="viewDocument(anexo)">
+                  <i class="bi bi-file-earmark-fill pdf-icon"></i>
+                  <div class="doc-info">
+                    <span>{{ getDocumentName(anexo) }}</span>
+                    <small>DAR CLICK PARA VISUALIZAR ANEXO</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="right-panel">
+            <div class="request-detail-box">
+              <h2 class="section-title">DETALLE SOLICITUD</h2>
+
+              <div class="sender-info" *ngIf="data.creador">
+                <div class="sender-avatar">
+                  {{ getCreatorInitials() }}
+                </div>
+                <div class="sender-details">
+                  <span>Enviado por</span>
+                  <strong>{{ data.creador.nombres }} {{ data.creador.apellidos }}</strong>
+                </div>
+                <div class="sender-timestamp">
+                  {{ formatDate(data.fechaCreacion) }}
+                </div>
+              </div>
+
+              <div class="request-status" *ngIf="data.estado">
+                <span class="section-subtitle">Estado:</span>
+                <span class="badge rounded-pill" [ngClass]="{
+                  'text-bg-success': data.estado === 'Aprobada',
+                  'text-bg-warning': data.estado === 'Pendiente',
+                  'text-bg-danger': data.estado === 'Rechazada',
+                  'text-bg-secondary': data.estado === 'Cancelada'
+                }">{{ data.estado }}</span>
+              </div>
+
+              <!-- Información de cancelación -->
+              <div class="cancellation-info" *ngIf="data.estado === 'Cancelada' && getCancellationInfo()">
+                <div class="cancellation-details">
+                  <div class="cancellation-date">
+                    <span class="cancellation-label">Fecha de cancelación:</span>
+                    <span class="cancellation-value">{{ formatDate(getCancellationInfo()?.fecha) }}</span>
+                  </div>
+                  <div class="cancellation-comment" *ngIf="getCancellationInfo()?.comentario">
+                    <span class="cancellation-label">Motivo:</span>
+                    <span class="cancellation-value">{{ getCancellationInfo()?.comentario }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Información de rechazo -->
+              <div class="rejection-info" *ngIf="data.estado === 'Rechazada' && getRejectionInfo()">
+                <div class="rejection-details">
+                  <div class="rejection-date">
+                    <span class="rejection-label">Fecha de rechazo:</span>
+                    <span class="rejection-value">{{ formatDate(getRejectionInfo()?.fecha) }}</span>
+                  </div>
+                  <div class="rejection-comment" *ngIf="getRejectionInfo()?.comentario">
+                    <span class="rejection-label">Motivo:</span>
+                    <span class="rejection-value">{{ getRejectionInfo()?.comentario }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="approvers-section">
+              <h2 class="section-title">APROBADORES</h2>
+              <div class="approvers-summary" *ngIf="data">
+                <div class="summary-item">
+                  <span class="summary-label">Total destinatarios:</span>
+                  <span class="summary-value">{{ data.destinatariosTotal || data.destinatarios.length || 0 }}</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Aprobados:</span>
+                  <span class="summary-value">{{ data.destinatariosAprobados || 0 }}</span>
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="approvers-table">
+                  <thead>
+                    <tr>
+                      <th *ngIf="shouldShowOrderColumn()">Orden</th>
+                      <th>Nombres y Apellidos</th>
+                      <th>Correo Electrónico</th>
+                      <th>Cargo</th>
+                      <th>Fecha Decisión</th>
+                      <th>Estado</th>
+                      <th>Comentario</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let approver of approvers; trackBy: trackByApprover; let i = index">
+                      <td *ngIf="shouldShowOrderColumn()" class="text-center">{{ getOrderNumber(approver.orden, i) }}</td>
+                      <td>{{ approver.nombresApellidos }}</td>
+                      <td>{{ approver.correo }}</td>
+                      <td>{{ approver.area }}</td>
+                      <td>{{ formatDate(approver.fecha) }}</td>
+                      <td>
+                        <span class="badge rounded-pill" [ngClass]="{
+                          'text-bg-success': approver.estado === 'APROBADO',
+                          'text-bg-warning': approver.estado === 'PENDIENTE',
+                          'text-bg-danger': approver.estado === 'RECHAZADO',
+                          'text-bg-secondary': approver.estado === 'CANCELADA'
+                        }">{{ approver.estado }}</span>
+                      </td>
+                      <td class="comment-cell">
+                        <span *ngIf="getApproverComment(approver.usuarioId)" 
+                              class="comment-preview" 
+                              (click)="showApproverComment(approver)">
+                          {{ getApproverComment(approver.usuarioId) }}
+                        </span>
+                        <span *ngIf="!getApproverComment(approver.usuarioId)" class="no-comment">
+                          Sin comentarios
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Historial de Gestiones -->
+            <div *ngIf="hasHistorialGestiones()" class="historial-section">
+              <h2 class="section-title">HISTORIAL DE GESTIONES</h2>
+              <div class="historial-timeline">
+                <div *ngFor="let gestion of getHistorialGestiones(); trackBy: trackByGestion" 
+                     class="historial-item" 
+                     [ngClass]="getGestionTypeClass(gestion.tipo)">
+                  <div class="historial-header">
+                    <div class="historial-type">
+                      <i class="bi" [ngClass]="getGestionTypeIcon(gestion.tipo)"></i>
+                      <span class="type-label">{{ gestion.tipo }}</span>
+                    </div>
+                    <div class="historial-meta">
+                      <span class="historial-user">{{ gestion.usuarioNombre }}</span>
+                      <span class="historial-date">{{ formatDate(gestion.fecha) }}</span>
+                    </div>
+                  </div>
+                  
+                  <div *ngIf="gestion.comentario" class="historial-comment">
+                    <p class="comment-preview" (click)="showCommentModal(gestion)">
+                      {{ getCommentPreview(gestion.comentario) }}
+                      <i *ngIf="gestion.comentario && gestion.comentario.length > 50" 
+                         class="bi bi-arrow-right-circle-fill comment-expand-icon"></i>
+                    </p>
+                  </div>
+                  
+                  <div *ngIf="gestion.estadoAnterior && gestion.estadoNuevo" class="historial-status-change">
+                    <span class="status-change">
+                      <span class="status-badge status-old">{{ gestion.estadoAnterior }}</span>
+                      <i class="bi bi-arrow-right"></i>
+                      <span class="status-badge status-new">{{ gestion.estadoNuevo }}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> 
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<app-confirmation-modal
+  [isVisible]="isConfirmationModalVisible"
+  [data]="confirmationModalData"
+  (confirm)="onConfirmationModalConfirm($event)"
+  (cancel)="onConfirmationModalCancel()">
+</app-confirmation-modal>
+
+<!-- Comment Modal -->
+<app-comment-modal
+  [isVisible]="isCommentModalVisible"
+  [data]="commentModalData"
+  (close)="onCommentModalClose()">
+</app-comment-modal>

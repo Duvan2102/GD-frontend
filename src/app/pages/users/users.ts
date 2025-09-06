@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Controls } from '../approvals/controls/controls';
@@ -8,33 +8,8 @@ import { PasswordModal } from './password-modal/password-modal';
 import { SuccessModal } from './success-modal/success-modal';
 import { ConfirmModal } from './confirm-modal/confirm-modal';
 import { ChangePassword } from './change-password/change-password';
-
-// ELIMINAMOS LA INTERFACE LOCAL Y USAMOS LA DE common.interfaces
-// Esta línea debe añadirse al principio del archivo:
-// import { Usuario } from '../../interfaces/common.interfaces';
-
-// INTERFACE TEMPORAL - Reemplazar con la importación de arriba
-export interface Usuario {
-  noUsuario: number;
-  identificacion: string;
-  nombres: string;
-  apellidos: string;
-  usuario: string;
-  estado: string;
-  activo: boolean;
-  cargo: string; // CAMBIADO: Ya no es opcional para evitar conflictos
-  correoEmpresarial: string; // CAMBIADO: Ya no es opcional
-  correoPersonal?: string;
-  celular: string; // CAMBIADO: Ya no es opcional
-  telefono?: string;
-  direccion?: string;
-  dobleAutenticacion: string; // CAMBIADO: Ya no es opcional
-  perfiles?: {
-    administrador: boolean;
-    funcionarioCreador: boolean;
-    funcionarios: boolean;
-  };
-}
+import { Usuario } from '../../interfaces/common.interfaces';
+import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-usuarios',
@@ -53,7 +28,7 @@ export interface Usuario {
   templateUrl: './users.html',
   styleUrls: ['./users.css']
 })
-export class Users {
+export class Users implements OnInit {
   usuarios: Usuario[] = [];
   usuariosFiltrados: Usuario[] = [];
   usuariosFiltradosLength = 0;
@@ -74,6 +49,24 @@ export class Users {
   modalSuccessMessage: string = '';
   modalSuccessBtn: string = 'Aceptar';
   modalIsConfirmation: boolean = false;
+
+  constructor(private userService: UserService) {}
+
+  ngOnInit(): void {
+    this.loadUsers();
+  }
+
+  loadUsers(): void {
+    this.userService.obtenerUsuarios().subscribe({
+      next: (data) => {
+        this.usuarios = data.map(u => ({...u, activo: u.estado === 'Activo'}));
+        this.filtrarUsuarios();
+      },
+      error: (error) => {
+        this.mostrarModalSuccess('Error al cargar usuarios. Intente de nuevo más tarde.', 'Cerrar');
+      }
+    });
+  }
 
   mostrarModalConfirmacion(mensaje: string, textoBtn: string = 'Aceptar') {
     this.modalSuccessMessage = mensaje;
@@ -105,34 +98,6 @@ export class Users {
       this.currentUser = null;
       this.currentAction = '';
     }
-  }
-
-  constructor() {
-    // DATOS ACTUALIZADOS para coincidir con la nueva interface
-    for (let i = 1; i <= 52; i++) {
-      this.usuarios.push({
-        noUsuario: i,
-        identificacion: `12345678${i.toString().padStart(2, '0')}`, // Formato más realista
-        nombres: `Nombre${i}`,
-        apellidos: `Apellido${i}`,
-        usuario: `usuario${i}`,
-        estado: i % 2 === 0 ? 'Activo' : 'Inactivo',
-        activo: i % 2 === 0,
-        cargo: 'Funcionario', // Ya no es opcional
-        correoEmpresarial: `usuario${i}@empresa.com`, // Ya no es opcional
-        correoPersonal: `usuario${i}@personal.com`,
-        celular: `300${i.toString().padStart(7, '0')}`, // Ya no es opcional
-        telefono: `5005566677`,
-        direccion: `Calle 45 # 22-18`,
-        dobleAutenticacion: 'Google Authenticator', // Ya no es opcional
-        perfiles: {
-          administrador: i === 1,
-          funcionarioCreador: i <= 5,
-          funcionarios: i > 5
-        }
-      });
-    }
-    this.filtrarUsuarios();
   }
 
   filtrarUsuarios() {
@@ -211,7 +176,7 @@ export class Users {
         break;
 
       default:
-        console.log('Acción no reconocida:', tipo);
+        break;
     }
   }
 
@@ -296,7 +261,7 @@ export class Users {
         break;
 
       default:
-        console.log('Acción no reconocida en validación:', this.currentAction);
+        break;
     }
 
     if (this.currentAction !== 'cambiarContraseña') {

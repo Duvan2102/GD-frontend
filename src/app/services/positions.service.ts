@@ -1,26 +1,36 @@
-// src/app/services/position.service.ts
-
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { environment } from '../environments/environment';
 import { Area } from './area.service';
 
-// Interfaces alineadas con tu estructura de datos JSON
 export interface Position {
   idCargo?: number;
   descripcion: string;
-  area: Area
+  area: Area;
+  permisos?: {
+    esAdministrador: boolean; 
+    esAuditor: boolean;
+  };
 }
 
 @Injectable({  providedIn: 'root'})
 export class PositionService {
-  private baseUrl = `${environment.apiUrl}cargos`;
+  private readonly baseUrl = (
+    environment.apiUrl.endsWith('/') ? environment.apiUrl.slice(0, -1) : environment.apiUrl
+  ) + '/cargos';
 
   constructor(private http: HttpClient) {}
 
   getAll(): Observable<Position[]> {
-    return this.http.get<Position[]>(this.baseUrl);
+    return this.http.get<any>(this.baseUrl).pipe(
+      map((res: any) => {
+        if (Array.isArray(res)) return res;
+        const data = res?.data ?? res;
+        const list = data?.content ?? data?.items ?? data?.rows ?? data;
+        return Array.isArray(list) ? list : [];
+      })
+    );
   }
 
   getById(id: number): Observable<Position> {
@@ -28,9 +38,8 @@ export class PositionService {
   }
 
   create(position: Partial<Position>): Observable<Position> {
-  return this.http.post<Position>(this.baseUrl, position);
-}
-
+    return this.http.post<Position>(this.baseUrl, position);
+  }
 
   update(id: number, position: Position): Observable<Position> {
     return this.http.put<Position>(`${this.baseUrl}/${id}`, position);

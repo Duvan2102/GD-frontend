@@ -429,6 +429,6 @@ export class ReportsAudits implements OnInit {
   }
 
   onManage(id: string): void {
-    console.log('Gestionando solicitud con ID:', id);
+    // Método para gestionar solicitud
   }
 }

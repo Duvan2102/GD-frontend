@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { map, Observable } from 'rxjs';
 import { Position } from './positions.service';
 import { environment } from '../environments/environment';
 
@@ -14,12 +14,21 @@ export interface Typology {
   providedIn: 'root'
 })
 export class TypologyService {
-   private baseUrl = `${environment.apiUrl}tipologias`;
+  private readonly baseUrl = (
+    environment.apiUrl.endsWith('/') ? environment.apiUrl.slice(0, -1) : environment.apiUrl
+  ) + '/tipologias';
 
   constructor(private http: HttpClient) { }
 
   getAll(): Observable<Typology[]> {
-    return this.http.get<Typology[]>(this.baseUrl);
+    return this.http.get<any>(this.baseUrl).pipe(
+      map((res: any) => {
+        if (Array.isArray(res)) return res;
+        const data = res?.data ?? res;
+        const list = data?.content ?? data?.items ?? data?.rows ?? data?.tipologias ?? data?.results ?? data?.list ?? data;
+        return Array.isArray(list) ? list : [];
+      })
+    );
   }
 
    getById(id: number): Observable<Typology> {
