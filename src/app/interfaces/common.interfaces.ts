@@ -1,20 +1,39 @@
 // src/app/interfaces/common.interfaces.ts
 
 export interface Usuario {
-  noUsuario: number;
+  noUsuario?: number;
+  idUsuario: number;
   identificacion: string;
   nombres: string;
   apellidos: string;
   usuario: string;
-  estado: string;
-  activo: boolean;
-  cargo?: string;
-  correoEmpresarial?: string;
+  estado: {
+    idEstado: number;
+    descripcion: string;
+  };
+  activo?: boolean;
+  cargo: {
+    idCargo: number;
+    descripcion: string;
+    area: {
+      idArea: number;
+      descripcion: string;
+      departamento: {
+        idDepartamento: number;
+        descripcion: string;
+      };
+    };
+  };
+  rol: {
+    idRol: number;
+    descripcion: string;
+  };
+  correoEmpresarial: string;
   correoPersonal?: string;
-  celular?: string;
-  telefono?: string;
+  telefono1: string;
+  telefono2?: string;
   direccion?: string;
-  dobleAutenticacion?: string;
+  dobleAutenticacion: boolean;
   perfiles?: {
     administrador: boolean;
     funcionarioCreador: boolean;
@@ -108,4 +127,38 @@ export interface AuthErrorResponse {
 
 export interface MessageResponse {
   message: string;
+}
+
+// Interfaces para validación de contraseña
+export interface PasswordValidationRequest {
+  password: string;
+}
+
+export interface PasswordValidationResponse {
+  valid: boolean;
+  message: string;
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  pageable: {
+    sort: {
+      sorted: boolean;
+      unsorted: boolean;
+      empty: boolean;
+    };
+    pageNumber: number;
+    pageSize: number;
+    offset: number;
+    paged: boolean;
+    unpaged: boolean;
+  };
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+  first: boolean;
+  size: number;
+  number: number;
+  numberOfElements: number;
+  empty: boolean;
 }

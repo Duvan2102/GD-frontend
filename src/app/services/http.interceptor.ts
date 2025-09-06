@@ -12,7 +12,8 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
   const auth = inject(AuthService);
   const user = auth.getCurrentUserValue();
   const token = auth.getToken();
-  const isApi = req.url.startsWith('/api') || req.url.includes('/api/');
+  // Detectar si es una petición a la API del backend
+  const isApi = req.url.includes('localhost:8080') || req.url.startsWith('/api');
   const isSolicitudes = req.url.includes('/solicitudes');
 
   let headers = req.headers;
@@ -20,6 +21,14 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
   // Agregar token de autenticación si existe
   if (token && (isApi || isSolicitudes)) {
     headers = headers.set('Authorization', `Bearer ${token}`);
+    console.log('🔐 Token JWT agregado a la petición:', req.url);
+  } else {
+    console.log('❌ Token JWT NO agregado:', {
+      url: req.url,
+      hasToken: !!token,
+      isApi,
+      isSolicitudes
+    });
   }
 
   // Agregar ID de usuario si existe (para compatibilidad con el sistema actual)

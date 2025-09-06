@@ -10,7 +10,7 @@
       </button>
     </div>
 
-    
+
 
     <!-- CONTROLES -->
     <app-controls
@@ -41,12 +41,12 @@
         <tbody>
           <ng-container *ngFor="let u of usuariosFiltrados; let i = index">
             <tr>
-              <td>{{ u.noUsuario }}</td>
+              <td>{{ u.idUsuario }}</td>
               <td>{{ u.identificacion }}</td>
               <td>{{ u.nombres }}</td>
               <td>{{ u.apellidos }}</td>
               <td>{{ u.usuario }}</td>
-              <td>{{ u.estado }}</td>
+              <td>{{ u.estado.descripcion }}</td>
               <td>
                 <button class="usuarios-ver" (click)="toggleDesplegable(i)">
                   <i *ngIf="filaDesplegada === i; else right" class="bi bi-chevron-down"></i>
@@ -60,10 +60,11 @@
                   <!-- Perfil y acciones desplegables -->
                   <div><b>Perfil</b><br> Funcionario</div>
                   <div class="acciones-usuario">
-                    <a href="#" (click)="abrirConfirmModal('inactivar', u); $event.preventDefault()">+ Inactivar usuario</a>
-                    <a href="#" (click)="accion('editar', u, $event); $event.preventDefault()">Editar usuario</a> •
-                    <a href="#" (click)="accion('cambiarContraseña', u, $event); $event.preventDefault()">Cambiar contraseña</a> •
-                    <a href="#" (click)="abrirConfirmModal('eliminarQR', u); $event.preventDefault()">Eliminar QR</a>
+                    <a href="#" *ngIf="u.activo" (click)="abrirConfirmModal('inactivar', u); $event.preventDefault()"> ㊀ Inactivar usuario</a>
+                    <a href="#" *ngIf="!u.activo" (click)="abrirConfirmModal('activar', u); $event.preventDefault()"> 🗹 Activar usuario</a>
+                    <a href="#" (click)="accion('editar', u, $event); $event.preventDefault()"> ✎ Editar usuario</a>
+                    <a href="#" (click)="accion('cambiarContraseña', u, $event); $event.preventDefault()"> ⚷ Cambiar contraseña</a>
+                    <a href="#" (click)="abrirConfirmModal('eliminarQR', u); $event.preventDefault()"> ✖︎ Eliminar QR</a>
 
                   </div>
                 </div>
@@ -100,7 +101,8 @@
   [mensajeModal]="mensajePasswordModal"
   [user]="currentUser"
   (close)="closePasswordModal()"
-  (validate)="handlePasswordValidation($event)">
+  (validate)="handlePasswordValidation($event)"
+  (validationError)="handlePasswordValidationError($event)">
 </app-password-modal>
 
 <app-confirm-modal
@@ -122,9 +124,7 @@
 <app-change-password
   [isVisible]="isChangePasswordModalVisible"
   [skipValidation]="true"
+  [user]="currentUser"
   (close)="closeChangePasswordModal()"
-  (passwordChanged)="handlePasswordChanged()">
+  (passwordChanged)="handlePasswordChanged($event)">
 </app-change-password>
-
-
-

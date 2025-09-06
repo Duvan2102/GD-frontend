@@ -23,19 +23,19 @@ export class RecipientService {
    * Resuelve destinatarios basándose en términos de búsqueda
    */
   resolveTypedRecipients(destinatarios: Destinatario[], allUsers: Usuario[]): void {
-    
+
     destinatarios.forEach((d, index) => {
       if (d.usuario) {
         return;
       }
-      
+
       const term = (d.searchTerm || '').trim();
       if (!term) {
         return;
       }
-      
+
       const user = this.findUserBySearchTerm(term, allUsers);
-      
+
       if (user) {
         d.usuario = user;
         d.searchTerm = `${user.nombres} ${user.apellidos} (${user.usuario})`;
@@ -54,21 +54,21 @@ export class RecipientService {
       const user = allUsers.find(u => u.usuario === username);
       if (user) return user;
     }
-    
+
     // Buscar por ID numérico
     if (/^\d+$/.test(term)) {
       const idNum = parseInt(term, 10);
       const user = allUsers.find(u => u.noUsuario === idNum);
       if (user) return user;
     }
-    
+
     // Buscar por texto en nombres o usuario
     const t = term.toLowerCase();
     const matches = allUsers.filter(u =>
       (u.nombres + ' ' + u.apellidos).toLowerCase().includes(t) ||
       u.usuario.toLowerCase().includes(t)
     );
-    
+
     return matches.length === 1 ? matches[0] : undefined;
   }
 
@@ -77,30 +77,30 @@ export class RecipientService {
    */
   filterUsersForDropdown(searchTerm: string, allUsers: Usuario[], selectedUserIds: number[], creatorUserId?: number): Usuario[] {
     if (searchTerm.length <= 1) return [];
-    
+
     const filtered = allUsers.filter(user => {
       // Verificar si el usuario coincide con la búsqueda
       const matchesSearch = user.nombres.toLowerCase().includes(searchTerm) ||
                            user.apellidos.toLowerCase().includes(searchTerm) ||
                            user.usuario.toLowerCase().includes(searchTerm);
-      
+
       if (!matchesSearch) return false;
-      
+
       // Verificar si es el usuario creador
       const isCreator = creatorUserId ? user.noUsuario === creatorUserId : false;
       if (isCreator) {
         return false;
       }
-      
+
       // Verificar si ya está seleccionado
-      const isSelected = selectedUserIds.includes(user.noUsuario);
+      const isSelected = selectedUserIds.includes(user.idUsuario);
       if (isSelected) {
         return false;
       }
-      
+
       return true;
     });
-    
+
     return filtered;
   }
 
@@ -151,8 +151,8 @@ export class RecipientService {
    * Reordena destinatarios
    */
   reorderRecipients(destinatarios: Destinatario[]): void {
-    destinatarios.forEach((dest, index) => { 
-      dest.orden = index + 1; 
+    destinatarios.forEach((dest, index) => {
+      dest.orden = index + 1;
     });
   }
 }

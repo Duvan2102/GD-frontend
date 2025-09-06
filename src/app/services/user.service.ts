@@ -3,23 +3,24 @@ import { HttpClient, HttpHeaders, HttpErrorResponse, HttpParams } from '@angular
 import { Observable, throwError, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { environment } from '../environments/environment';
-import { 
-  Usuario, 
-  UsuarioRequest, 
-  ApiResponse, 
+import {
+  Usuario,
+  UsuarioRequest,
+  ApiResponse,
   DobleAutenticacionTipo,
-  ErrorResponse 
+  ErrorResponse,
+  PageResponse
 } from '../interfaces/common.interfaces';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
-  private readonly baseUrl = environment.apiUrl.endsWith('/') 
-    ? environment.apiUrl.slice(0, -1) 
+  private readonly baseUrl = environment.apiUrl.endsWith('/')
+    ? environment.apiUrl.slice(0, -1)
     : environment.apiUrl;
   private readonly apiUrl = `${this.baseUrl}/usuarios`;
-  
+
   private readonly httpOptions = {
     headers: new HttpHeaders({
       'Content-Type': 'application/json',
@@ -35,7 +36,7 @@ export class UserService {
   };
 
   constructor(private http: HttpClient) {}
-  
+
   obtenerCargosDisponibles(): Observable<string[]> {
     const cargos = ['Gerente', 'Analista', 'Desarrollador', 'Administrador', 'Funcionario'];
     return of(cargos);
@@ -43,27 +44,43 @@ export class UserService {
 
   obtenerUsuarios(): Observable<Usuario[]> {
     const normalize = (res: any): Usuario[] => {
+      // Si es un array directo, devolverlo
       if (Array.isArray(res)) return res as Usuario[];
-      // soportar estructuras comunes
+
+      // Si es un objeto Page (Spring Boot), extraer el content
+      if (res && typeof res === 'object' && res.content && Array.isArray(res.content)) {
+        return res.content as Usuario[];
+      }
+
+      // Soporte para otras estructuras comunes
       const data1 = res?.data ?? res;
-      const data2 = data1?.data ?? data1; // por si viene doblemente anidado
+      const data2 = data1?.data ?? data1;
       const list = data2?.usuarios ?? data2?.content ?? data2?.items ?? data2?.rows ?? data2?.results ?? data2?.list ?? data2;
       return Array.isArray(list) ? (list as Usuario[]) : [];
     };
 
-    const intento1$ = this.http.get<any>(this.apiUrl).pipe(
+    // Intentar obtener todos los usuarios con paginación grande
+    const intento1$ = this.http.get<any>(this.apiUrl, {
+      params: new HttpParams()
+        .set('page', '0')
+        .set('size', '1000')
+        .set('sortBy', 'idUsuario')
+        .set('sortDir', 'asc')
+    }).pipe(
       map(normalize),
       catchError(() => of([] as Usuario[]))
     );
 
-    // fallback si no trae datos: intentar con paginación
-    const intento2$ = () => this.http.get<any>(this.apiUrl, {
-      params: new HttpParams().set('page', '0').set('size', '1000')
-    }).pipe(map(normalize), catchError(() => of([] as Usuario[])));
+    // Fallback: intentar sin parámetros de paginación
+    const intento2$ = () => this.http.get<any>(this.apiUrl).pipe(
+      map(normalize),
+      catchError(() => of([] as Usuario[]))
+    );
 
-    // fallback final: endpoint alterno comunes
+    // Fallback final: endpoint alterno
     const intento3$ = () => this.http.get<any>(`${this.apiUrl}/activos`).pipe(
-      map(normalize), catchError(() => of([] as Usuario[]))
+      map(normalize),
+      catchError(() => of([] as Usuario[]))
     );
 
     return intento1$.pipe(
@@ -71,6 +88,16 @@ export class UserService {
       switchMap(list => (list && list.length > 0) ? of(list) : intento3$()),
       catchError(this.handleError)
     );
+  }
+
+  obtenerUsuariosPaginados(page: number = 0, size: number = 10, sortBy: string = 'idUsuario', sortDir: string = 'asc'): Observable<PageResponse<Usuario>> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString())
+      .set('sortBy', sortBy)
+      .set('sortDir', sortDir);
+
+    return this.http.get<any>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
   obtenerUsuarioPorId(id: number): Observable<Usuario> {
@@ -106,6 +133,29 @@ export class UserService {
       );
   }
 
+  desactivarUsuario(id: number): Observable<ApiResponse> {
+    return this.http.patch<ApiResponse>(`${this.apiUrl}/${id}/desactivar`, {}, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  activarUsuario(id: number): Observable<ApiResponse> {
+    return this.http.patch<ApiResponse>(`${this.apiUrl}/${id}/activar`, {}, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  validarPasswordActual(id: number, password: string): Observable<boolean> {
+    return this.http.post<{valid: boolean}>(`${this.apiUrl}/${id}/validar-password`, { password }, this.httpOptions)
+      .pipe(
+        map(response => response.valid),
+        catchError(() => of(false))
+      );
+  }
+
+  cambiarPasswordUsuario(id: number, newPassword: string): Observable<ApiResponse> {
+    return this.http.patch<ApiResponse>(`${this.apiUrl}/${id}/password`, { newPassword }, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
   getDobleAutenticacionOpciones(): string[] {
     return Object.values(DobleAutenticacionTipo);
   }
@@ -118,12 +168,12 @@ export class UserService {
       usuario: usuario.usuario?.trim() || '',
       cargo: {
         // CORRECCIÓN: Usar el mapeo de cargos, por defecto Analista (ID: 2)
-        idCargo: this.obtenerIdCargo(usuario.cargo ?? 'Analista')
+        idCargo: this.obtenerIdCargo(usuario.cargo?.descripcion ?? 'Analista')
       },
       correoEmpresarial: usuario.correoEmpresarial?.trim() || '',
       correoPersonal: usuario.correoPersonal?.trim() || '',
-      telefono1: usuario.celular?.trim() || '',
-      telefono2: usuario.telefono?.trim() || '',
+      telefono1: usuario.telefono1?.trim() || '',
+      telefono2: usuario.telefono2?.trim() || '',
       direccion: usuario.direccion?.trim() || '',
       dobleAutenticacion: this.convertirDobleAutenticacion(usuario.dobleAutenticacion),
       perfiles: usuario.perfiles
@@ -134,17 +184,20 @@ export class UserService {
     // Por defecto devolver ID 2 (Analista)
     return this.cargoMap[cargo] || 2;
   }
-  
-  private convertirDobleAutenticacion(dobleAuth?: string): boolean {
-    return dobleAuth !== null && 
-           dobleAuth !== undefined && 
-           dobleAuth !== '' && 
+
+  private convertirDobleAutenticacion(dobleAuth?: boolean | string): boolean {
+    if (typeof dobleAuth === 'boolean') {
+      return dobleAuth;
+    }
+    return dobleAuth !== null &&
+           dobleAuth !== undefined &&
+           dobleAuth !== '' &&
            Object.values(DobleAutenticacionTipo).includes(dobleAuth as DobleAutenticacionTipo);
   }
-  
+
   private handleError = (error: HttpErrorResponse): Observable<never> => {
     let errorMessage = 'Error inesperado. Por favor, intenta más tarde.';
-    
+
     if (error.error instanceof ErrorEvent) {
       errorMessage = `Error: ${error.error.message}`;
     } else {

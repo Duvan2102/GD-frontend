@@ -229,12 +229,17 @@ export class CreateForm implements OnInit, OnChanges {
     if (!user) return null;
 
     // Si es UsuarioData, usar idUsuario
-    if ('idUsuario' in user) {
+    if ('idUsuario' in user && user.idUsuario) {
       return user.idUsuario;
     }
 
-    // Si es Usuario, usar noUsuario
-    if ('noUsuario' in user) {
+    // Si es Usuario, usar idUsuario
+    if ('idUsuario' in user && user.idUsuario) {
+      return user.idUsuario;
+    }
+
+    // Si es Usuario con noUsuario, usar noUsuario
+    if ('noUsuario' in user && user.noUsuario) {
       return user.noUsuario;
     }
 

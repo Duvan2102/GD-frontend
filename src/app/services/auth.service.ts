@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable, of, BehaviorSubject, throwError } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { map, catchError } from 'rxjs/operators';
-import { Usuario, LoginRequest, AuthResponse, UsuarioData, AuthErrorResponse, MessageResponse } from '../interfaces/common.interfaces';
+import { Usuario, LoginRequest, AuthResponse, UsuarioData, AuthErrorResponse, MessageResponse, PasswordValidationRequest, PasswordValidationResponse } from '../interfaces/common.interfaces';
 import { Position } from './positions.service';
 import { environment } from '../environments/environment';
 
@@ -17,16 +17,38 @@ export class AuthService {
   private currentUser: UsuarioData | null = null;
 
   // Datos mock para desarrollo (se mantienen como respaldo)
-  private mockUsers: (Usuario & { cargoCompleto: Position })[] = [
+  private mockUsers: any[] = [
     {
-      noUsuario: 2,
+      idUsuario: 2,
       identificacion: '1234567802',
       nombres: 'Nombre2',
       apellidos: 'Apellido2',
       usuario: 'usuario2',
-      estado: 'Activo',
+      estado: {
+        idEstado: 1,
+        descripcion: 'ACTIVO'
+      },
       activo: true,
-      cargo: 'Contador',
+      cargo: {
+        idCargo: 5,
+        descripcion: 'Contador',
+        area: {
+          idArea: 1,
+          descripcion: 'Desarrollo',
+          departamento: {
+            idDepartamento: 1,
+            descripcion: 'Tecnología'
+          }
+        }
+      },
+      rol: {
+        idRol: 1,
+        descripcion: 'ADMINISTRADOR'
+      },
+      correoEmpresarial: 'usuario2@empresa.com',
+      telefono1: '3001234567',
+      direccion: 'Calle 123',
+      dobleAutenticacion: true,
       cargoCompleto: {
         idCargo: 5,
         descripcion: 'Contador',
@@ -50,9 +72,27 @@ export class AuthService {
       nombres: 'Luisga',
       apellidos: 'Perez Cabrales',
       usuario: 'luis.perez',
-      estado: 'Activo',
+      estado: {
+        idEstado: 1,
+        descripcion: 'ACTIVO'
+      },
       activo: true,
-      cargo: 'Analista de Desarrollo',
+      cargo: {
+        idCargo: 1,
+        descripcion: 'Analista de Desarrollo',
+        area: {
+          idArea: 1,
+          descripcion: 'Desarrollo',
+          departamento: {
+            idDepartamento: 1,
+            descripcion: 'Tecnología'
+          }
+        }
+      },
+      rol: {
+        idRol: 2,
+        descripcion: 'USUARIO'
+      },
       cargoCompleto: {
         idCargo: 1,
         descripcion: 'Analista de Desarrollo',
@@ -76,9 +116,27 @@ export class AuthService {
       nombres: 'Luis Gabriel',
       apellidos: 'Perez Cabrales',
       usuario: 'luis.perez1',
-      estado: 'Activo',
+      estado: {
+        idEstado: 1,
+        descripcion: 'ACTIVO'
+      },
       activo: true,
-      cargo: 'Analista de Desarrollo',
+      cargo: {
+        idCargo: 1,
+        descripcion: 'Analista de Desarrollo',
+        area: {
+          idArea: 1,
+          descripcion: 'Desarrollo',
+          departamento: {
+            idDepartamento: 1,
+            descripcion: 'Tecnología'
+          }
+        }
+      },
+      rol: {
+        idRol: 2,
+        descripcion: 'USUARIO'
+      },
       cargoCompleto: {
         idCargo: 1,
         descripcion: 'Analista de Desarrollo',
@@ -102,9 +160,27 @@ export class AuthService {
       nombres: 'Luis',
       apellidos: 'Gabriel Perez',
       usuario: 'lucho.gabriel',
-      estado: 'Activo',
+      estado: {
+        idEstado: 1,
+        descripcion: 'ACTIVO'
+      },
       activo: true,
-      cargo: 'Analista de Desarrollo',
+      cargo: {
+        idCargo: 1,
+        descripcion: 'Analista de Desarrollo',
+        area: {
+          idArea: 1,
+          descripcion: 'Desarrollo',
+          departamento: {
+            idDepartamento: 1,
+            descripcion: 'Tecnología'
+          }
+        }
+      },
+      rol: {
+        idRol: 2,
+        descripcion: 'USUARIO'
+      },
       cargoCompleto: {
         idCargo: 1,
         descripcion: 'Analista de Desarrollo',
@@ -128,9 +204,27 @@ export class AuthService {
       nombres: 'Juan Carlos',
       apellidos: 'Pérez González',
       usuario: 'jpere3z',
-      estado: 'Activo',
+      estado: {
+        idEstado: 1,
+        descripcion: 'ACTIVO'
+      },
       activo: true,
-      cargo: 'Analista de Desarrollo',
+      cargo: {
+        idCargo: 1,
+        descripcion: 'Analista de Desarrollo',
+        area: {
+          idArea: 1,
+          descripcion: 'Desarrollo',
+          departamento: {
+            idDepartamento: 1,
+            descripcion: 'Tecnología'
+          }
+        }
+      },
+      rol: {
+        idRol: 2,
+        descripcion: 'USUARIO'
+      },
       cargoCompleto: {
         idCargo: 1,
         descripcion: 'Analista de Desarrollo',
@@ -154,9 +248,27 @@ export class AuthService {
       nombres: 'Luisa',
       apellidos: 'Perez Cabrales',
       usuario: 'luisa.perez',
-      estado: 'Activo',
+      estado: {
+        idEstado: 1,
+        descripcion: 'ACTIVO'
+      },
       activo: true,
-      cargo: 'Analista de Desarrollo',
+      cargo: {
+        idCargo: 1,
+        descripcion: 'Analista de Desarrollo',
+        area: {
+          idArea: 1,
+          descripcion: 'Desarrollo',
+          departamento: {
+            idDepartamento: 1,
+            descripcion: 'Tecnología'
+          }
+        }
+      },
+      rol: {
+        idRol: 2,
+        descripcion: 'USUARIO'
+      },
       cargoCompleto: {
         idCargo: 1,
         descripcion: 'Analista de Desarrollo',
@@ -180,9 +292,27 @@ export class AuthService {
       nombres: 'Brayan',
       apellidos: 'Aranda',
       usuario: 'brayan.aranda',
-      estado: 'Activo',
+      estado: {
+        idEstado: 1,
+        descripcion: 'ACTIVO'
+      },
       activo: true,
-      cargo: 'Analista de Desarrollo',
+      cargo: {
+        idCargo: 1,
+        descripcion: 'Analista de Desarrollo',
+        area: {
+          idArea: 1,
+          descripcion: 'Desarrollo',
+          departamento: {
+            idDepartamento: 1,
+            descripcion: 'Tecnología'
+          }
+        }
+      },
+      rol: {
+        idRol: 2,
+        descripcion: 'USUARIO'
+      },
       cargoCompleto: {
         idCargo: 1,
         descripcion: 'Analista de Desarrollo',
@@ -206,9 +336,27 @@ export class AuthService {
       nombres: 'maria paula',
       apellidos: 'suarez',
       usuario: 'maria.suarez',
-      estado: 'Activo',
+      estado: {
+        idEstado: 1,
+        descripcion: 'ACTIVO'
+      },
       activo: true,
-      cargo: 'Desarrollador Senior',
+      cargo: {
+        idCargo: 2,
+        descripcion: 'Desarrollador Senior',
+        area: {
+          idArea: 1,
+          descripcion: 'Desarrollo',
+          departamento: {
+            idDepartamento: 1,
+            descripcion: 'Tecnología'
+          }
+        }
+      },
+      rol: {
+        idRol: 2,
+        descripcion: 'USUARIO'
+      },
       cargoCompleto: {
         idCargo: 2,
         descripcion: 'Desarrollador Senior',
@@ -232,9 +380,27 @@ export class AuthService {
       nombres: 'No lo se Rick',
       apellidos: 'Parece Falso',
       usuario: 'no.parece',
-      estado: 'Activo',
+      estado: {
+        idEstado: 1,
+        descripcion: 'ACTIVO'
+      },
       activo: true,
-      cargo: 'Analista de Desarrollo',
+      cargo: {
+        idCargo: 1,
+        descripcion: 'Analista de Desarrollo',
+        area: {
+          idArea: 1,
+          descripcion: 'Desarrollo',
+          departamento: {
+            idDepartamento: 1,
+            descripcion: 'Tecnología'
+          }
+        }
+      },
+      rol: {
+        idRol: 2,
+        descripcion: 'USUARIO'
+      },
       cargoCompleto: {
         idCargo: 1,
         descripcion: 'Analista de Desarrollo',
@@ -258,9 +424,27 @@ export class AuthService {
       nombres: 'Juan Carlos',
       apellidos: 'Pérez González',
       usuario: 'jperezZ',
-      estado: 'Activo',
+      estado: {
+        idEstado: 1,
+        descripcion: 'ACTIVO'
+      },
       activo: true,
-      cargo: 'Analista de Desarrollo',
+      cargo: {
+        idCargo: 1,
+        descripcion: 'Analista de Desarrollo',
+        area: {
+          idArea: 1,
+          descripcion: 'Desarrollo',
+          departamento: {
+            idDepartamento: 1,
+            descripcion: 'Tecnología'
+          }
+        }
+      },
+      rol: {
+        idRol: 2,
+        descripcion: 'USUARIO'
+      },
       cargoCompleto: {
         idCargo: 1,
         descripcion: 'Analista de Desarrollo',
@@ -284,9 +468,27 @@ export class AuthService {
       nombres: 'Juan Carlos',
       apellidos: 'Pérez González',
       usuario: 'jperez',
-      estado: 'Inactivo',
+      estado: {
+        idEstado: 2,
+        descripcion: 'INACTIVO'
+      },
       activo: false,
-      cargo: 'Analista de Desarrollo',
+      cargo: {
+        idCargo: 1,
+        descripcion: 'Analista de Desarrollo',
+        area: {
+          idArea: 1,
+          descripcion: 'Desarrollo',
+          departamento: {
+            idDepartamento: 1,
+            descripcion: 'Tecnología'
+          }
+        }
+      },
+      rol: {
+        idRol: 2,
+        descripcion: 'USUARIO'
+      },
       cargoCompleto: {
         idCargo: 1,
         descripcion: 'Analista de Desarrollo',
@@ -342,15 +544,15 @@ export class AuthService {
 
   private convertMockUserToUsuarioData(mockUser: Usuario & { cargoCompleto: Position }): UsuarioData {
     return {
-      idUsuario: mockUser.noUsuario,
+      idUsuario: mockUser.idUsuario || mockUser.noUsuario || 0,
       identificacion: mockUser.identificacion,
       nombres: mockUser.nombres,
       apellidos: mockUser.apellidos,
       usuario: mockUser.usuario,
       correoEmpresarial: mockUser.correoEmpresarial || '',
       correoPersonal: mockUser.correoPersonal,
-      telefono1: mockUser.celular || '',
-      telefono2: mockUser.telefono,
+      telefono1: mockUser.telefono1 || '',
+      telefono2: mockUser.telefono2,
       direccion: mockUser.direccion,
       cargo: {
         idCargo: mockUser.cargoCompleto.idCargo || 0,
@@ -358,8 +560,8 @@ export class AuthService {
         area: mockUser.cargoCompleto.area.descripcion,
         departamento: mockUser.cargoCompleto.area.departamento?.descripcion || ''
       },
-      rol: mockUser.cargo || '',
-      estado: mockUser.estado,
+      rol: mockUser.rol?.descripcion || '',
+      estado: mockUser.estado?.descripcion || '',
       tipologias: [] // Se cargarían desde el backend
     };
   }
@@ -493,5 +695,34 @@ export class AuthService {
   // Obtener el token actual
   getToken(): string | null {
     return localStorage.getItem(this.tokenKey);
+  }
+
+  // Validar contraseña del usuario autenticado
+  validatePassword(password: string): Observable<PasswordValidationResponse> {
+    const token = this.getToken();
+    if (!token) {
+      return throwError(() => new Error('Usuario no autenticado'));
+    }
+
+    const request: PasswordValidationRequest = { password };
+
+    return this.http.post<PasswordValidationResponse>(`${this.apiUrl}/auth/validate-password`, request, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }).pipe(
+      catchError((error: any) => {
+        console.error('Error validando contraseña:', error);
+        // Si hay error de autenticación, devolver respuesta de contraseña incorrecta
+        if (error.status === 401) {
+          return of({
+            valid: false,
+            message: 'Contraseña incorrecta'
+          });
+        }
+        return throwError(() => error);
+      })
+    );
   }
 }

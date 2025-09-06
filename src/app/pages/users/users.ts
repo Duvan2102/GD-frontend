@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subject, takeUntil } from 'rxjs';
 import { Controls } from '../approvals/controls/controls';
 import { FooterControls } from '../approvals/footer-controls/footer-controls';
 import { UserFormModal } from './user-form-modal/user-form-modal';
@@ -8,8 +9,8 @@ import { PasswordModal } from './password-modal/password-modal';
 import { SuccessModal } from './success-modal/success-modal';
 import { ConfirmModal } from './confirm-modal/confirm-modal';
 import { ChangePassword } from './change-password/change-password';
-import { Usuario } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
+import { Usuario } from '../../interfaces/common.interfaces';
 
 @Component({
   selector: 'app-usuarios',
@@ -28,7 +29,7 @@ import { UserService } from '../../services/user.service';
   templateUrl: './users.html',
   styleUrls: ['./users.css']
 })
-export class Users implements OnInit {
+export class Users implements OnInit, OnDestroy {
   usuarios: Usuario[] = [];
   usuariosFiltrados: Usuario[] = [];
   usuariosFiltradosLength = 0;
@@ -44,26 +45,49 @@ export class Users implements OnInit {
   currentAction = '';
   mensajePasswordModal: string = '';
 
-  // -------- MODAL DE ÉXITO / CONFIRMACIÓN --------
+  isLoading = false;
+  errorMessage = '';
+  private destroy$ = new Subject<void>();
+
   modalSuccessVisible: boolean = false;
   modalSuccessMessage: string = '';
   modalSuccessBtn: string = 'Aceptar';
   modalIsConfirmation: boolean = false;
 
+  confirmModalVisible = false;
+  confirmModalMessage = '';
+  confirmModalAction: 'inactivar' | 'activar' | 'eliminarQR' | null = null;
+
   constructor(private userService: UserService) {}
 
   ngOnInit(): void {
-    this.loadUsers();
+    this.cargarUsuarios();
   }
 
-  loadUsers(): void {
-    this.userService.obtenerUsuarios().subscribe({
-      next: (data) => {
-        this.usuarios = data.map(u => ({...u, activo: u.estado === 'Activo'}));
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  cargarUsuarios(): void {
+  this.isLoading = true;
+  this.errorMessage = '';
+  this.usuarios = [];
+
+  this.userService.obtenerUsuarios()
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (usuarios) => {
+        this.usuarios = usuarios;
         this.filtrarUsuarios();
+        this.isLoading = false;
       },
       error: (error) => {
-        this.mostrarModalSuccess('Error al cargar usuarios. Intente de nuevo más tarde.', 'Cerrar');
+        console.error('Error cargando usuarios:', error);
+        this.errorMessage = 'No se pudo conectar con el servidor. Verifique la conexión.';
+        this.isLoading = false;
+        this.usuarios = [];
+        this.filtrarUsuarios();
       }
     });
   }
@@ -101,7 +125,13 @@ export class Users implements OnInit {
   }
 
   filtrarUsuarios() {
-    let filtrados = this.usuarios.filter(u => this.activos ? u.activo : true);
+    let filtrados = this.usuarios.filter(u => {
+  if (this.activos) {
+    return u.estado.descripcion === 'ACTIVO';
+  } else {
+    return true;
+  }
+  });
 
     if (this.searchTerm.trim()) {
       const t = this.searchTerm.trim().toLowerCase();
@@ -176,7 +206,7 @@ export class Users implements OnInit {
         break;
 
       default:
-        break;
+        console.log('Acción no reconocida:', tipo);
     }
   }
 
@@ -199,18 +229,21 @@ export class Users implements OnInit {
   }
 
   saveUser(userData: Usuario): void {
-    this.currentUser = userData;
+    this.cargarUsuarios();
     this.isUserFormVisible = false;
-    this.mensajePasswordModal = this.currentAction === 'crear'
-      ? 'Ingrese su contraseña para finalizar la creación del usuario.'
-      : 'Ingrese su contraseña para guardar los cambios.';
-    this.isPasswordModalVisible = true;
+    this.currentUser = null;
+    this.currentAction = '';
   }
 
   closePasswordModal(): void {
     this.isPasswordModalVisible = false;
     this.currentUser = null;
     this.currentAction = '';
+  }
+
+  handlePasswordValidationError(error: string): void {
+    // El error ya se muestra en el modal, no necesitamos hacer nada adicional aquí
+    console.log('Error de validación de contraseña:', error);
   }
 
   handlePasswordValidation(password: string): void {
@@ -220,32 +253,74 @@ export class Users implements OnInit {
 
     switch (this.currentAction) {
       case 'crear':
-        const nuevo: Usuario = {
-          ...this.currentUser!,
-          noUsuario: this.usuarios.length + 1,
-          estado: 'Activo',
-          activo: true
-        };
-        this.usuarios.push(nuevo);
-        this.mostrarModalSuccess('Usuario creado con éxito', 'Aceptar');
+        if (this.currentUser) {
+          this.userService.crearUsuario(this.currentUser)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (response: any) => {
+                this.mostrarModalSuccess('Usuario creado con éxito', 'Aceptar');
+                this.cargarUsuarios();
+              },
+              error: (error: any) => {
+                console.error('Error creando usuario:', error);
+                alert('Error al crear el usuario: ' + (error.message || 'Error desconocido'));
+              }
+            });
+        }
         break;
 
       case 'editar':
-        const idx = this.usuarios.findIndex(u => u.noUsuario === this.currentUser!.noUsuario);
-        if (idx > -1) {
-          this.usuarios[idx] = { ...this.currentUser! };
+        if (this.currentUser) {
+          this.userService.actualizarUsuario(this.currentUser)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (response: any) => {
+                this.mostrarModalSuccess('Usuario editado con éxito', 'Aceptar');
+                this.cargarUsuarios();
+              },
+              error: (error: any) => {
+                console.error('Error actualizando usuario:', error);
+                alert('Error al actualizar el usuario: ' + (error.message || 'Error desconocido'));
+              }
+            });
         }
-        this.mostrarModalSuccess('Usuario editado con éxito', 'Aceptar');
         break;
 
       case 'inactivar':
-        const idxInactivar = this.usuarios.findIndex(u => u.noUsuario === this.currentUser!.noUsuario);
-        if (idxInactivar > -1) {
-          this.usuarios[idxInactivar].estado = 'Inactivo';
-          this.usuarios[idxInactivar].activo = false;
+      if (this.currentUser && this.currentUser.idUsuario) {
+      this.userService.desactivarUsuario(this.currentUser.idUsuario)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: any) => {
+          console.log('Usuario desactivado exitosamente:', response);
+          this.mostrarModalSuccess('Usuario inactivado con éxito', 'Aceptar');
+          this.cargarUsuarios();
+        },
+        error: (error: any) => {
+          console.error('Error desactivando usuario:', error);
+          alert('Error al inactivar el usuario: ' + (error.message || 'Error desconocido'));
         }
-        this.mostrarModalSuccess('Usuario inactivado con éxito', 'Aceptar');
-        break;
+      });
+      }
+      break;
+
+      case 'activar':
+      if (this.currentUser && this.currentUser.idUsuario) {
+      this.userService.activarUsuario(this.currentUser.idUsuario)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: any) => {
+          console.log('Usuario activado exitosamente:', response);
+          this.mostrarModalSuccess('Usuario activado con éxito', 'Aceptar');
+          this.cargarUsuarios();
+        },
+        error: (error: any) => {
+          console.error('Error activando usuario:', error);
+          alert('Error al activar el usuario: ' + (error.message || 'Error desconocido'));
+        }
+      });
+      }
+      break;
 
       case 'cambiarContraseña':
         this.isPasswordModalVisible = false;
@@ -253,19 +328,28 @@ export class Users implements OnInit {
         break;
 
       case 'eliminarQR':
-        const idxQR = this.usuarios.findIndex(u => u.noUsuario === this.currentUser!.noUsuario);
-        if (idxQR > -1) {
-          this.usuarios[idxQR].dobleAutenticacion = '';
+        if (this.currentUser) {
+          const usuarioSinQR = { ...this.currentUser, dobleAutenticacion: false };
+          this.userService.actualizarUsuario(usuarioSinQR)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: () => {
+                this.mostrarModalSuccess('Código QR eliminado con éxito', 'Aceptar');
+                this.cargarUsuarios();
+              },
+              error: (error: any) => {
+                console.error('Error eliminando QR:', error);
+                alert('Error al eliminar el código QR: ' + (error.message || 'Error desconocido'));
+              }
+            });
         }
-        this.mostrarModalSuccess('Código QR eliminado con éxito', 'Aceptar');
         break;
 
       default:
-        break;
+        console.log('Acción no reconocida en validación:', this.currentAction);
     }
 
     if (this.currentAction !== 'cambiarContraseña') {
-      this.filtrarUsuarios();
       this.isPasswordModalVisible = false;
       this.currentUser = null;
       this.currentAction = '';
@@ -278,44 +362,80 @@ export class Users implements OnInit {
     this.currentAction = '';
   }
 
-  handlePasswordChanged(): void {
-    this.isChangePasswordModalVisible = false;
-    this.currentUser = null;
-    this.currentAction = '';
-    this.mostrarModalSuccess('Contraseña cambiada con éxito', 'Aceptar');
-    this.filtrarUsuarios();
+  handlePasswordChanged(nuevaPassword: string): void {
+  this.isChangePasswordModalVisible = false;
+  this.currentUser = null;
+  this.currentAction = '';
+  this.mostrarModalSuccess('Contraseña cambiada con éxito', 'Aceptar');
+  this.cargarUsuarios();
+}
+
+  abrirConfirmModal(tipo: 'inactivar' | 'activar' | 'eliminarQR', usuario: Usuario) {
+  this.confirmModalAction = tipo;
+  this.currentUser = usuario;
+
+  switch(tipo) {
+    case 'inactivar':
+      this.confirmModalMessage = '¿Está seguro de que desea inactivar el usuario?';
+      break;
+    case 'activar':
+      this.confirmModalMessage = '¿Está seguro de que desea activar el usuario?';
+      break;
+    case 'eliminarQR':
+      this.confirmModalMessage = '¿Está seguro de que desea eliminar el código QR?';
+      break;
   }
 
-  confirmModalVisible = false;
-  confirmModalMessage = '';
-  confirmModalAction: 'inactivar' | 'eliminarQR' | null = null;
+  this.confirmModalVisible = true;
+}
 
-  abrirConfirmModal(tipo: 'inactivar' | 'eliminarQR', usuario: Usuario) {
-    this.confirmModalAction = tipo;
-    this.currentUser = usuario;
-    this.confirmModalMessage =
-      tipo === 'inactivar'
-        ? '¿Está seguro de que desea inactivar el usuario?'
-        : '¿Está seguro de que desea eliminar el código QR?';
-    this.confirmModalVisible = true;
-  }
+onAceptarConfirmacion() {
+  this.confirmModalVisible = false;
 
-  onAceptarConfirmacion() {
-    this.confirmModalVisible = false;
-    if (this.confirmModalAction === 'inactivar') {
+  switch(this.confirmModalAction) {
+    case 'inactivar':
       this.mensajePasswordModal = 'Ingrese su contraseña para inactivar el usuario.';
       this.isPasswordModalVisible = true;
       this.currentAction = 'inactivar';
-    } else if (this.confirmModalAction === 'eliminarQR') {
+      break;
+    case 'activar':
+      this.mensajePasswordModal = 'Ingrese su contraseña para activar el usuario.';
+      this.isPasswordModalVisible = true;
+      this.currentAction = 'activar';
+      break;
+    case 'eliminarQR':
       this.mensajePasswordModal = 'Ingrese su contraseña para eliminar el código QR.';
       this.isPasswordModalVisible = true;
       this.currentAction = 'eliminarQR';
-    }
+      break;
   }
+}
 
   onCancelarConfirmacion() {
     this.confirmModalVisible = false;
     this.confirmModalAction = null;
     this.currentUser = null;
   }
+
+  handlePasswordChange(nuevaPassword: string): void {
+  if (!nuevaPassword.trim()) {
+    return alert('La nueva contraseña no puede estar vacía');
+  }
+
+  if (this.currentUser && this.currentUser.idUsuario) {
+    this.userService.cambiarPasswordUsuario(this.currentUser.idUsuario, nuevaPassword)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: any) => {
+          console.log('Contraseña cambiada exitosamente:', response);
+          this.mostrarModalSuccess('Contraseña cambiada con éxito', 'Aceptar');
+          this.cargarUsuarios();
+        },
+        error: (error: any) => {
+          console.error('Error cambiando contraseña:', error);
+          alert('Error al cambiar la contraseña: ' + (error.message || 'Error desconocido'));
+        }
+      });
+  }
+}
 }
