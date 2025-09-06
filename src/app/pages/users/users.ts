@@ -63,7 +63,6 @@ export class Users implements OnInit {
         this.filtrarUsuarios();
       },
       error: (error) => {
-        console.error('Error al cargar usuarios:', error);
         this.mostrarModalSuccess('Error al cargar usuarios. Intente de nuevo más tarde.', 'Cerrar');
       }
     });
@@ -177,7 +176,7 @@ export class Users implements OnInit {
         break;
 
       default:
-        console.log('Acción no reconocida:', tipo);
+        break;
     }
   }
 
@@ -262,7 +261,7 @@ export class Users implements OnInit {
         break;
 
       default:
-        console.log('Acción no reconocida en validación:', this.currentAction);
+        break;
     }
 
     if (this.currentAction !== 'cambiarContraseña') {

@@ -139,7 +139,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
           this.cargosDisponibles = cargos;
         },
         error: (error) => {
-          console.error('Error cargando cargos:', error);
           this.cargosDisponibles = ['Gerente', 'Analista', 'Desarrollador', 'Administrador', 'Funcionario'];
         }
       });
@@ -206,9 +205,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('Operación exitosa:', response);
-          
-          // CORRECCIÓN: Usar el mensaje del servidor o uno por defecto
           this.successMessage = response?.message || 
             (this.isEditMode ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente');
           
@@ -226,9 +222,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
           }, 2000);
         },
         error: (error) => {
-          console.error('Error en operación:', error);
-          
-          // CORRECCIÓN: Manejar la estructura de error del servicio
           if (error && typeof error === 'object') {
             // El servicio devuelve un objeto con message, status, details, etc.
             this.errorMessage = error.message || 'Error inesperado al procesar la solicitud';

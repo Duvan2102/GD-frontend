@@ -20,7 +20,6 @@ export class AuthGuard implements CanActivate {
     }
 
     if (typeof this.authService[requiredPermission] !== 'function') {
-        console.error(`El permiso '${requiredPermission}' no es una función válida en AuthService.`);
         return this.router.createUrlTree(['/approvals']);
     }
 

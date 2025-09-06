@@ -240,18 +240,6 @@ export class CreateForm implements OnInit, OnChanges {
   selectUser(user: Usuario, index: number): void {
     const userId = this.getUserId(user);
     
-    console.log('[CreateForm] selectUser llamado:', {
-      user: user.usuario,
-      userId,
-      userKeys: Object.keys(user),
-      userObject: user,
-      index,
-      destinatarios: this.destinatarios.map((d, i) => ({
-        index: i,
-        usuario: d.usuario?.usuario,
-        userId: this.getUserId(d.usuario)
-      }))
-    });
 
     // Verificar que no sea el usuario creador
     const currentUserId = this.getUserId(this.currentUser);
@@ -265,11 +253,6 @@ export class CreateForm implements OnInit, OnChanges {
       i !== index && d.usuario && this.getUserId(d.usuario) === userId
     );
     
-    console.log('[CreateForm] Verificación de duplicados:', {
-      isAlreadySelected,
-      userId,
-      currentIndex: index
-    });
     
     if (isAlreadySelected) {
       alert('Este usuario ya está seleccionado en otro campo');
@@ -422,7 +405,6 @@ export class CreateForm implements OnInit, OnChanges {
       anexos: this.anexos.length > 0 ? this.anexos : undefined,
     };
     
-    console.log('[CreateForm] Datos de solicitud construidos:', solicitudData);
     this.onSaved.emit(solicitudData);
     this.resetForm();
   }
