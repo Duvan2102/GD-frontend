@@ -4,14 +4,19 @@
       <h1 class="h4 mb-0" style="font-family: cursive;">Gestor Documental</h1>
     </div>
     <div class="d-flex align-items-center">
-      <div class="text-end me-3 small">
+      <div class="text-end me-3 small" *ngIf="currentUser">
         <div>PROASISTEMAS S.A.</div>
-        <div>Usuario Helisa</div>
-        <div>usuariohelisahelisa.com</div>
+        <div>{{ currentUser.nombres }} {{ currentUser.apellidos }}</div>
+        <div>{{ currentUser.cargo.descripcion }}</div>
       </div>
-      <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
-           style="width:40px; height:40px;">
-        UH
+      <div class="d-flex align-items-center gap-2">
+        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+             style="width:40px; height:40px;">
+          {{ getInitials() }}
+        </div>
+        <button class="btn btn-outline-danger btn-sm" (click)="logout()" title="Cerrar Sesión">
+          <i class="bi bi-box-arrow-right"></i>
+        </button>
       </div>
     </div>
   </header>

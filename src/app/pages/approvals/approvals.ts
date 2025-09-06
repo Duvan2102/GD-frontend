@@ -8,7 +8,7 @@ import { FooterControls } from './footer-controls/footer-controls';
 import { RequestSuccessModal, SuccessModalData } from '../create-request/request-success-modal/request-success-modal';
 import { ApprovalDocumentView, ApprovalDocumentViewData } from './approval-document-view/approval-document-view';
 import { DocumentView, DocumentViewData } from '../create-request/document-view/document-view';
-import { Usuario } from '../../interfaces/common.interfaces';
+import { Usuario, UsuarioData } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
 import { ApprovalService } from '../../services/approval.service';
 import { SuccessModalService } from '../../services/success-modal.service';
@@ -70,8 +70,8 @@ export class Approvals implements OnInit, OnDestroy {
   isApprovalDocumentViewVisible = false;
   documentToApproveData: ApprovalDocumentViewData | null = null;
   isLoadingDetails = false;
-  currentUser: Usuario | null = null;
-  
+  currentUser: UsuarioData | null = null;
+
   // Propiedades para document-view
   isDocumentViewVisible = false;
   documentViewData: DocumentViewData | null = null;
@@ -108,7 +108,7 @@ export class Approvals implements OnInit, OnDestroy {
 
   subscribeToApprovals(): void {
     if (!this.currentUser) return;
-    const uid = this.currentUser.noUsuario;
+    const uid = this.currentUser.idUsuario;
     this.approvalService.getApprovalsForApprover(uid, this.allUsers).subscribe(list => {
       this.pendingApprovals = list || [];
       this.refreshApprovalsSource();
@@ -126,7 +126,7 @@ export class Approvals implements OnInit, OnDestroy {
 
   onManage(id: string): void {
     this.isLoadingDetails = true;
-    const uid = this.currentUser?.noUsuario;
+    const uid = this.currentUser?.idUsuario;
     this.approvalService.getApprovalDetails(id, this.allUsers, uid).pipe(delay(500))
       .subscribe(requestDetails => {
       if (requestDetails) {
@@ -167,24 +167,24 @@ export class Approvals implements OnInit, OnDestroy {
   }
 
   handleViewApprovedDocument(data: SuccessModalData): void {
-    
-    const documentFile = data?.documentoAprobacion || 
-                        (data?.documentosAnexos as any)?.[0] || 
-                        (data?.anexos as any)?.[0] || 
+
+    const documentFile = data?.documentoAprobacion ||
+                        (data?.documentosAnexos as any)?.[0] ||
+                        (data?.anexos as any)?.[0] ||
                         (data?.adjuntos as any)?.[0] ||
-                        (data as any)?.documento || 
-                        (data as any)?.archivo || 
+                        (data as any)?.documento ||
+                        (data as any)?.archivo ||
                         (data as any)?.file;
-    
-    const documentUrl = data?.documentoUrl || 
-                       (data as any)?.url || 
+
+    const documentUrl = data?.documentoUrl ||
+                       (data as any)?.url ||
                        (data as any)?.documentUrl;
-    
-    
-    if (!documentFile && !documentUrl && data?.pdfOriginalName && this.currentUser?.noUsuario) {
+
+
+      if (!documentFile && !documentUrl && data?.pdfOriginalName && this.currentUser?.idUsuario) {
       this.isLoadingDetails = true;
-      
-      this.approvalService.getDocumentPdf(data.id!, this.currentUser.noUsuario).subscribe({
+
+      this.approvalService.getDocumentPdf(data.id!, this.currentUser.idUsuario).subscribe({
         next: (pdfBlob: Blob) => {
           const pdfUrl = URL.createObjectURL(pdfBlob);
           this.documentViewData = {
@@ -275,7 +275,7 @@ export class Approvals implements OnInit, OnDestroy {
         this.isApprovalDocumentViewVisible = true;
       } else {
         // Si no hay URL directa, intentar obtener el documento del servidor
-        const userId = this.currentUser?.noUsuario;
+        const userId = this.currentUser?.idUsuario;
         if (userId && data.id) {
           this.approvalService.getDocumentPdf(data.id, userId).subscribe({
             next: (blob) => {
@@ -301,7 +301,7 @@ export class Approvals implements OnInit, OnDestroy {
   }
 
   handleApproveRequest(ev: { id: string | number, comentario?: string }) {
-    const uid = this.currentUser?.noUsuario;
+    const uid = this.currentUser?.idUsuario;
     if (!uid) return;
     this.approvalService.aprobarSolicitud(ev.id, uid, ev.comentario).subscribe({
       next: (appr) => {
@@ -323,7 +323,7 @@ export class Approvals implements OnInit, OnDestroy {
   }
 
   handleRejectRequest(ev: { id: string | number, comentario?: string }) {
-    const uid = this.currentUser?.noUsuario;
+    const uid = this.currentUser?.idUsuario;
     if (!uid) return;
     this.approvalService.rechazarSolicitud(ev.id, uid, ev.comentario).subscribe({
       next: (appr) => {

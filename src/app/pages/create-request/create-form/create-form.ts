@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TypologyService, Typology } from '../../../services/typology.service';
 import { UserService } from '../../../services/user.service';
 import { RecipientService, Destinatario } from '../../../services/recipient.service';
-import { Usuario } from '../../../interfaces/common.interfaces';
+import { Usuario, UsuarioData } from '../../../interfaces/common.interfaces';
 import { DocumentView, DocumentViewData } from '../document-view/document-view';
 import { ConfirmModal } from '../../users/confirm-modal/confirm-modal';
 
@@ -34,7 +34,7 @@ export interface SolicitudData {
 export class CreateForm implements OnInit, OnChanges {
   @ViewChild('docView') docView!: DocumentView;
   @Input() isVisible: boolean = false;
-  @Input() currentUser: Usuario | null = null;
+  @Input() currentUser: UsuarioData | null = null;
   @Output() onSaved = new EventEmitter<SolicitudData>();
   @Output() close = new EventEmitter<void>();
   @Output() deleteRequest = new EventEmitter<string | number>();
@@ -108,11 +108,11 @@ export class CreateForm implements OnInit, OnChanges {
 
   loadUsers(): void {
     this.userService.obtenerUsuarios().subscribe({
-      next: (data) => { 
-        this.allUsers = data; 
+      next: (data) => {
+        this.allUsers = data;
       },
-      error: (error) => { 
-        this.errorMessage = 'Error al cargar los usuarios.'; 
+      error: (error) => {
+        this.errorMessage = 'Error al cargar los usuarios.';
       }
     });
   }
@@ -135,23 +135,23 @@ export class CreateForm implements OnInit, OnChanges {
   private filterUsersLocally(searchTerm: string, currentIndex: number): Usuario[] {
     if (!searchTerm || searchTerm.length <= 1) return [];
     if (!this.allUsers || this.allUsers.length === 0) return [];
-    
+
     // Obtener IDs de usuarios ya seleccionados (excluyendo el campo actual)
     const selectedUserIds = this.destinatarios
       .map((d, i) => i !== currentIndex && d.usuario ? this.getUserId(d.usuario) : null)
       .filter(id => id != null) as number[];
-    
+
     const creatorUserId = this.getUserId(this.currentUser);
     const searchTermLower = searchTerm.toLowerCase();
 
     const filtered = this.allUsers.filter(user => {
       const userId = this.getUserId(user);
-      
+
       // 1. Verificar coincidencia de búsqueda
       const matchesSearch = user.nombres?.toLowerCase().includes(searchTermLower) ||
                            user.apellidos?.toLowerCase().includes(searchTermLower) ||
                            user.usuario?.toLowerCase().includes(searchTermLower);
-      
+
       if (!matchesSearch) return false;
 
       // 2. Excluir usuario creador
@@ -173,7 +173,7 @@ export class CreateForm implements OnInit, OnChanges {
   calculateDropdownPosition(inputElement: HTMLInputElement) {
     const rect = inputElement.getBoundingClientRect();
     const dropdownHeight = 200;
-    
+
     this.dropdownStyle = {
       position: 'fixed',
       bottom: `${window.innerHeight - rect.top + 5}px`,
@@ -224,22 +224,26 @@ export class CreateForm implements OnInit, OnChanges {
   }
 
   // Función auxiliar para obtener el ID del usuario de manera robusta
-  private getUserId(user: Usuario | null): number | null {
+  private getUserId(user: UsuarioData | Usuario | null): number | null {
     // Verificar que el usuario no sea null
     if (!user) return null;
-    
-    // Intentar diferentes propiedades posibles para el ID
-    return user.noUsuario || 
-           (user as any).id || 
-           (user as any).idUsuario || 
-           (user as any).userId || 
-           (user as any).usuarioId || 
-           null;
+
+    // Si es UsuarioData, usar idUsuario
+    if ('idUsuario' in user) {
+      return user.idUsuario;
+    }
+
+    // Si es Usuario, usar noUsuario
+    if ('noUsuario' in user) {
+      return user.noUsuario;
+    }
+
+    return null;
   }
 
   selectUser(user: Usuario, index: number): void {
     const userId = this.getUserId(user);
-    
+
 
     // Verificar que no sea el usuario creador
     const currentUserId = this.getUserId(this.currentUser);
@@ -249,11 +253,11 @@ export class CreateForm implements OnInit, OnChanges {
     }
 
     // Verificar que no esté ya seleccionado en otro campo (excluyendo el campo actual)
-    const isAlreadySelected = this.destinatarios.some((d, i) => 
+    const isAlreadySelected = this.destinatarios.some((d, i) =>
       i !== index && d.usuario && this.getUserId(d.usuario) === userId
     );
-    
-    
+
+
     if (isAlreadySelected) {
       alert('Este usuario ya está seleccionado en otro campo');
       return;
@@ -276,7 +280,7 @@ export class CreateForm implements OnInit, OnChanges {
     if (selectedIndex === this.destinatarios.length - 1 && this.destinatarios[selectedIndex].usuario) {
       const nuevoOrden = this.destinatarios.length + 1;
       this.destinatarios.push(this.recipientService.createNewRecipient(nuevoOrden));
-      
+
       // Enfocar el nuevo campo después de un pequeño delay
       setTimeout(() => {
         const newInput = document.querySelector(`input[placeholder*="Escriba aquí los nombres"]:last-of-type`) as HTMLInputElement;
@@ -286,7 +290,7 @@ export class CreateForm implements OnInit, OnChanges {
       }, 100);
     }
   }
-  
+
   onDocumentoAprobacionChange(event: any): void {
     const file = event.target.files[0];
     if (file && file.type === 'application/pdf') {
@@ -307,7 +311,7 @@ export class CreateForm implements OnInit, OnChanges {
       }
     }
   }
-  
+
   private isValidFileType(file: File): boolean {
     const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     return allowedTypes.includes(file.type);
@@ -328,7 +332,7 @@ export class CreateForm implements OnInit, OnChanges {
     } else {
       this.destinatarios[0] = { orden: 1, usuario: null, searchTerm: '' };
     }
-    
+
     // Si hay un campo activo, actualizar el filtrado
     if (this.activeRecipientIndex !== null && this.destinatarios[this.activeRecipientIndex]?.searchTerm) {
       const searchTerm = this.destinatarios[this.activeRecipientIndex].searchTerm.toLowerCase();
@@ -393,7 +397,7 @@ export class CreateForm implements OnInit, OnChanges {
   onGuardar(): void {
     // Resolver destinatarios
     this.recipientService.resolveTypedRecipients(this.destinatarios, this.allUsers);
-    
+
     // Validar formulario
     if (!this.isFormValid()) {
       alert('Por favor completa todos los campos obligatorios, incluyendo al menos un destinatario válido.');
@@ -412,7 +416,7 @@ export class CreateForm implements OnInit, OnChanges {
       documentoAprobacion: this.documentoAprobacion || undefined,
       anexos: this.anexos.length > 0 ? this.anexos : undefined,
     };
-    
+
     this.onSaved.emit(solicitudData);
     this.resetForm();
   }

@@ -52,11 +52,11 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   ascendingOrder: boolean = false;
   isLoading = true;
   currentUserId?: number;
-  
+
   // Propiedades para document-view
   isDocumentViewVisible = false;
   documentViewData: DocumentViewData | null = null;
-  
+
   // Propiedades para la modal de metadata
   isDetailModalVisible = false;
   successModalData: SuccessModalData | null = null;
@@ -72,8 +72,10 @@ export class ApprovalDetails implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.authService.getCurrentUser().subscribe(u => {
-      this.currentUserId = u.noUsuario;
-      this.loadInitialData();
+      if (u) {
+        this.currentUserId = u.idUsuario;
+        this.loadInitialData();
+      }
     });
   }
 
@@ -161,7 +163,7 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   private showDetailsModal(id: string): void {
     this.isLoadingDetails = true;
     const uid = this.currentUserId;
-    
+
     this.approvalService.getApprovalDetails(id, this.allUsers, uid).pipe(delay(500))
       .subscribe(requestDetails => {
         if (requestDetails) {
@@ -178,21 +180,21 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   }
 
   handleViewApprovedDocument(data: SuccessModalData): void {
-    const documentFile = data?.documentoAprobacion || 
-                        (data?.documentosAnexos as any)?.[0] || 
-                        (data?.anexos as any)?.[0] || 
+    const documentFile = data?.documentoAprobacion ||
+                        (data?.documentosAnexos as any)?.[0] ||
+                        (data?.anexos as any)?.[0] ||
                         (data?.adjuntos as any)?.[0] ||
-                        (data as any)?.documento || 
-                        (data as any)?.archivo || 
+                        (data as any)?.documento ||
+                        (data as any)?.archivo ||
                         (data as any)?.file;
-    
-    const documentUrl = data?.documentoUrl || 
-                       (data as any)?.url || 
+
+    const documentUrl = data?.documentoUrl ||
+                       (data as any)?.url ||
                        (data as any)?.documentUrl;
-    
+
     if (!documentFile && !documentUrl && data?.pdfOriginalName && this.currentUserId) {
       this.isLoadingDetails = true;
-      
+
       this.approvalService.getDocumentPdf(data.id!, this.currentUserId).subscribe({
         next: (pdfBlob: Blob) => {
           const pdfUrl = URL.createObjectURL(pdfBlob);

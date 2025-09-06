@@ -11,12 +11,20 @@ function isFormData(body: any): boolean {
 export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): Observable<HttpEvent<any>> => {
   const auth = inject(AuthService);
   const user = auth.getCurrentUserValue();
+  const token = auth.getToken();
   const isApi = req.url.startsWith('/api') || req.url.includes('/api/');
   const isSolicitudes = req.url.includes('/solicitudes');
 
   let headers = req.headers;
-  if ((isApi || isSolicitudes) && user?.noUsuario) {
-    headers = headers.set('X-User-Id', String(user.noUsuario));
+
+  // Agregar token de autenticación si existe
+  if (token && (isApi || isSolicitudes)) {
+    headers = headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  // Agregar ID de usuario si existe (para compatibilidad con el sistema actual)
+  if ((isApi || isSolicitudes) && user?.idUsuario) {
+    headers = headers.set('X-User-Id', String(user.idUsuario));
   }
   // Evitar forzar Content-Type cuando es FormData
   if (!isFormData(req.body) && !headers.has('Content-Type')) {
@@ -34,7 +42,7 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
     cloned.headers.keys().forEach(key => {
       headersObj[key] = cloned.headers.get(key) || '';
     });
-    
+
   }
 
   if (environment.enableLogging) {

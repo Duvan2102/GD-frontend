@@ -2,7 +2,6 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Layout} from './layout/layout';
 import { Approvals } from "./pages/approvals/approvals";
-import { UserSwitcherComponent } from './components/user-switcher/user-switcher.component';
 import { SuccessModalComponent } from './components/success-modal/success-modal.component';
 import { SuccessModalService, SuccessModalData } from './services/success-modal.service';
 import { Subscription } from 'rxjs';
@@ -10,13 +9,13 @@ import { Subscription } from 'rxjs';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [ RouterOutlet, UserSwitcherComponent, SuccessModalComponent],
+  imports: [ RouterOutlet, SuccessModalComponent],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
 export class App implements OnInit, OnDestroy {
   protected title = 'gd-frontend';
-  
+
   // Success modal properties
   isSuccessModalVisible = false;
   successModalTitle = 'Proceso completado con éxito';

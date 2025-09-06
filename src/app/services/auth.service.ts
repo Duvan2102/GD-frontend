@@ -1,13 +1,23 @@
 import { Injectable } from '@angular/core';
-import { Observable, of, BehaviorSubject } from 'rxjs';
-import { Usuario } from '../interfaces/common.interfaces';
+import { Observable, of, BehaviorSubject, throwError } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { map, catchError } from 'rxjs/operators';
+import { Usuario, LoginRequest, AuthResponse, UsuarioData, AuthErrorResponse, MessageResponse } from '../interfaces/common.interfaces';
 import { Position } from './positions.service';
+import { environment } from '../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private users: (Usuario & { cargoCompleto: Position })[] = [
+  private apiUrl = environment.apiUrl;
+  private tokenKey = 'auth_token';
+
+  private currentUserSubject = new BehaviorSubject<UsuarioData | null>(null);
+  private currentUser: UsuarioData | null = null;
+
+  // Datos mock para desarrollo (se mantienen como respaldo)
+  private mockUsers: (Usuario & { cargoCompleto: Position })[] = [
     {
       noUsuario: 2,
       identificacion: '1234567802',
@@ -296,64 +306,192 @@ export class AuthService {
     }
   ];
 
-  private currentUserSubject = new BehaviorSubject<Usuario & { cargoCompleto: Position }>(this.users[0]);
-  private currentUser: Usuario & { cargoCompleto: Position } = this.users[0];
-
-  constructor() { }
-
-  getCurrentUser(): Observable<Usuario & { cargoCompleto: Position }> {
-    return this.currentUserSubject.asObservable();
+  constructor(private http: HttpClient) {
+    // Verificar si hay un token guardado al inicializar el servicio
+    this.initializeAuth();
   }
 
-  getCurrentUserValue(): (Usuario & { cargoCompleto: Position }) | null {
-    return this.currentUser ?? null;
-  }
-
-  getAllUsers(): (Usuario & { cargoCompleto: Position })[] {
-    return this.users;
-  }
-
-  switchUser(userId: number): boolean {
-    const user = this.users.find(u => u.noUsuario === userId);
-    if (user) {
-      this.currentUser = user;
-      this.currentUserSubject.next(user);
-      return true;
+  private initializeAuth(): void {
+    const token = localStorage.getItem(this.tokenKey);
+    if (token) {
+      // En un caso real, aquí se validaría el token con el backend
+      // Por ahora, solo verificamos que existe
+      this.loadUserFromToken();
     }
-    return false;
   }
 
-  switchUserByUsername(username: string): boolean {
-    const user = this.users.find(u => u.usuario === username);
-    if (user) {
-      this.currentUser = user;
-      this.currentUserSubject.next(user);
-      return true;
+  private loadUserFromToken(): void {
+    // En un caso real, aquí se decodificaría el JWT y se cargarían los datos del usuario
+    // Por ahora, solo verificamos que el token existe y mantenemos el usuario actual
+    console.log('Loading user from token...');
+
+    // Si ya hay un usuario cargado, no hacer nada
+    if (this.currentUser) {
+      console.log('User already loaded:', this.currentUser);
+      return;
     }
-    return false;
+
+    // Si no hay usuario, cargar uno mock como fallback
+    const mockUser = this.mockUsers[0];
+    if (mockUser) {
+      console.log('Loading mock user as fallback');
+      this.currentUser = this.convertMockUserToUsuarioData(mockUser);
+      this.currentUserSubject.next(this.currentUser);
+    }
   }
 
-  // Permisos según privilegio por letra del cargo: E=Admin, I=Usuario, A=Auditor
-  setCargoPrivilege(privilegio: 'E'|'I'|'A'): void {
-    const isAdmin = privilegio === 'E';
-    const isAuditor = privilegio === 'A';
-    this.currentUser.cargoCompleto.permisos = {
-      esAdministrador: isAdmin,
-      esAuditor: isAuditor
+  private convertMockUserToUsuarioData(mockUser: Usuario & { cargoCompleto: Position }): UsuarioData {
+    return {
+      idUsuario: mockUser.noUsuario,
+      identificacion: mockUser.identificacion,
+      nombres: mockUser.nombres,
+      apellidos: mockUser.apellidos,
+      usuario: mockUser.usuario,
+      correoEmpresarial: mockUser.correoEmpresarial || '',
+      correoPersonal: mockUser.correoPersonal,
+      telefono1: mockUser.celular || '',
+      telefono2: mockUser.telefono,
+      direccion: mockUser.direccion,
+      cargo: {
+        idCargo: mockUser.cargoCompleto.idCargo || 0,
+        descripcion: mockUser.cargoCompleto.descripcion,
+        area: mockUser.cargoCompleto.area.descripcion,
+        departamento: mockUser.cargoCompleto.area.departamento?.descripcion || ''
+      },
+      rol: mockUser.cargo || '',
+      estado: mockUser.estado,
+      tipologias: [] // Se cargarían desde el backend
     };
   }
 
-  // El administrador tiene acceso a las vistas de Usuarios y Administración
+  getCurrentUser(): Observable<UsuarioData | null> {
+    return this.currentUserSubject.asObservable();
+  }
+
+  getCurrentUserValue(): UsuarioData | null {
+    return this.currentUser;
+  }
+
+  getAllUsers(): (Usuario & { cargoCompleto: Position })[] {
+    return this.mockUsers;
+  }
+
+
+  // Métodos de permisos (simplificados para el nuevo modelo)
   canAccessAdmin(): boolean {
-    return this.currentUser.cargoCompleto.permisos?.esAdministrador ?? false;
+    // En el nuevo modelo, se puede determinar por el rol o cargo
+    return this.currentUser?.rol?.toLowerCase().includes('admin') ?? false;
   }
 
   canAccessUsers(): boolean {
-    return this.currentUser.cargoCompleto.permisos?.esAdministrador ?? false;
+    return this.currentUser?.rol?.toLowerCase().includes('admin') ?? false;
   }
 
-  // El auditor tiene acceso a la vista de Reportes
   canAccessReports(): boolean {
-    return this.currentUser.cargoCompleto.permisos?.esAuditor ?? false;
+    return this.currentUser?.rol?.toLowerCase().includes('auditor') ?? false;
+  }
+
+  // Método de login que consume el backend real
+  login(username: string, password: string): Observable<boolean> {
+    const loginRequest: LoginRequest = {
+      usuario: username,
+      password: password
+    };
+
+    console.log('Sending login request to:', `${this.apiUrl}/auth/login`);
+    console.log('Login request data:', loginRequest);
+
+    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/login`, loginRequest)
+      .pipe(
+        map((response: AuthResponse) => {
+          console.log('Login response received:', response);
+
+          // Guardar el token
+          localStorage.setItem(this.tokenKey, response.token);
+          console.log('Token saved to localStorage');
+
+          // Actualizar el usuario actual
+          this.currentUser = response.usuario;
+          this.currentUserSubject.next(this.currentUser);
+          console.log('Current user updated:', this.currentUser);
+
+          return true;
+        }),
+        catchError((error: any) => {
+          console.error('Error en login:', error);
+          return throwError(() => error);
+        })
+      );
+  }
+
+  // Método de login síncrono para compatibilidad (usar solo en desarrollo)
+  loginSync(username: string, password: string): boolean {
+    // Buscar usuario por nombre de usuario en datos mock
+    const user = this.mockUsers.find(u => u.usuario === username && u.activo);
+
+    if (user) {
+      // En desarrollo, aceptamos cualquier contraseña de 4+ caracteres
+      if (password && password.length >= 4) {
+        this.currentUser = this.convertMockUserToUsuarioData(user);
+        this.currentUserSubject.next(this.currentUser);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Método de logout
+  logout(): Observable<boolean> {
+    const token = localStorage.getItem(this.tokenKey);
+
+    if (token) {
+      return this.http.post<MessageResponse>(`${this.apiUrl}/auth/logout`, {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }).pipe(
+        map(() => {
+          this.clearAuthData();
+          return true;
+        }),
+        catchError((error: any) => {
+          console.error('Error en logout:', error);
+          // Aunque falle el logout en el backend, limpiar datos locales
+          this.clearAuthData();
+          return throwError(() => error);
+        })
+      );
+    } else {
+      this.clearAuthData();
+      return of(true);
+    }
+  }
+
+  private clearAuthData(): void {
+    localStorage.removeItem(this.tokenKey);
+    this.currentUser = null;
+    this.currentUserSubject.next(null);
+  }
+
+  // Método de logout síncrono para compatibilidad
+  logoutSync(): void {
+    this.clearAuthData();
+  }
+
+  // Verificar si el usuario está autenticado
+  isAuthenticated(): boolean {
+    const hasUser = this.currentUser !== null;
+    const hasToken = this.getToken() !== null;
+    const isActive = this.currentUser?.estado === 'Activo' || this.currentUser?.estado === 'ACTIVO' || this.currentUser?.estado === 'activo';
+
+    console.log('Auth check:', { hasUser, hasToken, isActive, estado: this.currentUser?.estado });
+
+    return hasUser && hasToken && (isActive || !this.currentUser?.estado); // Si no hay estado, asumir activo
+  }
+
+  // Obtener el token actual
+  getToken(): string | null {
+    return localStorage.getItem(this.tokenKey);
   }
 }

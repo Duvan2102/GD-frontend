@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SolicitudData } from '../create-form/create-form';
-import { Usuario } from '../../../interfaces/common.interfaces';
+import { Usuario, UsuarioData } from '../../../interfaces/common.interfaces';
 import { ConfirmationModal, ConfirmationModalData } from '../../approvals/confirmation-modal/confirmation-modal';
 import { CommentModal, CommentModalData } from './comment-modal';
 import { ApprovalService } from '../../../services/approval.service';
@@ -96,8 +96,8 @@ export class RequestSuccessModal implements OnChanges {
   @Input() usuariosDisponibles: Usuario[] = [];
   @Input() isApprovalFlow = false;
   @Input() hideManageButton = false;
-  @Input() hideViewDocumentButton = false; // Nuevo input para ocultar el botón de visualizar documento 
-  @Input() currentUser: Usuario | null = null; // Usuario actual para las llamadas al servicio
+  @Input() hideViewDocumentButton = false; // Nuevo input para ocultar el botón de visualizar documento
+  @Input() currentUser: UsuarioData | null = null; // Usuario actual para las llamadas al servicio
 
   @Output() close = new EventEmitter<void>();
   @Output() cancelRequest = new EventEmitter<{ solicitudId: string | number, comentario?: string }>();
@@ -105,7 +105,7 @@ export class RequestSuccessModal implements OnChanges {
   @Output() viewApprovedDocument = new EventEmitter<SuccessModalData>();
 
   approvers: AprobadorTabla[] = [];
-  
+
   // Confirmation modal properties
   isConfirmationModalVisible = false;
   confirmationModalData: ConfirmationModalData | null = null;
@@ -129,41 +129,41 @@ export class RequestSuccessModal implements OnChanges {
       this.approvers = [];
       return;
     }
-    
+
     // Mapear destinatarios y asignar orden secuencial
     const mappedApprovers = this.data.destinatarios.map((dest: DestinatarioData, index: number) => {
       // Usar la misma lógica de búsqueda que ApprovalService
       const findUserById = (id?: number): any => {
         if (!id) return undefined;
-        
+
         // Buscar por noUsuario (ID numérico)
         let user = this.usuariosDisponibles.find(u => u.noUsuario === id);
-        
+
         // Si no se encuentra, buscar por idUsuario (para usuarios resueltos)
         if (!user) {
           user = this.usuariosDisponibles.find(u => (u as any).idUsuario === id);
         }
-        
+
         // Si no se encuentra, buscar por usuario (string)
         if (!user) {
           user = this.usuariosDisponibles.find(u => u.usuario === String(id));
         }
-        
+
         // Si aún no se encuentra, buscar por ID en otros campos
         if (!user) {
           user = this.usuariosDisponibles.find(u => (u as any).id === id || (u as any).usuarioId === id);
         }
-        
+
         return user;
       };
-      
+
       // Obtener el ID numérico del destinatario
       const usuarioId = typeof dest.usuarioId === 'string' ? parseInt(dest.usuarioId, 10) : dest.usuarioId;
       const usuario = findUserById(usuarioId);
-      
+
       // Mapear el estado correctamente según la respuesta de la API
       const estadoAprobador = this.mapEstadoFromAPI(dest.decision || dest.estado || 'PENDIENTE');
-      
+
       return {
         usuarioId: dest.usuarioId,
         nombresApellidos: usuario ? `${usuario.nombres} ${usuario.apellidos}` : (dest.nombre || 'Usuario no encontrado'),
@@ -174,39 +174,39 @@ export class RequestSuccessModal implements OnChanges {
         orden: index + 1 // Siempre asignar orden secuencial basado en el índice
       };
     });
-    
+
     // Los aprobadores ya están en orden secuencial por el mapeo
     this.approvers = mappedApprovers;
-    
+
   }
-  
+
   private extractAreaString(user: any): string {
     if (!user) return 'Área no especificada';
-    
+
     // Función para extraer el valor de un campo (maneja objetos y strings)
     const extractFieldValue = (field: any, fieldName: string): string | null => {
       if (!field) return null;
-      
+
       // Si es string, devolverlo directamente
       if (typeof field === 'string') {
         return field.trim();
       }
-      
+
       // Si es objeto, buscar propiedades comunes
       if (typeof field === 'object') {
         // Buscar propiedades comunes en objetos de cargo/rol
         const possibleKeys = ['nombre', 'name', 'descripcion', 'description', 'titulo', 'title', 'valor', 'value'];
-        
+
         for (const key of possibleKeys) {
           if (field[key] && typeof field[key] === 'string') {
             return field[key].trim();
           }
         }
-        
+
         // Si no se encuentra nada, convertir el objeto a string
         return JSON.stringify(field);
       }
-      
+
       return null;
     };
 
@@ -214,49 +214,49 @@ export class RequestSuccessModal implements OnChanges {
     const isValidArea = (field: any, fieldName: string): boolean => {
       const fieldValue = extractFieldValue(field, fieldName);
       if (!fieldValue) return false;
-      
+
       // Solo permitir campos que realmente pueden ser áreas organizacionales
       const validAreaFields = ['cargo', 'area', 'departamento', 'gerencia', 'centroCosto', 'areaTrabajo', 'sede', 'ubicacion', 'rol'];
-      
+
       if (!validAreaFields.includes(fieldName)) {
         return false;
       }
-      
+
       if (fieldValue.length === 0) return false;
       if (fieldValue.toLowerCase().includes('null')) return false;
       if (fieldValue.toLowerCase().includes('undefined')) return false;
-      
+
       // Evitar campos que son solo números (como identificaciones)
       if (/^\d+$/.test(fieldValue)) return false;
-      
+
       // Permitir cargos y roles válidos (solo letras y espacios)
       if (/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(fieldValue) && fieldValue.length < 50) {
         // Solo rechazar si parece ser un nombre personal (muy corto o muy común)
         const personalNames = ['juan', 'carlos', 'maria', 'ana', 'luis', 'pedro', 'jose', 'antonio'];
         const lowerValue = fieldValue.toLowerCase();
-        
+
         // Si contiene palabras típicas de cargos/roles, permitirlo
         const jobKeywords = ['analista', 'desarrollador', 'administrador', 'gerente', 'director', 'coordinador', 'supervisor', 'asistente', 'especialista', 'consultor', 'ingeniero', 'arquitecto', 'diseñador', 'programador', 'soporte', 'ventas', 'marketing', 'recursos', 'humanos', 'finanzas', 'contabilidad', 'operaciones', 'logistica', 'calidad', 'seguridad', 'sistemas', 'tecnologia', 'informatica'];
-        
+
         if (jobKeywords.some(keyword => lowerValue.includes(keyword))) {
           return true; // Es un cargo/rol válido
         }
-        
+
         // Si es muy corto y parece nombre personal, rechazarlo
         if (fieldValue.length < 10 && personalNames.some(name => lowerValue.includes(name))) {
           return false;
         }
-        
+
         // Para otros casos, permitir (podría ser un cargo válido)
         return true;
       }
-      
+
       // Evitar campos que parecen correos
       if (/@/.test(fieldValue)) return false;
-      
+
       // Evitar campos que parecen teléfonos
       if (/^\d+[\s\-\(\)]*\d+/.test(fieldValue)) return false;
-      
+
       // Evitar campos que parecen direcciones
       const addressPatterns = [
         /calle\s+\d+/i,
@@ -269,42 +269,42 @@ export class RequestSuccessModal implements OnChanges {
         /manzana/i,
         /lote/i
       ];
-      
+
       return !addressPatterns.some(pattern => pattern.test(fieldValue));
     };
-    
+
     // Buscar en TODOS los campos del usuario, no solo los predefinidos
     let area = null;
-    
+
     // Primero buscar en campos específicos de área, luego cargo como respaldo
     const areaFields = ['area', 'departamento', 'gerencia', 'centroCosto', 'areaTrabajo', 'sede', 'ubicacion'];
     const jobFields = ['cargo', 'rol'];
     const allFields = Object.keys(user);
-    
+
     // Primero buscar en campos específicos de área
     for (const fieldName of areaFields) {
       const fieldValue = user[fieldName];
       const extractedValue = extractFieldValue(fieldValue, fieldName);
-      
+
       if (extractedValue && isValidArea(fieldValue, fieldName)) {
         area = extractedValue;
         break;
       }
     }
-    
+
     // Si no se encuentra área específica, usar cargo como área
     if (!area) {
       for (const fieldName of jobFields) {
         const fieldValue = user[fieldName];
         const extractedValue = extractFieldValue(fieldValue, fieldName);
-        
+
         if (extractedValue && isValidArea(fieldValue, fieldName)) {
           area = extractedValue;
           break;
         }
       }
     }
-    
+
     // Si no se encuentra en campos conocidos, buscar en TODOS los campos
     if (!area) {
       for (const fieldName of allFields) {
@@ -316,7 +316,7 @@ export class RequestSuccessModal implements OnChanges {
         }
       }
     }
-    
+
     // Si aún no se encuentra, usar campos que podrían ser útiles como área
     if (!area) {
       const fallbackFields = ['cargo', 'rol', 'estado'];
@@ -332,18 +332,18 @@ export class RequestSuccessModal implements OnChanges {
         }
       }
     }
-    
+
     // Si aún no se encuentra nada, usar "Sin área especificada"
     if (!area) {
       area = 'Sin área especificada';
     }
-    
+
     return area ? area.trim() : 'Área no especificada';
   }
 
   private mapEstadoFromAPI(estado: string): 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA' {
     if (!estado) return 'PENDIENTE';
-    
+
     const estadoUpper = estado.toUpperCase();
     if (estadoUpper.includes('APROBADO') || estadoUpper === 'APPROVED') return 'APROBADO';
     if (estadoUpper.includes('RECHAZADO') || estadoUpper === 'REJECTED') return 'RECHAZADO';
@@ -391,7 +391,7 @@ export class RequestSuccessModal implements OnChanges {
 
   onCancelRequest(): void {
     if (!this.data?.id) return;
-    
+
     this.confirmationModalData = {
       title: 'Cancelar Solicitud',
       message: '¿Está seguro de que desea cancelar esta solicitud? Esta acción no se puede deshacer.',
@@ -403,16 +403,16 @@ export class RequestSuccessModal implements OnChanges {
       commentPlaceholder: 'Escriba el motivo de la cancelación...',
       commentRequired: true
     };
-    
+
     this.isConfirmationModalVisible = true;
   }
 
   onConfirmationModalConfirm(event: { confirmed: boolean, comment?: string }): void {
     this.isConfirmationModalVisible = false;
-    
+
     if (event.confirmed && this.data?.id) {
       const comentario = event.comment?.trim() || ''; // Ensure it's a string
-      this.cancelRequest.emit({ 
+      this.cancelRequest.emit({
         solicitudId: this.data.id,
         comentario: comentario
       });
@@ -422,9 +422,9 @@ export class RequestSuccessModal implements OnChanges {
   onConfirmationModalCancel(): void {
     this.isConfirmationModalVisible = false;
   }
-  
+
   onClose(): void { this.close.emit(); }
-  
+
 
   canCancelRequest(): boolean {
     const estado = this.data?.estado;
@@ -434,12 +434,12 @@ export class RequestSuccessModal implements OnChanges {
   formatDate(date?: Date | null): string {
     if (!date) return '-';
     try {
-      return new Intl.DateTimeFormat('es-ES', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      return new Intl.DateTimeFormat('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
       }).format(new Date(date));
     } catch (error) {
       return '-';
@@ -462,8 +462,8 @@ export class RequestSuccessModal implements OnChanges {
 
   hasDocument(): boolean {
     // Verificar si hay algún documento disponible (archivo, URL, o metadatos PDF)
-    return !!(this.data?.documentoAprobacion || 
-              this.data?.documentoUrl || 
+    return !!(this.data?.documentoAprobacion ||
+              this.data?.documentoUrl ||
               this.data?.pdfOriginalName ||
               (this.data?.documentosAnexos as any)?.[0] ||
               (this.data?.anexos as any)?.[0] ||
@@ -483,7 +483,7 @@ export class RequestSuccessModal implements OnChanges {
 
   hasOnlyAnexos(): boolean {
     // Solo mostrar anexos si NO hay documento principal
-    return !this.hasMainDocument() && 
+    return !this.hasMainDocument() &&
            !!(this.data?.anexos && this.data.anexos.length > 0);
   }
 
@@ -514,24 +514,24 @@ export class RequestSuccessModal implements OnChanges {
   }
 
   private handleAttachmentsDownload(): void {
-    if (!this.data?.id || !this.currentUser?.noUsuario) {
+    if (!this.data?.id || !this.currentUser?.idUsuario) {
       alert('No se puede acceder a los adjuntos. Usuario no disponible.');
       return;
     }
 
     this.isLoadingAttachments = true;
-    
+
     // Primero listar los adjuntos
-    this.approvalService.getAttachments(this.data.id, this.currentUser.noUsuario).subscribe({
+    this.approvalService.getAttachments(this.data.id, this.currentUser.idUsuario).subscribe({
       next: (attachments) => {
         this.attachments = attachments;
         this.isLoadingAttachments = false;
-        
+
         if (attachments.length === 0) {
           alert('No hay adjuntos disponibles para esta solicitud.');
           return;
         }
-        
+
         // Si hay adjuntos, descargar el primero (o el principal si se puede identificar)
         const attachmentToDownload = this.findMainAttachment(attachments) || attachments[0];
         this.downloadAttachment(attachmentToDownload);
@@ -546,7 +546,7 @@ export class RequestSuccessModal implements OnChanges {
 
   private findMainAttachment(attachments: any[]): any {
     // Buscar el adjunto principal (puede ser el primero o uno con nombre específico)
-    return attachments.find(att => 
+    return attachments.find(att =>
       att.originalName?.toLowerCase().includes('principal') ||
       att.originalName?.toLowerCase().includes('documento') ||
       att.mime === 'application/pdf'
@@ -554,11 +554,11 @@ export class RequestSuccessModal implements OnChanges {
   }
 
   private downloadAttachment(attachment: any): void {
-    if (!this.data?.id || !this.currentUser?.noUsuario) {
+    if (!this.data?.id || !this.currentUser?.idUsuario) {
       return;
     }
 
-    this.approvalService.downloadAttachment(this.data.id, attachment.id, this.currentUser.noUsuario).subscribe({
+    this.approvalService.downloadAttachment(this.data.id, attachment.id, this.currentUser.idUsuario).subscribe({
       next: (blob) => {
         // Crear URL del blob y descargar
         const url = window.URL.createObjectURL(blob);
@@ -655,7 +655,7 @@ export class RequestSuccessModal implements OnChanges {
 
   getApproverComment(usuarioId: string): string {
     if (!this.data?.destinatarios) return '';
-    
+
     const destinatario = this.data.destinatarios.find((d: DestinatarioData) => d.usuarioId === usuarioId);
     return destinatario?.comentario || '';
   }
@@ -664,7 +664,7 @@ export class RequestSuccessModal implements OnChanges {
     console.log('getCancellationInfo - Estado:', this.data?.estado);
     console.log('getCancellationInfo - Historial:', this.data?.historialGestiones);
     console.log('getCancellationInfo - Data completa:', this.data);
-    
+
     if (this.data?.estado !== 'Cancelada') {
       console.log('getCancellationInfo - No está cancelada');
       return null;
@@ -672,8 +672,8 @@ export class RequestSuccessModal implements OnChanges {
 
     // Buscar en el historial de gestiones
     if (this.data?.historialGestiones && this.data.historialGestiones.length > 0) {
-      const cancelacion = this.data.historialGestiones.find(gestion => 
-        gestion.tipo === 'CANCELACION' || 
+      const cancelacion = this.data.historialGestiones.find(gestion =>
+        gestion.tipo === 'CANCELACION' ||
         (gestion as any).accion === 'CANCELAR' ||
         (gestion as any).accion === 'CANCELACION'
       );
@@ -692,9 +692,9 @@ export class RequestSuccessModal implements OnChanges {
     const historialRaw = (this.data as any)?.historial || (this.data as any)?.historialAcciones || (this.data as any)?.gestiones;
     if (Array.isArray(historialRaw)) {
       console.log('getCancellationInfo - Historial raw:', historialRaw);
-      
-      const cancelacion = historialRaw.find((item: any) => 
-        item.accion === 'CANCELAR' || 
+
+      const cancelacion = historialRaw.find((item: any) =>
+        item.accion === 'CANCELAR' ||
         item.accion === 'CANCELACION' ||
         item.tipo === 'CANCELAR' ||
         item.tipo === 'CANCELACION'
@@ -712,11 +712,11 @@ export class RequestSuccessModal implements OnChanges {
 
     // Fallback: Si no hay historial pero está cancelada, mostrar información básica
     console.log('getCancellationInfo - No se encontró información de cancelación en historial');
-    
+
     // Buscar información de cancelación en otros campos de la solicitud
     const fechaCancelacion = (this.data as any)?.fechaCancelacion || (this.data as any)?.fechaActualizacion || this.data?.fechaCreacion;
     const comentarioCancelacion = (this.data as any)?.comentarioCancelacion || (this.data as any)?.motivoCancelacion;
-    
+
     if (fechaCancelacion) {
       console.log('getCancellationInfo - Usando información de fallback:', { fechaCancelacion, comentarioCancelacion });
       return {
@@ -724,7 +724,7 @@ export class RequestSuccessModal implements OnChanges {
         comentario: comentarioCancelacion || 'Solicitud cancelada'
       };
     }
-    
+
     console.log('getCancellationInfo - No se encontró información de cancelación');
     return null;
   }
@@ -733,7 +733,7 @@ export class RequestSuccessModal implements OnChanges {
     console.log('getRejectionInfo - Estado:', this.data?.estado);
     console.log('getRejectionInfo - Historial:', this.data?.historialGestiones);
     console.log('getRejectionInfo - Data completa:', this.data);
-    
+
     if (this.data?.estado !== 'Rechazada') {
       console.log('getRejectionInfo - No está rechazada');
       return null;
@@ -741,8 +741,8 @@ export class RequestSuccessModal implements OnChanges {
 
     // Buscar en el historial de gestiones
     if (this.data?.historialGestiones && this.data.historialGestiones.length > 0) {
-      const rechazo = this.data.historialGestiones.find(gestion => 
-        gestion.tipo === 'RECHAZO' || 
+      const rechazo = this.data.historialGestiones.find(gestion =>
+        gestion.tipo === 'RECHAZO' ||
         (gestion as any).accion === 'RECHAZAR' ||
         (gestion as any).accion === 'RECHAZO'
       );
@@ -761,9 +761,9 @@ export class RequestSuccessModal implements OnChanges {
     const historialRaw = (this.data as any)?.historial || (this.data as any)?.historialAcciones || (this.data as any)?.gestiones;
     if (Array.isArray(historialRaw)) {
       console.log('getRejectionInfo - Historial raw:', historialRaw);
-      
-      const rechazo = historialRaw.find((item: any) => 
-        item.accion === 'RECHAZAR' || 
+
+      const rechazo = historialRaw.find((item: any) =>
+        item.accion === 'RECHAZAR' ||
         item.accion === 'RECHAZO' ||
         item.tipo === 'RECHAZAR' ||
         item.tipo === 'RECHAZO'
@@ -781,11 +781,11 @@ export class RequestSuccessModal implements OnChanges {
 
     // Fallback: Si no hay historial pero está rechazada, mostrar información básica
     console.log('getRejectionInfo - No se encontró información de rechazo en historial');
-    
+
     // Buscar información de rechazo en otros campos de la solicitud
     const fechaRechazo = (this.data as any)?.fechaRechazo || (this.data as any)?.fechaActualizacion || this.data?.fechaCreacion;
     const comentarioRechazo = (this.data as any)?.comentarioRechazo || (this.data as any)?.motivoRechazo;
-    
+
     if (fechaRechazo) {
       console.log('getRejectionInfo - Usando información de fallback:', { fechaRechazo, comentarioRechazo });
       return {
@@ -793,7 +793,7 @@ export class RequestSuccessModal implements OnChanges {
         comentario: comentarioRechazo || 'Solicitud rechazada'
       };
     }
-    
+
     console.log('getRejectionInfo - No se encontró información de rechazo');
     return null;
   }

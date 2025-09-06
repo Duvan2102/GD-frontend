@@ -8,7 +8,7 @@ import { FooterControls } from '../approvals/footer-controls/footer-controls';
 import { CreateForm, SolicitudData } from './create-form/create-form';
 import { RequestSuccessModal, SuccessModalData } from './request-success-modal/request-success-modal';
 import { DocumentView, DocumentViewData } from './document-view/document-view';
-import { Usuario } from '../../interfaces/common.interfaces';
+import { Usuario, UsuarioData } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
 import { TypologyService, Typology } from '../../services/typology.service';
 import { ApprovalService } from '../../services/approval.service';
@@ -39,7 +39,7 @@ export class CreateRequest implements OnInit, OnDestroy {
   isCreateModalVisible = false;
   isDetailModalVisible = false;
   successModalData: SuccessModalData | null = null;
-  currentUser: Usuario | null = null;
+  currentUser: UsuarioData | null = null;
   allUsers: Usuario[] = [];
   tipologias: Typology[] = [];
   approvalsList: Approval[] = [];
@@ -55,12 +55,12 @@ export class CreateRequest implements OnInit, OnDestroy {
   ascendingOrder: boolean = false;
   isLoading = true;
   isLoadingDetails = false;
-  
+
   // Propiedades para document-view
   isDocumentViewVisible = false;
   documentViewData: DocumentViewData | null = null;
   hideSendButtonInDocumentView = true; // Por defecto oculto, se cambia según el contexto
-  
+
   // Flags para controlar cuándo mostrar modal de éxito
   private wasRequestCreatedSuccessfully = false;
   private wasRequestCancelledSuccessfully = false;
@@ -99,7 +99,7 @@ export class CreateRequest implements OnInit, OnDestroy {
 
   subscribeToApprovals(): void {
     if (!this.currentUser) return;
-    this.approvalsSubscription = this.approvalService.getApprovalsByCreator(this.currentUser.noUsuario, this.allUsers)
+    this.approvalsSubscription = this.approvalService.getApprovalsByCreator(this.currentUser.idUsuario, this.allUsers)
       .subscribe(approvals => {
         this.approvalsList = approvals;
         this.applyViewLogic();
@@ -118,9 +118,9 @@ export class CreateRequest implements OnInit, OnDestroy {
   handleSaveRequest(solicitudData: SolicitudData): void {
     if (!this.currentUser) return;
 
-    const idSolicitante = this.currentUser.noUsuario;
+    const idSolicitante = this.currentUser.idUsuario;
     const idTipologia = Number(solicitudData.tipologia);
-    
+
     const destinatariosIds: number[] = solicitudData.destinatarios
       .filter(d => d.noUsuarioId && d.noUsuarioId > 0)
       .map(d => d.noUsuarioId as number);
@@ -160,7 +160,7 @@ export class CreateRequest implements OnInit, OnDestroy {
   closeDetailModal(): void {
     this.isDetailModalVisible = false;
     this.successModalData = null;
-    
+
     // Mostrar modal de éxito como última acción en todos los casos
     if (this.wasRequestCreatedSuccessfully) {
       this.successModalService.showSuccess('Solicitud enviada', 'Tu solicitud ha sido creada y enviada exitosamente. Los aprobadores han sido notificados para su revisión.');
@@ -173,17 +173,17 @@ export class CreateRequest implements OnInit, OnDestroy {
 
   handleViewApprovedDocument(data: SuccessModalData): void {
     // Priorizar documento principal sobre anexos
-    const mainDocumentFile = data?.documentoAprobacion || 
-                            (data as any)?.documento || 
-                            (data as any)?.archivo || 
+    const mainDocumentFile = data?.documentoAprobacion ||
+                            (data as any)?.documento ||
+                            (data as any)?.archivo ||
                             (data as any)?.file;
-    
-    const mainDocumentUrl = data?.documentoUrl || 
-                           (data as any)?.url || 
+
+    const mainDocumentUrl = data?.documentoUrl ||
+                           (data as any)?.url ||
                            (data as any)?.documentUrl;
-    
+
     this.hideSendButtonInDocumentView = true;
-    
+
     // Si hay documento principal, usarlo
     if (mainDocumentFile || mainDocumentUrl) {
       this.documentViewData = {
@@ -197,12 +197,12 @@ export class CreateRequest implements OnInit, OnDestroy {
       this.isDocumentViewVisible = true;
       return;
     }
-    
+
     // Si no hay documento principal pero hay metadatos PDF, intentar descargarlo
-    if (data?.pdfOriginalName && this.currentUser?.noUsuario) {
+    if (data?.pdfOriginalName && this.currentUser?.idUsuario) {
       this.isLoadingDetails = true;
-      
-      this.approvalService.getDocumentPdf(data.id!, this.currentUser.noUsuario).subscribe({
+
+      this.approvalService.getDocumentPdf(data.id!, this.currentUser.idUsuario).subscribe({
         next: (pdfBlob: Blob) => {
           const pdfUrl = URL.createObjectURL(pdfBlob);
           this.documentViewData = {
@@ -264,7 +264,7 @@ export class CreateRequest implements OnInit, OnDestroy {
   }
 
   handleCancelRequest(event: { solicitudId: string | number, comentario?: string }): void {
-    const uid = this.currentUser?.noUsuario;
+    const uid = this.currentUser?.idUsuario;
     if (!uid) return;
     this.approvalService.cancelarSolicitud(event.solicitudId, uid, event.comentario).subscribe({
       next: () => {
@@ -284,11 +284,11 @@ export class CreateRequest implements OnInit, OnDestroy {
   }
 
   handleDeleteRequest(solicitudId: string | number): void {
-    const uid = this.currentUser?.noUsuario;
+    const uid = this.currentUser?.idUsuario;
     if (!uid) {
       return;
     }
-    
+
     this.approvalService.deleteApproval(solicitudId, uid).subscribe({
       next: () => {
         this.subscribeToApprovals(); // Recargar la lista
@@ -300,7 +300,7 @@ export class CreateRequest implements OnInit, OnDestroy {
   }
 
   onManage(id: string): void {
-    const uid = this.currentUser?.noUsuario;
+    const uid = this.currentUser?.idUsuario;
     this.isLoadingDetails = true;
     this.approvalService.getApprovalDetails(id, this.allUsers, uid).pipe()
       .subscribe(request => {

@@ -60,3 +60,52 @@ export enum DobleAutenticacionTipo {
   GOOGLE_AUTHENTICATOR = 'Google Authenticator',
   TOKEN_SEGURIDAD = 'Token de Seguridad'
 }
+
+// Interfaces para la autenticación con el backend
+export interface LoginRequest {
+  usuario: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  usuario: UsuarioData;
+}
+
+export interface UsuarioData {
+  idUsuario: number;
+  identificacion: string;
+  nombres: string;
+  apellidos: string;
+  usuario: string;
+  correoEmpresarial: string;
+  correoPersonal?: string;
+  telefono1: string;
+  telefono2?: string;
+  direccion?: string;
+  cargo: CargoData;
+  rol: string;
+  estado: string;
+  tipologias: TipologiaData[];
+}
+
+export interface CargoData {
+  idCargo: number;
+  descripcion: string;
+  area: string;
+  departamento: string;
+}
+
+export interface TipologiaData {
+  idTipologia: number;
+  descripcion: string;
+}
+
+export interface AuthErrorResponse {
+  code: string;
+  message: string;
+}
+
+export interface MessageResponse {
+  message: string;
+}

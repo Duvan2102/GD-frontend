@@ -12,7 +12,20 @@ export class AuthGuard implements CanActivate {
   canActivate(
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot): boolean | UrlTree {
-    
+
+    console.log('AuthGuard checking authentication...');
+    console.log('Current user:', this.authService.getCurrentUserValue());
+    console.log('Is authenticated:', this.authService.isAuthenticated());
+    console.log('Token exists:', !!this.authService.getToken());
+
+    // Verificar si el usuario está autenticado
+    if (!this.authService.isAuthenticated()) {
+      console.log('User not authenticated, redirecting to login');
+      return this.router.createUrlTree(['/login']);
+    }
+
+    console.log('User authenticated, allowing access');
+
     const requiredPermission = route.data['permission'] as keyof AuthService;
 
     if (!requiredPermission) {
@@ -26,7 +39,7 @@ export class AuthGuard implements CanActivate {
     const hasPermission = (this.authService[requiredPermission] as () => boolean)();
 
     if (hasPermission) {
-      return true; 
+      return true;
     } else {
       return this.router.createUrlTree(['/approvals']);
     }
