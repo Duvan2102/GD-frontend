@@ -7,6 +7,7 @@ import { RequestsTable } from '../approvals/requests-table/requests-table';
 import { FooterControls } from '../approvals/footer-controls/footer-controls';
 import { CreateForm, SolicitudData } from './create-form/create-form';
 import { RequestSuccessModal, SuccessModalData } from './request-success-modal/request-success-modal';
+import { DocumentView, DocumentViewData } from './document-view/document-view';
 import { Usuario } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
 import { TypologyService, Typology } from '../../services/typology.service';
@@ -27,7 +28,8 @@ import { applyViewLogic } from '../../utils/view.utils';
     RequestsTable,
     FooterControls,
     CreateForm,
-    RequestSuccessModal
+    RequestSuccessModal,
+    DocumentView
   ],
   templateUrl: './create-request.html',
   styleUrls: ['./create-request.css']
@@ -52,6 +54,11 @@ export class CreateRequest implements OnInit, OnDestroy {
   ascendingOrder: boolean = false;
   isLoading = true;
   isLoadingDetails = false;
+  
+  // Propiedades para document-view
+  isDocumentViewVisible = false;
+  documentViewData: DocumentViewData | null = null;
+  hideSendButtonInDocumentView = true; // Por defecto oculto, se cambia según el contexto
 
   constructor(
     private userService: UserService,
@@ -144,6 +151,82 @@ export class CreateRequest implements OnInit, OnDestroy {
   closeDetailModal(): void {
     this.isDetailModalVisible = false;
     this.successModalData = null;
+  }
+
+  handleViewApprovedDocument(data: SuccessModalData): void {
+    
+    const documentFile = data?.documentoAprobacion || 
+                        (data?.documentosAnexos as any)?.[0] || 
+                        (data?.anexos as any)?.[0] || 
+                        (data?.adjuntos as any)?.[0] ||
+                        (data as any)?.documento || 
+                        (data as any)?.archivo || 
+                        (data as any)?.file;
+    
+    const documentUrl = data?.documentoUrl || 
+                       (data as any)?.url || 
+                       (data as any)?.documentUrl;
+    
+    this.hideSendButtonInDocumentView = true;
+    
+    if (!documentFile && !documentUrl && data?.pdfOriginalName && this.currentUser?.noUsuario) {
+      this.isLoadingDetails = true;
+      
+      this.approvalService.getDocumentPdf(data.id!, this.currentUser.noUsuario).subscribe({
+        next: (pdfBlob: Blob) => {
+          const pdfUrl = URL.createObjectURL(pdfBlob);
+          this.documentViewData = {
+            id: data.id!,
+            file: undefined,
+            url: pdfUrl,
+            title: data.nombreSolicitud,
+            fileName: data.pdfOriginalName,
+            metadata: {
+              pdfOriginalName: data.pdfOriginalName,
+              pdfSizeBytes: data.pdfSizeBytes,
+              isPdfMetadata: false,
+              isPdfFromService: true
+            }
+          };
+          this.isDetailModalVisible = false;
+          this.isDocumentViewVisible = true;
+          this.isLoadingDetails = false;
+        },
+        error: (error) => {
+          this.isLoadingDetails = false;
+          this.documentViewData = {
+            id: data.id!,
+            file: undefined,
+            url: undefined,
+            title: data.nombreSolicitud,
+            fileName: data.pdfOriginalName,
+            metadata: {
+              pdfOriginalName: data.pdfOriginalName,
+              pdfSizeBytes: data.pdfSizeBytes,
+              isPdfMetadata: true,
+              error: 'No se pudo cargar el PDF'
+            }
+          };
+          this.isDetailModalVisible = false;
+          this.isDocumentViewVisible = true;
+        }
+      });
+    } else if (data && (documentFile || documentUrl)) {
+      this.documentViewData = {
+        id: data.id!,
+        file: documentFile,
+        url: documentUrl,
+        title: data.nombreSolicitud,
+        fileName: data.documentoFileName || documentFile?.name || 'Documento Aprobado'
+      };
+      this.isDetailModalVisible = false;
+      this.isDocumentViewVisible = true;
+    }
+  }
+
+  closeDocumentView(): void {
+    this.isDocumentViewVisible = false;
+    this.documentViewData = null;
   }
 
   handleCancelRequest(event: { solicitudId: string | number, comentario?: string }): void {

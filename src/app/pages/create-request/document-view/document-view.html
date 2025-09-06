@@ -8,13 +8,16 @@
 
       <div class="modal-header">
         <h5 class="modal-title">
-          {{ documentData?.file?.name || documentData?.title || 'Vista Previa del Documento' }}
+          {{ documentData?.file?.name || documentData?.fileName || documentData?.title || 'Vista Previa del Documento' }}
         </h5>
         <div class="header-actions-right">
-          <button type="button" class="btn btn-outline-light btn-sm btn-edit" (click)="onEdit()">
+          <button type="button" class="btn btn-outline-light btn-sm btn-print-header" (click)="onPrint()" title="Imprimir documento">
+            <i class="bi bi-printer"></i> Imprimir
+          </button>
+          <button *ngIf="!hideManagementButtons" type="button" class="btn btn-outline-light btn-sm btn-edit" (click)="onEdit()">
             <i class="bi bi-pencil-square"></i> Editar Solicitud
           </button>
-          <button type="button" class="btn btn-outline-danger btn-sm btn-delete" (click)="onDelete()">
+          <button *ngIf="!hideManagementButtons" type="button" class="btn btn-outline-danger btn-sm btn-delete" (click)="onDelete()">
             <i class="bi bi-trash3"></i> Eliminar solicitud
           </button>
           <button type="button" class="btn-close btn-close-white" (click)="onClose()" aria-label="Close"></button>
@@ -33,6 +36,29 @@
           <div *ngIf="error && !isLoading" class="error-container">
             <i class="bi bi-exclamation-triangle-fill text-warning"></i>
             <p class="error-text">{{ error }}</p>
+          </div>
+
+          <!-- Mostrar información del documento cuando solo hay metadatos -->
+          <div *ngIf="!pdfSrc && !isLoading && !error && documentData?.metadata?.isPdfMetadata" class="document-info-container">
+            <div class="document-info-card">
+              <div class="document-icon">
+                <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 4rem;"></i>
+              </div>
+              <div class="document-details">
+                <h4>{{ documentData?.fileName || 'Documento PDF' }}</h4>
+                <p class="document-meta">
+                  <strong>Tamaño:</strong> {{ formatFileSize(documentData?.metadata?.pdfSizeBytes) }}
+                </p>
+                <p class="document-meta">
+                  <strong>Estado:</strong> <span class="badge bg-success">Aprobado</span>
+                </p>
+                <p class="document-description">
+                  Este documento ha sido aprobado y está disponible para consulta. 
+                  Los metadatos del documento están disponibles pero el archivo completo 
+                  no está cargado en este momento.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div *ngIf="pdfSrc && !isLoading && !error" class="document-viewer">
@@ -63,7 +89,7 @@
               <button type="button" class="btn-zoom" (click)="onZoomIn()"><i class="bi bi-plus"></i></button>
             </div>
             <div class="extra-actions">
-              <button type="button" class="btn-send-main" (click)="onSend()">Enviar</button>
+              <button *ngIf="!hideSendButton" type="button" class="btn-send-main" (click)="onSend()">Enviar</button>
               <button type="button" class="btn-nav btn-close-bottom" (click)="onClose()"><i class="bi bi-x-lg"></i></button>
             </div>
           </div>

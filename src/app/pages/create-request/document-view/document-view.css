@@ -1,6 +1,6 @@
 .modal-dialog.modal-fullscreen {
   width: 85%;
-  max-width: 1400px;
+  max-width: 1000px;
   height: auto;
   position: absolute;
   top: 50%;
@@ -8,16 +8,14 @@
   transform: translate(-50%, -50%);
 }
 
-/* Contenido del modal que ocupa toda la altura y tiene un fondo gris claro */
 .modal-content {
-  height: 100vh; /* 100% de la altura de la ventana */
+  height: 100vh;
   border-radius: 0;
   border: none;
   display: flex;
   flex-direction: column;
 }
 
-/* --- Estilos de la Cabecera --- */
 .modal-header {
   background: #346464; 
   color: #59947f;
@@ -49,6 +47,21 @@
   background-color: #59947f; 
   color: white;
 }
+
+.btn-print-header {
+  font-size: 1rem;
+  background-color: transparent; 
+  color: #0000004d;
+  border: transparent;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-print-header:hover {
+  font-size: 1rem;
+  background-color: #6c757d; 
+  color: white;
+}
 .btn.btn-delete { 
     font-size: 1rem;
   background-color: transparent; 
@@ -65,17 +78,16 @@ font-size: 1rem;
   filter: invert(1) grayscale(100%) brightness(200%);
 }
 
-/* --- Estilos del Cuerpo del Modal y Contenedor del Visor --- */
 .modal-body {
   padding: 0;
-  overflow: hidden; /* Oculta el desbordamiento para que no aparezcan barras de scroll no deseadas */
-  flex-grow: 1; /* Permite que el cuerpo ocupe todo el espacio restante */
+  overflow: hidden;
+  flex-grow: 1;
   display: flex;
 }
 
 .preview-container {
   flex-grow: 1;
-  position: relative; /* Necesario para posicionar la barra de controles inferior */
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -85,12 +97,59 @@ font-size: 1rem;
 .document-viewer {
   width: 100%;
   height: 100%;
-  max-width: 1200px; /* Ancho máximo más amplio para mejor visualización */
+  max-width: 1200px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   border: 1px solid #ccc;
 }
 
-/* --- Estilos para los estados de Carga y Error --- */
+.document-info-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: 2rem;
+}
+
+.document-info-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  padding: 3rem;
+  text-align: center;
+  max-width: 600px;
+  width: 100%;
+  border: 1px solid #e0e0e0;
+}
+
+.document-icon {
+  margin-bottom: 1.5rem;
+}
+
+.document-details h4 {
+  color: #333;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.document-meta {
+  color: #666;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.document-description {
+  color: #777;
+  margin-top: 1.5rem;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.badge {
+  font-size: 0.8rem;
+  padding: 0.4rem 0.8rem;
+}
+
 .loading-container, .error-container {
   display: flex;
   flex-direction: column;
@@ -107,26 +166,24 @@ font-size: 1rem;
   color: #e74c3c;
 }
 
-/* --- Barra de Controles Inferior Flotante --- */
 .bottom-controls {
   position: absolute;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(44, 62, 80, 0.9); /* Fondo oscuro semitransparente */
-  backdrop-filter: blur(5px); /* Efecto de desenfoque para el fondo */
+  background: rgba(44, 62, 80, 0.9);
+  backdrop-filter: blur(5px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 50px; /* Bordes redondeados */
+  border-radius: 50px;
   padding: 8px 15px;
   display: flex;
   align-items: center;
   gap: 15px;
   color: white;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
-  z-index: 10; /* Asegura que esté por encima del visor */
+  z-index: 10;
 }
 
-/* Botón principal de "Enviar" */
 .btn-send-main {
   background-color: #59947f; 
   color: white;
@@ -143,7 +200,31 @@ font-size: 1rem;
   background-color: #346464;
 }
 
-/* Divisores entre grupos de botones */
+.btn-print {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-weight: 500;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-print:hover {
+  background-color: #5a6268;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-print i {
+  font-size: 0.9rem;
+}
+
 .page-nav-controls, .zoom-controls-bottom, .extra-actions {
   display: flex;
   align-items: center;
@@ -180,12 +261,11 @@ font-size: 1rem;
 .page-info {
   font-size: 0.9rem;
   font-weight: 500;
-  min-width: 55px; /* Espacio para "99 / 99" */
+  min-width: 55px;
   text-align: center;
-  user-select: none; /* Evita que el texto se pueda seleccionar */
+  user-select: none;
 }
 
-/* --- Responsividad para diferentes tamaños de pantalla --- */
 @media (max-width: 1200px) {
   .modal-dialog.modal-fullscreen {
     width: 90%;

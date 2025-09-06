@@ -38,8 +38,10 @@
   [data]="successModalData"
   [usuariosDisponibles]="allUsers"
   [isApprovalFlow]="true"
+  [hideManageButton]="showOnlyManaged"
   (close)="closeDetailModal()"
-  (manageRequest)="handleOpenDocumentToApprove($event)"> 
+  (manageRequest)="handleOpenDocumentToApprove($event)"
+  (viewApprovedDocument)="handleViewApprovedDocument($event)"> 
 </app-request-success-modal>
 
 <app-approval-document-view
@@ -49,6 +51,14 @@
   (approve)="handleApproveRequest($event)"
   (reject)="handleRejectRequest($event)">
 </app-approval-document-view>
+
+<app-document-view
+  [isVisible]="isDocumentViewVisible"
+  [documentData]="documentViewData"
+  [hideManagementButtons]="true"
+  [hideSendButton]="true"
+  (close)="closeDocumentView()">
+</app-document-view>
 
 <!-- Loading overlay for detail fetch -->
 <div *ngIf="isLoadingDetails" class="loading-overlay">

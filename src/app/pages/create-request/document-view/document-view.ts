@@ -8,6 +8,7 @@ export interface DocumentViewData {
   file?: File;
   url?: string;
   title?: string;
+  fileName?: string;
   metadata?: any;
 }
 
@@ -21,6 +22,8 @@ export interface DocumentViewData {
 export class DocumentView implements OnChanges {
   @Input() isVisible = false;
   @Input() documentData: DocumentViewData | null = null;
+  @Input() hideManagementButtons = false; // Nuevo input para ocultar botones de gestión
+  @Input() hideSendButton = false; // Nuevo input para ocultar botón de envío
   @Output() close = new EventEmitter<void>();
   @Output() edit = new EventEmitter<void>();
   @Output() send = new EventEmitter<void>();
@@ -41,6 +44,9 @@ export class DocumentView implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['isVisible'] && this.isVisible) {
+      this.loadDocument();
+    }
+    if (changes['documentData'] && this.documentData) {
       this.loadDocument();
     }
   }
@@ -100,5 +106,12 @@ export class DocumentView implements OnChanges {
     if (this.documentData?.id && confirm('¿Seguro que deseas eliminar esta solicitud?')) {
       this.deleteRequest.emit(this.documentData.id);
     }
+  }
+
+  formatFileSize(bytes?: number): string {
+    if (!bytes) return 'N/A';
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   }
 }

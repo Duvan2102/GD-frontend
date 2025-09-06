@@ -21,7 +21,7 @@ export interface AprobadorTabla {
   nombresApellidos: string;
   correo: string;
   area: string;
-  fecha: Date;
+  fecha: Date | null;
   estado: 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA';
   orden?: number;
 }
@@ -93,11 +93,13 @@ export class RequestSuccessModal implements OnChanges {
   @Input() isVisible = false;
   @Input() data: SuccessModalData | null = null;
   @Input() usuariosDisponibles: Usuario[] = [];
-  @Input() isApprovalFlow = false; 
+  @Input() isApprovalFlow = false;
+  @Input() hideManageButton = false; // Nuevo input para ocultar el botón de gestionar 
 
   @Output() close = new EventEmitter<void>();
   @Output() cancelRequest = new EventEmitter<{ solicitudId: string | number, comentario?: string }>();
   @Output() manageRequest = new EventEmitter<SuccessModalData>();
+  @Output() viewApprovedDocument = new EventEmitter<SuccessModalData>();
 
   approvers: AprobadorTabla[] = [];
   
@@ -158,19 +160,14 @@ export class RequestSuccessModal implements OnChanges {
         nombresApellidos: usuario ? `${usuario.nombres} ${usuario.apellidos}` : (dest.nombre || 'Usuario no encontrado'),
         correo: usuario?.correoEmpresarial || 'correo@ejemplo.com',
         area: this.extractAreaString(usuario),
-        fecha: dest.fechaDecision ? new Date(dest.fechaDecision) : (this.data?.fechaCreacion || new Date()),
+        fecha: dest.fechaDecision ? new Date(dest.fechaDecision) : null, // Solo fecha de decisión real, no fecha de creación
         estado: estadoAprobador,
-        orden: dest.ordenIndex ?? dest.orden ?? (index + 1) // Usar ordenIndex de la API o asignar secuencial
+        orden: index + 1 // Siempre asignar orden secuencial basado en el índice
       };
     });
     
-    // Ordenar por orden y luego por índice para mantener consistencia
-    this.approvers = mappedApprovers.sort((a, b) => {
-      if (a.orden !== b.orden) {
-        return (a.orden || 0) - (b.orden || 0);
-      }
-      return 0;
-    });
+    // Los aprobadores ya están en orden secuencial por el mapeo
+    this.approvers = mappedApprovers;
     
   }
   
@@ -425,9 +422,48 @@ export class RequestSuccessModal implements OnChanges {
     return estado !== 'Cancelada' && estado !== 'Aprobada' && estado !== 'Rechazada';
   }
 
-  formatDate(date?: Date): string {
-    if (!date) return '';
-    return new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(date));
+  formatDate(date?: Date | null): string {
+    if (!date) return '-';
+    try {
+      return new Intl.DateTimeFormat('es-ES', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }).format(new Date(date));
+    } catch (error) {
+      return '-';
+    }
+  }
+
+  getOrderNumber(orden?: number, index?: number): number {
+    // Siempre usar el índice + 1 para orden secuencial
+    // El índice viene del *ngFor y garantiza secuencia 1, 2, 3, 4...
+    return (index || 0) + 1;
+  }
+
+  isApproved(): boolean {
+    return this.data?.estado === 'Aprobada';
+  }
+
+  hasDocument(): boolean {
+    // Verificar si hay algún documento disponible (archivo, URL, o metadatos PDF)
+    return !!(this.data?.documentoAprobacion || 
+              this.data?.documentoUrl || 
+              this.data?.pdfOriginalName ||
+              (this.data?.documentosAnexos as any)?.[0] ||
+              (this.data?.anexos as any)?.[0] ||
+              (this.data?.adjuntos as any)?.[0] ||
+              (this.data as any)?.documento ||
+              (this.data as any)?.archivo ||
+              (this.data as any)?.file);
+  }
+
+  onViewApprovedDocument(): void {
+    if (this.data) {
+      this.viewApprovedDocument.emit(this.data);
+    }
   }
 
   getDocumentName(doc?: File): string { return doc?.name || 'Documento'; }
@@ -513,7 +549,7 @@ export class RequestSuccessModal implements OnChanges {
         titulo: `Comentario - ${approver.nombresApellidos}`,
         comentario: comentario,
         usuario: approver.nombresApellidos,
-        fecha: approver.fecha,
+        fecha: approver.fecha || new Date(),
         tipo: 'ENVIO' // Using ENVIO as fallback since COMENTARIO is not in the original type
       };
       this.isCommentModalVisible = true;

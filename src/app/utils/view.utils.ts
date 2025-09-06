@@ -58,7 +58,8 @@ export function applyViewLogic(
   const displayedRequests = result.slice(start, start + itemsPerPage).map(req => ({
     ...req,
     type: getTypologyDescription(req.type),
-    approvers: req.approvers.map(a => a.initials),
+    // Preservamos objetos para poder usar nombre completo en tooltip
+    approvers: req.approvers.map(a => ({ initials: a.initials, fullName: a.fullName })),
     creatorUser: req.creatorFullName
   }));
 
@@ -121,7 +122,8 @@ export function applyApprovalDetailsViewLogic(
   const displayedRequests = result.slice(start, start + itemsPerPage).map(req => ({
     ...req,
     type: getTypologyDescription(req.type),
-    approvers: req.approvers.map(a => a.initials),
+    // Preservamos objetos para poder usar nombre completo en tooltip
+    approvers: req.approvers.map(a => ({ initials: a.initials, fullName: a.fullName })),
     creatorUser: req.creatorFullName
   }));
 

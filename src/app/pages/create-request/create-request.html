@@ -49,9 +49,19 @@
   [isVisible]="isDetailModalVisible"
   [data]="successModalData"
   [usuariosDisponibles]="allUsers"
+  [hideManageButton]="showOnlyManaged"
   (close)="closeDetailModal()"
-  (cancelRequest)="handleCancelRequest($event)">
+  (cancelRequest)="handleCancelRequest($event)"
+  (viewApprovedDocument)="handleViewApprovedDocument($event)">
 </app-request-success-modal>
+
+<app-document-view
+  [isVisible]="isDocumentViewVisible"
+  [documentData]="documentViewData"
+  [hideManagementButtons]="true"
+  [hideSendButton]="hideSendButtonInDocumentView"
+  (close)="closeDocumentView()">
+</app-document-view>
 
 <!-- Loading overlay for detail fetch -->
 <div *ngIf="isLoadingDetails" class="loading-overlay">

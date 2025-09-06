@@ -7,6 +7,7 @@ import { RequestsTable } from './requests-table/requests-table';
 import { FooterControls } from './footer-controls/footer-controls';
 import { RequestSuccessModal, SuccessModalData } from '../create-request/request-success-modal/request-success-modal';
 import { ApprovalDocumentView, ApprovalDocumentViewData } from './approval-document-view/approval-document-view';
+import { DocumentView, DocumentViewData } from '../create-request/document-view/document-view';
 import { Usuario } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
 import { ApprovalService } from '../../services/approval.service';
@@ -41,7 +42,8 @@ export interface Approval {
     RequestsTable,
     FooterControls,
     RequestSuccessModal,
-    ApprovalDocumentView
+    ApprovalDocumentView,
+    DocumentView
   ],
   templateUrl: './approvals.html',
   styleUrls: ['./approvals.css']
@@ -68,6 +70,10 @@ export class Approvals implements OnInit, OnDestroy {
   documentToApproveData: ApprovalDocumentViewData | null = null;
   isLoadingDetails = false;
   currentUser: Usuario | null = null;
+  
+  // Propiedades para document-view
+  isDocumentViewVisible = false;
+  documentViewData: DocumentViewData | null = null;
 
   constructor(
     private userService: UserService,
@@ -156,6 +162,81 @@ export class Approvals implements OnInit, OnDestroy {
   closeDetailModal() {
     this.isDetailModalVisible = false;
     this.successModalData = null;
+  }
+
+  handleViewApprovedDocument(data: SuccessModalData): void {
+    
+    const documentFile = data?.documentoAprobacion || 
+                        (data?.documentosAnexos as any)?.[0] || 
+                        (data?.anexos as any)?.[0] || 
+                        (data?.adjuntos as any)?.[0] ||
+                        (data as any)?.documento || 
+                        (data as any)?.archivo || 
+                        (data as any)?.file;
+    
+    const documentUrl = data?.documentoUrl || 
+                       (data as any)?.url || 
+                       (data as any)?.documentUrl;
+    
+    
+    if (!documentFile && !documentUrl && data?.pdfOriginalName && this.currentUser?.noUsuario) {
+      this.isLoadingDetails = true;
+      
+      this.approvalService.getDocumentPdf(data.id!, this.currentUser.noUsuario).subscribe({
+        next: (pdfBlob: Blob) => {
+          const pdfUrl = URL.createObjectURL(pdfBlob);
+          this.documentViewData = {
+            id: data.id!,
+            file: undefined,
+            url: pdfUrl,
+            title: data.nombreSolicitud,
+            fileName: data.pdfOriginalName,
+            metadata: {
+              pdfOriginalName: data.pdfOriginalName,
+              pdfSizeBytes: data.pdfSizeBytes,
+              isPdfMetadata: false,
+              isPdfFromService: true
+            }
+          };
+          this.isDetailModalVisible = false;
+          this.isDocumentViewVisible = true;
+          this.isLoadingDetails = false;
+        },
+        error: (error) => {
+          this.isLoadingDetails = false;
+          this.documentViewData = {
+            id: data.id!,
+            file: undefined,
+            url: undefined,
+            title: data.nombreSolicitud,
+            fileName: data.pdfOriginalName,
+            metadata: {
+              pdfOriginalName: data.pdfOriginalName,
+              pdfSizeBytes: data.pdfSizeBytes,
+              isPdfMetadata: true,
+              error: 'No se pudo cargar el PDF'
+            }
+          };
+          this.isDetailModalVisible = false;
+          this.isDocumentViewVisible = true;
+        }
+      });
+    } else if (data && (documentFile || documentUrl)) {
+      this.documentViewData = {
+        id: data.id!,
+        file: documentFile,
+        url: documentUrl,
+        title: data.nombreSolicitud,
+        fileName: data.documentoFileName || documentFile?.name || 'Documento Aprobado'
+      };
+      this.isDetailModalVisible = false;
+      this.isDocumentViewVisible = true;
+    }
+  }
+
+  closeDocumentView(): void {
+    this.isDocumentViewVisible = false;
+    this.documentViewData = null;
   }
 
   handleOpenDocumentToApprove(data: SuccessModalData) {

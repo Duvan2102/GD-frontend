@@ -46,12 +46,31 @@
             </div>
 
             <button
+              *ngIf="!hideManageButton"
               id="btn-manage-request"
               class="btn-cancel"
               type="button"
               (click)="handleMainAction()"
               [disabled]="!canPerformMainAction()">
               {{ getMainActionText() }}
+            </button>
+
+            <button
+              *ngIf="hideManageButton && isApproved()"
+              id="btn-view-approved-document"
+              class="btn-cancel"
+              type="button"
+              (click)="onViewApprovedDocument()">
+              <i class="bi bi-file-earmark-pdf"></i> Visualizar Documento Aprobado
+            </button>
+
+            <button
+              *ngIf="!hideManageButton && hasDocument()"
+              id="btn-view-document"
+              class="btn-cancel"
+              type="button"
+              (click)="onViewApprovedDocument()">
+              <i class="bi bi-file-earmark-pdf"></i> Visualizar Documento
             </button>
           </div>
 
@@ -109,8 +128,8 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let approver of approvers; trackBy: trackByApprover">
-                      <td *ngIf="shouldShowOrderColumn()" class="text-center">{{ approver.orden || '-' }}</td>
+                    <tr *ngFor="let approver of approvers; trackBy: trackByApprover; let i = index">
+                      <td *ngIf="shouldShowOrderColumn()" class="text-center">{{ getOrderNumber(approver.orden, i) }}</td>
                       <td>{{ approver.nombresApellidos }}</td>
                       <td>{{ approver.correo }}</td>
                       <td>{{ approver.area }}</td>

@@ -38,9 +38,25 @@
         </td>
         
         <td>
-          <div *ngIf="request.approvers?.length > 0" class="aprobadores-container">
-            <span *ngFor="let initials of request.approvers" class="aprobador-icono">
-                {{ initials }}
+          <div *ngIf="request.approvers && request.approvers.length > 0" class="aprobadores-container">
+            <!-- Debug: {{ request.approvers.length }} aprobadores -->
+            <ng-container *ngFor="let approver of request.approvers | slice:0:4; let i = index; trackBy: trackByApprover">
+              <span class="aprobador-icono" 
+                    [attr.title]="approver.fullName"
+                    [attr.data-tooltip]="approver.fullName"
+                    [attr.data-index]="i"
+                    (mouseenter)="showTooltip($event, approver.fullName, 'top')"
+                    (mouseleave)="hideTooltip()">
+                {{ approver.initials }}
+              </span>
+            </ng-container>
+            <span *ngIf="request.approvers.length > 4" 
+                  class="aprobador-icono aprobador-contador" 
+                  [attr.title]="request.approvers.length - 4 + ' más'"
+                  [attr.data-tooltip]="getRemainingApproversNames(request.approvers)"
+                  (mouseenter)="showTooltip($event, getRemainingApproversNames(request.approvers), 'top')"
+                  (mouseleave)="hideTooltip()">
+              +{{ request.approvers.length - 4 }}
             </span>
           </div>
         </td>
@@ -78,6 +94,10 @@
       </tr>
     </tbody>
   </table>
+</div>
+
+<div #tooltipElement class="custom-tooltip" [style.display]="tooltipVisible ? 'block' : 'none'" [style.left.px]="tooltipX" [style.top.px]="tooltipY">
+  {{ tooltipText }}
 </div>
 <div class="row mt-3 align-items-center">
     </div>
