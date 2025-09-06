@@ -4,7 +4,7 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractContro
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 import { Usuario } from '../../../interfaces/common.interfaces';
 import { UserService } from '../../../services/user.service';
-import { Position } from '../../../services/positions.service';
+import { PositionService, Position } from '../../../services/positions.service';
 import { DepartmentService, Department } from '../../../services/department.service';
 import { AreaService, Area } from '../../../services/area.service';
 import { PasswordModal } from '../password-modal/password-modal';
@@ -44,7 +44,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   hierarchicalData: any = { departamentos: [] };
   isDropdownOpen = false;
   selectedCargoInfo: Position | null = null;
-  
+
 isPasswordModalVisible = false;
 confirmModalVisible = false;
 modalSuccessVisible = false;
@@ -64,6 +64,7 @@ pendingUserData: Usuario | null = null;
   constructor(
   private fb: FormBuilder,
   private userService: UserService,
+  private positionService: PositionService,
   private departmentService: DepartmentService,
   private areaService: AreaService
 ) {
@@ -126,8 +127,8 @@ pendingUserData: Usuario | null = null;
       });
 
     const nombresControl = this.userForm.get('nombres');
-    const apellidosControl = this.userForm.get('apellidos');    
-    
+    const apellidosControl = this.userForm.get('apellidos');
+
     if (nombresControl && apellidosControl) {
       [nombresControl, apellidosControl].forEach(control => {
         control.valueChanges
@@ -147,23 +148,24 @@ pendingUserData: Usuario | null = null;
   private loadFormData(): void {
     if (this.isEditMode && this.user) {
       let cargoValue = '';
-      
+
       if (this.user.cargo) {
         if (typeof this.user.cargo === 'number' || !isNaN(Number(this.user.cargo))) {
           cargoValue = this.user.cargo.toString();
+        } else if (typeof this.user.cargo === 'object' && this.user.cargo.idCargo) {
+          cargoValue = this.user.cargo.idCargo.toString();
         } else {
           const cargoEncontrado = this.cargosDisponibles.find(
-            c => c.descripcion === this.user?.cargo
+            c => c.descripcion === this.user?.cargo?.descripcion
           );
-          cargoValue = (cargoEncontrado && cargoEncontrado.idCargo) 
-          ? cargoEncontrado.idCargo.toString() 
+          cargoValue = (cargoEncontrado && cargoEncontrado.idCargo)
+          ? cargoEncontrado.idCargo.toString()
           : '5';
         }
       }
 
-      
       this.userForm.patchValue({
-        noUsuario: this.user.noUsuario || this.user.noUsuario,
+        noUsuario: this.user.idUsuario,
         identificacion: this.user.identificacion || '',
         nombres: this.user.nombres || '',
         apellidos: this.user.apellidos || '',
@@ -171,10 +173,10 @@ pendingUserData: Usuario | null = null;
         cargo: cargoValue,
         correoEmpresarial: this.user.correoEmpresarial || '',
         correoPersonal: this.user.correoPersonal || '',
-        celular: this.user.celular || '',
-        telefono: this.user.telefono || '',
+        celular: this.user.telefono1 || '',
+        telefono: this.user.telefono2 || '',
         direccion: this.user.direccion || '',
-        dobleAutenticacion: this.user.dobleAutenticacion || 'Google Authenticator',
+        dobleAutenticacion: this.user.dobleAutenticacion ? 'Google Authenticator' : 'Token de Seguridad',
       });
 
       if (this.user.cargo) {
@@ -188,11 +190,10 @@ pendingUserData: Usuario | null = null;
   }
 private setSelectedCargoFromValue(cargoValue: string): void {
   if (!cargoValue) return;
-  
-  const cargoEncontrado = this.cargosDisponibles.find(cargo => 
+
+  const cargoEncontrado = this.cargosDisponibles.find(cargo =>
     cargo.idCargo?.toString() === cargoValue.toString()
   );
-  
   if (cargoEncontrado) {
     this.selectedCargoInfo = cargoEncontrado;
     console.log('Cargo establecido en edición:', cargoEncontrado);
@@ -205,13 +206,12 @@ private setSelectedCargoFromValue(cargoValue: string): void {
     Promise.all([
       this.departmentService.getAll().toPromise(),
       this.areaService.getAll().toPromise(),
-      this.userService.obtenerCargosDisponibles().toPromise()
+      this.positionService.getAll().toPromise()
     ]).then(([departamentos, areas, cargos]) => {
       this.departamentos = departamentos || [];
       this.areas = areas || [];
       this.cargosDisponibles = cargos || [];
       this.buildHierarchicalStructure();
-      
       if (this.isEditMode && this.user) {
         this.loadFormData();
       }
@@ -226,7 +226,6 @@ private setSelectedCargoFromValue(cargoValue: string): void {
       { idDepartamento: 1, descripcion: 'Administración' },
       { idDepartamento: 2, descripcion: 'Tecnología' }
     ];
-    
     this.areas = [
       { idArea: 1, descripcion: 'Gerencia', departamento: { idDepartamento: 1 } },
       { idArea: 2, descripcion: 'Análisis', departamento: { idDepartamento: 1 } },
@@ -234,7 +233,7 @@ private setSelectedCargoFromValue(cargoValue: string): void {
       { idArea: 4, descripcion: 'Desarrollo', departamento: { idDepartamento: 2 } },
       { idArea: 5, descripcion: 'Infraestructura', departamento: { idDepartamento: 2 } }
     ];
-    
+
     this.cargosDisponibles = [
       { idCargo: 1, descripcion: 'Gerente', area: { idArea: 1, descripcion: 'Gerencia', departamento: { idDepartamento: 1, descripcion: 'Administración' } } },
       { idCargo: 2, descripcion: 'Subgerente', area: { idArea: 1, descripcion: 'Gerencia', departamento: { idDepartamento: 1, descripcion: 'Administración' } } },
@@ -244,7 +243,6 @@ private setSelectedCargoFromValue(cargoValue: string): void {
       { idCargo: 6, descripcion: 'Desarrollador Junior', area: { idArea: 4, descripcion: 'Desarrollo', departamento: { idDepartamento: 2, descripcion: 'Tecnología' } } },
       { idCargo: 7, descripcion: 'Administrador de Sistemas', area: { idArea: 5, descripcion: 'Infraestructura', departamento: { idDepartamento: 2, descripcion: 'Tecnología' } } }
     ];
-    
     this.buildHierarchicalStructure();
     if (this.isEditMode && this.user) {
       this.loadFormData();
@@ -258,7 +256,6 @@ private setSelectedCargoFromValue(cargoValue: string): void {
   console.log('Cargos:', this.cargosDisponibles);
 
   const departamentosMap = new Map();
-  
   this.departamentos.forEach(dept => {
     departamentosMap.set(dept.idDepartamento, {
       idDepartamento: dept.idDepartamento,
@@ -271,7 +268,6 @@ private setSelectedCargoFromValue(cargoValue: string): void {
   this.areas.forEach(area => {
     const deptId = area.departamento.idDepartamento;
     const departamento = departamentosMap.get(deptId);
-    
     if (departamento) {
       const areaExists = departamento.areas.find((a: any) => a.idArea === area.idArea);
       if (!areaExists) {
@@ -290,7 +286,6 @@ private setSelectedCargoFromValue(cargoValue: string): void {
 
     const deptId = cargo.area.departamento.idDepartamento;
     const areaId = cargo.area.idArea;
-    
     const departamento = departamentosMap.get(deptId);
     if (departamento) {
       const area = departamento.areas.find((a: any) => a.idArea === areaId);
@@ -302,7 +297,6 @@ private setSelectedCargoFromValue(cargoValue: string): void {
 
   this.hierarchicalData.departamentos = Array.from(departamentosMap.values())
     .sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
-  
   this.hierarchicalData.departamentos.forEach((dept: any) => {
     dept.areas.sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
     dept.areas.forEach((area: any) => {
@@ -353,6 +347,10 @@ closePasswordModal(): void {
   this.pendingUserData = null;
 }
 
+handlePasswordValidationError(error: string): void {
+  // El error ya se muestra en el modal, no necesitamos hacer nada adicional aquí
+  console.log('Error de validación de contraseña:', error);
+}
 handlePasswordValidation(password: string): void {
   if (!password.trim()) {
     alert('La contraseña no puede estar vacía');
@@ -365,21 +363,20 @@ handlePasswordValidation(password: string): void {
   }
 
   this.isPasswordModalVisible = false;
-  
-  this.confirmModalMessage = this.isEditMode 
+
+  this.confirmModalMessage = this.isEditMode
     ? `¿Confirmas la actualización del usuario ${this.pendingUserData.nombres} ${this.pendingUserData.apellidos}?`
     : `¿Confirmas la creación del usuario ${this.pendingUserData.nombres} ${this.pendingUserData.apellidos}?`;
-  
   this.confirmModalVisible = true;
 }
 
 onAceptarConfirmacion(): void {
   this.confirmModalVisible = false;
-  
+
   if (!this.pendingUserData) return;
 
   this.isLoading = true;
-  const operacion = this.isEditMode 
+  const operacion = this.isEditMode
     ? this.userService.actualizarUsuario(this.pendingUserData)
     : this.userService.crearUsuario(this.pendingUserData);
 
@@ -388,33 +385,29 @@ onAceptarConfirmacion(): void {
     .subscribe({
       next: (response) => {
         this.isLoading = false;
-        
-        this.modalSuccessMessage = response?.message || 
+
+        this.modalSuccessMessage = response?.message ||
           (this.isEditMode ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente');
         this.modalSuccessVisible = true;
-        
         if (this.isEditMode) {
           this.userUpdated.emit(this.pendingUserData!);
         } else {
           this.userCreated.emit(this.pendingUserData!);
         }
-        
         this.save.emit(this.pendingUserData!);
       },
       error: (error) => {
         this.isLoading = false;
         console.error('Error en operación:', error);
-        
+
         if (error && typeof error === 'object') {
           this.errorMessage = error.message || 'Error al procesar la solicitud';
-          
           if (error.details && Array.isArray(error.details) && error.details.length > 0) {
             this.errorMessage += ':\n• ' + error.details.join('\n• ');
           }
         } else {
           this.errorMessage = typeof error === 'string' ? error : 'Error inesperado al procesar la solicitud';
         }
-        
         this.pendingUserData = null;
       }
     });
@@ -455,25 +448,24 @@ cerrarModalSuccess(): void {
 
   private generateUsername(): void {
     const nombres = this.userForm.get('nombres')?.value?.trim();
-    const apellidos = this.userForm.get('apellidos')?.value?.trim();    
-    
+    const apellidos = this.userForm.get('apellidos')?.value?.trim();
+
     if (nombres && apellidos) {
       const username = (nombres.split(' ')[0] + '.' + apellidos.split(' ')[0])
         .toLowerCase()
-        .replace(/[^a-z.]/g, '');      
+        .replace(/[^a-z.]/g, '');
       this.userForm.get('usuario')?.setValue(username, { emitEvent: false });
     }
   }
 
   onSave(): void {
   this.resetMessages();
-  
   const identificacionControl = this.userForm.get('identificacion');
   const wasDisabled = identificacionControl?.disabled;
   if (wasDisabled) {
     identificacionControl?.enable();
   }
-  
+
   if (this.userForm.invalid) {
     this.markFormGroupTouched();
     this.errorMessage = 'Por favor, corrige los errores en el formulario.';
@@ -484,7 +476,7 @@ cerrarModalSuccess(): void {
   }
 
   const formValue = this.userForm.getRawValue();
-  
+
   this.pendingUserData = {
     ...formValue,
     noUsuario: this.isEditMode ? (this.user?.noUsuario || this.user?.noUsuario) : undefined,
@@ -509,7 +501,7 @@ cerrarModalSuccess(): void {
     identificacionControl?.disable();
   }
 
-  this.mensajePasswordModal = this.isEditMode 
+  this.mensajePasswordModal = this.isEditMode
     ? 'Ingrese su contraseña para guardar los cambios del usuario.'
     : 'Ingrese su contraseña para crear el nuevo usuario.';
   this.isPasswordModalVisible = true;
@@ -521,12 +513,10 @@ cerrarModalSuccess(): void {
   this.isLoading = false;
   this.selectedCargoInfo = null;
   this.isDropdownOpen = false;
-  
   this.isPasswordModalVisible = false;
   this.confirmModalVisible = false;
   this.modalSuccessVisible = false;
   this.pendingUserData = null;
-  
   this.close.emit();
 }
 
@@ -542,7 +532,6 @@ cerrarModalSuccess(): void {
   this.userForm.get('identificacion')?.enable();
   this.selectedCargoInfo = null;
   this.isDropdownOpen = false;
-  
   this.isPasswordModalVisible = false;
   this.confirmModalVisible = false;
   this.modalSuccessVisible = false;
@@ -587,7 +576,7 @@ cerrarModalSuccess(): void {
   getErrorMessage(controlName: string): string {
     const control = this.userForm.get(controlName);
     if (!control?.errors) return '';
-    
+
     const errors = control.errors;
     const errorMessages: { [key: string]: { [key: string]: string } } = {
       identificacion: {

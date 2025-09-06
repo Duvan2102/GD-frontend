@@ -10,7 +10,7 @@
   background-color: hsl(180, 100%, 10%);
   color: white;
   border-bottom: none;
-  padding: 20;
+  padding: 20px;
   text-align: center;
   margin: 0;
 }
@@ -101,4 +101,20 @@
   display: flex;
   justify-content: center;
   gap: 15px;
+}
+
+/* --- ESTILOS PARA EL CHECKBOX --- */
+.form-check-input {
+  cursor: pointer;
+}
+
+.form-check-input:checked {
+  background-color: #6b9080;
+  border-color: #6b9080;
+}
+
+.form-check-input:focus {
+  border-color: #5a7a6a;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(107, 144, 128, 0.5);
 }

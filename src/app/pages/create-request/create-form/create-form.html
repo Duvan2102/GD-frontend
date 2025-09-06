@@ -1,0 +1,147 @@
+<div class="modal custom-backdrop" tabindex="-1" [class.show]="isVisible && !showDocumentView" [style.display]="isVisible && !showDocumentView ? 'block' : 'none'">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      
+      <div class="modal-header">
+        <h5 class="modal-title">Creación de Solicitud</h5>
+        <button type="button" class="btn-close" (click)="onCancelar()" aria-label="Close">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-container">
+          
+          <div class="form-row-double">
+            <div class="form-group-half">
+              <label for="nombreSolicitud" class="form-label">Nombre de la Solicitud</label>
+              <input type="text" id="nombreSolicitud" class="form-control" placeholder="Nombre del Documento" [(ngModel)]="nombreSolicitud">
+            </div>
+            <div class="form-group-half">
+              <label for="tipologia" class="form-label">Tipología</label>
+              <select id="tipologia" class="form-select" [(ngModel)]="tipologia">
+                <option *ngFor="let tip of tipologias" [value]="tip.idTipologia">{{ tip.descripcion }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row-single">
+            <div class="form-group">
+              <label for="detalles" class="form-label">Detalles Adicionales</label>
+              <textarea id="detalles" class="form-control textarea-large" placeholder="Agregue información adicional que ayude acerca de la solicitud" [(ngModel)]="detallesAdicionales"></textarea>
+            </div>
+          </div>
+
+          <div class="form-row-double">
+            <div class="form-group-half">
+              <label for="prioridad" class="form-label">Prioridad</label>
+              <select id="prioridad" class="form-select" [(ngModel)]="prioridad">
+                <option value="NORMAL">NORMAL</option>
+                <option value="IMPORTANTE">IMPORTANTE</option>
+              </select>
+            </div>
+            <div class="form-group-half">
+              <label for="recordatorio" class="form-label">Enviar recordatorio</label>
+              <select id="recordatorio" class="form-select" [(ngModel)]="enviarRecordatorio">
+                <option value="NUNCA">NUNCA</option>
+                <option value="SEMANALMENTE">SEMANALMENTE</option>
+                <option value="CADA_3_DIAS">CADA 3 DÍAS</option>
+                <option value="TODOS_LOS_DIAS">TODOS LOS DÍAS</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row-single">
+            <div class="form-group">
+              <label class="form-label">Documento de Aprobación</label>
+              <div class="file-upload-container">
+                <input type="file" id="documentoAprobacion" class="d-none" accept=".pdf" (change)="onDocumentoAprobacionChange($event)">
+                <label for="documentoAprobacion" class="btn-file-upload"><i class="bi bi-filetype-pdf"></i> Cargar documento</label>
+              </div>
+              <div *ngIf="documentoAprobacion" class="file-selected">{{ documentoAprobacion.name }} <button type="button" class="btn-remove" (click)="removeDocumentoAprobacion()">×</button></div>
+            </div>
+          </div>
+
+          <div class="form-row-single">
+            <div class="form-group-checkbox">
+              <input type="checkbox" id="documentosAnexos" class="form-check-input" [(ngModel)]="documentosAnexos">
+              <label for="documentosAnexos" class="checkbox-label">Documentos Anexos</label>
+            </div>
+          </div>
+          <div *ngIf="documentosAnexos" class="form-row-single">
+            <div class="form-group">
+              <div class="file-upload-container">
+                <input type="file" id="anexos" class="d-none" multiple accept=".pdf,.doc,.docx" (change)="onAnexosChange($event)">
+                <label for="anexos" class="btn-file-upload"><i class="bi bi-file-earmark-text"></i> Cargar anexos</label>
+              </div>
+              <div *ngFor="let anexo of anexos; let i = index" class="file-selected">{{ anexo.name }} <button type="button" class="btn-remove" (click)="removeAnexo(i)">×</button></div>
+            </div>
+          </div>
+          
+          <div class="form-row-switch">
+            <div class="switch-container">
+              <label class="form-label switch-label-text">Establecer un Orden</label>
+              <div class="custom-switch">
+                <input type="checkbox" id="establecerOrden" class="switch-input" [(ngModel)]="establecerOrden" (change)="onEstablecerOrdenChange()">
+                <label for="establecerOrden" class="switch-label"></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="destinatarios-section">
+            <label class="form-label">Destinatarios</label>
+            <div class="destinatarios-header">
+              <div class="header-orden" *ngIf="establecerOrden">Orden</div>
+              <div class="header-usuario">Usuario</div>
+              <div class="header-actions"></div>
+            </div>
+            <div class="destinatarios-list-container">
+              <div *ngFor="let destinatario of destinatarios; let i = index" class="destinatario-item">
+                <div class="destinatario-orden" *ngIf="establecerOrden"><span class="orden-badge">{{ destinatario.orden }}</span></div>
+                <div class="destinatario-usuario">
+                  <input #searchInput type="text" class="form-control-destinatario" [placeholder]="i === 0 ? 'Escriba aquí los nombres' : 'Escriba aquí los nombres'" [(ngModel)]="destinatario.searchTerm" (input)="onSearchUser($event, i, searchInput)" (keydown)="onSearchUserKeydown($event, i)" (blur)="closeDropdown()" autocomplete="off">
+                </div>
+                <div class="destinatario-actions">
+                  <button *ngIf="i > 0" type="button" class="btn-trash" (click)="eliminarDestinatario(i)"><i class="bi bi-trash3"></i></button>
+                  <button *ngIf="i === destinatarios.length - 1" type="button" class="btn-add" (click)="agregarDestinatario()"><i class="bi bi-plus"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
+        <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+        <div class="footer-buttons">
+          <button type="button" class="btn-cancelar" (click)="onCancelar()">Cancelar</button>
+          <button type="button" class="btn-previsualizar" (click)="onPreviewClick()" [disabled]="!isFormValid() || !documentoAprobacion">Previsualizar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="activeRecipientIndex !== null && filteredUsers.length > 0" class="user-dropdown-overlay" (click)="closeDropdown()"></div>
+<div *ngIf="activeRecipientIndex !== null && filteredUsers.length > 0" class="user-dropdown" [ngStyle]="dropdownStyle">
+  <ul class="dropdown-list">
+    <li *ngFor="let user of filteredUsers; let j = index" 
+        class="dropdown-item" 
+        [class.highlighted]="j === highlightedUserIndex" 
+        (mousedown)="selectUser(user, activeRecipientIndex)">
+      <span class="user-name">{{ user.nombres }} {{ user.apellidos }}</span>
+      <span class="user-username">{{ user.usuario }}</span>
+    </li>
+  </ul>
+</div>
+
+<app-document-view #docView [isVisible]="showDocumentView" [documentData]="documentViewData" [hidePrintButton]="true" (close)="onCloseView()" (edit)="onEditFromView()" (send)="onSendFromView()" (deleteRequest)="onDeleteFromView($event)" (discard)="onDiscardFromView()"></app-document-view>
+
+<app-confirm-modal
+  [visible]="confirmVisible"
+  [mensaje]="confirmMessage"
+  [textoAceptar]="'Confirmar envío'"
+  [textoCancelar]="'Volver'"
+  (aceptar)="onConfirmSend()"
+  (cancelar)="onCancelConfirm()"
+></app-confirm-modal>

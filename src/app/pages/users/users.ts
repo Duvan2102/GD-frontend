@@ -44,11 +44,10 @@ export class Users implements OnInit, OnDestroy {
   currentUser: Usuario | null = null;
   currentAction = '';
   mensajePasswordModal: string = '';
-  
+
   isLoading = false;
   errorMessage = '';
   private destroy$ = new Subject<void>();
-
   modalSuccessVisible: boolean = false;
   modalSuccessMessage: string = '';
   modalSuccessBtn: string = 'Aceptar';
@@ -73,7 +72,6 @@ export class Users implements OnInit, OnDestroy {
   this.isLoading = true;
   this.errorMessage = '';
   this.usuarios = [];
-  
   this.userService.obtenerUsuarios()
     .pipe(takeUntil(this.destroy$))
     .subscribe({
@@ -91,7 +89,6 @@ export class Users implements OnInit, OnDestroy {
       }
     });
   }
-  
   mostrarModalConfirmacion(mensaje: string, textoBtn: string = 'Aceptar') {
     this.modalSuccessMessage = mensaje;
     this.modalSuccessBtn = textoBtn;
@@ -127,7 +124,7 @@ export class Users implements OnInit, OnDestroy {
   filtrarUsuarios() {
     let filtrados = this.usuarios.filter(u => {
   if (this.activos) {
-    return u.activo === true;
+    return u.estado.descripcion === 'ACTIVO';
   } else {
     return true;
   }
@@ -241,6 +238,11 @@ export class Users implements OnInit, OnDestroy {
     this.currentAction = '';
   }
 
+  handlePasswordValidationError(error: string): void {
+    // El error ya se muestra en el modal, no necesitamos hacer nada adicional aquí
+    console.log('Error de validación de contraseña:', error);
+  }
+
   handlePasswordValidation(password: string): void {
     if (!password.trim()) {
       return alert('La contraseña no puede estar vacía');
@@ -252,11 +254,11 @@ export class Users implements OnInit, OnDestroy {
           this.userService.crearUsuario(this.currentUser)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-              next: (response) => {
+              next: (response: any) => {
                 this.mostrarModalSuccess('Usuario creado con éxito', 'Aceptar');
                 this.cargarUsuarios();
               },
-              error: (error) => {
+              error: (error: any) => {
                 console.error('Error creando usuario:', error);
                 alert('Error al crear el usuario: ' + (error.message || 'Error desconocido'));
               }
@@ -269,11 +271,11 @@ export class Users implements OnInit, OnDestroy {
           this.userService.actualizarUsuario(this.currentUser)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-              next: (response) => {
+              next: (response: any) => {
                 this.mostrarModalSuccess('Usuario editado con éxito', 'Aceptar');
                 this.cargarUsuarios();
               },
-              error: (error) => {
+              error: (error: any) => {
                 console.error('Error actualizando usuario:', error);
                 alert('Error al actualizar el usuario: ' + (error.message || 'Error desconocido'));
               }
@@ -286,12 +288,12 @@ export class Users implements OnInit, OnDestroy {
       this.userService.desactivarUsuario(this.currentUser.idUsuario)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           console.log('Usuario desactivado exitosamente:', response);
           this.mostrarModalSuccess('Usuario inactivado con éxito', 'Aceptar');
           this.cargarUsuarios();
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('Error desactivando usuario:', error);
           alert('Error al inactivar el usuario: ' + (error.message || 'Error desconocido'));
         }
@@ -304,12 +306,12 @@ export class Users implements OnInit, OnDestroy {
       this.userService.activarUsuario(this.currentUser.idUsuario)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           console.log('Usuario activado exitosamente:', response);
           this.mostrarModalSuccess('Usuario activado con éxito', 'Aceptar');
           this.cargarUsuarios();
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('Error activando usuario:', error);
           alert('Error al activar el usuario: ' + (error.message || 'Error desconocido'));
         }
@@ -324,7 +326,7 @@ export class Users implements OnInit, OnDestroy {
 
       case 'eliminarQR':
         if (this.currentUser) {
-          const usuarioSinQR = { ...this.currentUser, dobleAutenticacion: '' };
+          const usuarioSinQR = { ...this.currentUser, dobleAutenticacion: false };
           this.userService.actualizarUsuario(usuarioSinQR)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
@@ -332,7 +334,7 @@ export class Users implements OnInit, OnDestroy {
                 this.mostrarModalSuccess('Código QR eliminado con éxito', 'Aceptar');
                 this.cargarUsuarios();
               },
-              error: (error) => {
+              error: (error: any) => {
                 console.error('Error eliminando QR:', error);
                 alert('Error al eliminar el código QR: ' + (error.message || 'Error desconocido'));
               }
@@ -368,7 +370,6 @@ export class Users implements OnInit, OnDestroy {
   abrirConfirmModal(tipo: 'inactivar' | 'activar' | 'eliminarQR', usuario: Usuario) {
   this.confirmModalAction = tipo;
   this.currentUser = usuario;
-  
   switch(tipo) {
     case 'inactivar':
       this.confirmModalMessage = '¿Está seguro de que desea inactivar el usuario?';
@@ -380,13 +381,12 @@ export class Users implements OnInit, OnDestroy {
       this.confirmModalMessage = '¿Está seguro de que desea eliminar el código QR?';
       break;
   }
-  
+
   this.confirmModalVisible = true;
 }
 
 onAceptarConfirmacion() {
   this.confirmModalVisible = false;
-  
   switch(this.confirmModalAction) {
     case 'inactivar':
       this.mensajePasswordModal = 'Ingrese su contraseña para inactivar el usuario.';
@@ -413,24 +413,24 @@ onAceptarConfirmacion() {
   }
 
   handlePasswordChange(nuevaPassword: string): void {
-  if (!nuevaPassword.trim()) {
-    return alert('La nueva contraseña no puede estar vacía');
-  }
+    if (!nuevaPassword.trim()) {
+      return alert('La nueva contraseña no puede estar vacía');
+    }
 
-  if (this.currentUser && this.currentUser.idUsuario) {
-    this.userService.cambiarPasswordUsuario(this.currentUser.idUsuario, nuevaPassword)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          console.log('Contraseña cambiada exitosamente:', response);
-          this.mostrarModalSuccess('Contraseña cambiada con éxito', 'Aceptar');
-          this.cargarUsuarios();
-        },
-        error: (error) => {
-          console.error('Error cambiando contraseña:', error);
-          alert('Error al cambiar la contraseña: ' + (error.message || 'Error desconocido'));
-        }
-      });
+    if (this.currentUser && this.currentUser.idUsuario) {
+      this.userService.cambiarPasswordUsuario(this.currentUser.idUsuario, nuevaPassword)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response: any) => {
+            console.log('Contraseña cambiada exitosamente:', response);
+            this.mostrarModalSuccess('Contraseña cambiada con éxito', 'Aceptar');
+            this.cargarUsuarios();
+          },
+          error: (error: any) => {
+            console.error('Error cambiando contraseña:', error);
+            alert('Error al cambiar la contraseña: ' + (error.message || 'Error desconocido'));
+          }
+        });
+    }
   }
-}
 }

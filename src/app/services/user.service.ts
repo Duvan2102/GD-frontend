@@ -1,117 +1,103 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { environment } from '../environments/environment';
-import { PositionService, Position } from '../services/positions.service';
-import { 
-  Usuario, 
-  UsuarioRequest, 
-  ApiResponse, 
+import {
+  Usuario,
+  UsuarioRequest,
+  ApiResponse,
   DobleAutenticacionTipo,
-  ErrorResponse 
+  ErrorResponse,
+  PageResponse
 } from '../interfaces/common.interfaces';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
-  private readonly baseUrl = environment.apiUrl.endsWith('/') 
-    ? environment.apiUrl.slice(0, -1) 
+  private readonly baseUrl = environment.apiUrl.endsWith('/')
+    ? environment.apiUrl.slice(0, -1)
     : environment.apiUrl;
   private readonly apiUrl = `${this.baseUrl}/usuarios`;
-  
+
   private readonly httpOptions = {
-  headers: new HttpHeaders({
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  })
-};
+    headers: new HttpHeaders({
+      'Content-Type': 'application/json',
+    })
+  };
 
-  constructor(
-    private http: HttpClient,
-    private positionService: PositionService
-  ) {}
-  
-  obtenerCargosDisponibles(): Observable<Position[]> {
-    return this.positionService.getAll().pipe(
-      catchError((error) => {
-        console.warn('Error obteniendo cargos del backend, usando fallback:', error);
-        const cargosFallback: Position[] = [
-          { 
-            idCargo: 1, 
-            descripcion: 'Gerente', 
-            area: { 
-              idArea: 1, 
-              descripcion: 'Gerencia', 
-              departamento: { idDepartamento: 1, descripcion: 'Administración' } 
-            } 
-          },
-          { 
-            idCargo: 2, 
-            descripcion: 'Analista', 
-            area: { 
-              idArea: 2, 
-              descripcion: 'Análisis', 
-              departamento: { idDepartamento: 1, descripcion: 'Administración' } 
-            } 
-          },
-          { 
-            idCargo: 3, 
-            descripcion: 'Desarrollador', 
-            area: { 
-              idArea: 3, 
-              descripcion: 'Desarrollo', 
-              departamento: { idDepartamento: 2, descripcion: 'Tecnología' } 
-            } 
-          },
-          { 
-            idCargo: 4, 
-            descripcion: 'Administrador', 
-            area: { 
-              idArea: 4, 
-              descripcion: 'Administración', 
-              departamento: { idDepartamento: 1, descripcion: 'Administración' } 
-            } 
-          },
-          { 
-            idCargo: 5, 
-            descripcion: 'Funcionario', 
-            area: { 
-              idArea: 5, 
-              descripcion: 'General', 
-              departamento: { idDepartamento: 1, descripcion: 'Administración' } 
-            } 
-          }
-        ];
-        return of(cargosFallback);
-      })
-    );
-  }
+  private readonly cargoMap: { [key: string]: number } = {
+    'Gerente': 1,
+    'Analista': 2,
+    'Desarrollador': 3,
+    'Administrador': 4,
+    'Funcionario': 5
+  };
 
-  obtenerCargoPorId(id: number): Observable<Position> {
-    return this.positionService.getById(id).pipe(
-      catchError((error) => {
-        console.warn(`Error obteniendo cargo con ID ${id}:`, error);
-        const cargoDefault: Position = {
-          idCargo: id,
-          descripcion: 'Cargo no encontrado',
-          area: {
-            idArea: 1,
-            descripcion: 'Sin área',
-            departamento: { idDepartamento: 1, descripcion: 'Sin departamento' }
-          }
-        };
-        return of(cargoDefault);
-      })
-    );
+  constructor(private http: HttpClient) {}
+
+  obtenerCargosDisponibles(): Observable<string[]> {
+    const cargos = ['Gerente', 'Analista', 'Desarrollador', 'Administrador', 'Funcionario'];
+    return of(cargos);
   }
 
   obtenerUsuarios(): Observable<Usuario[]> {
-    return this.http.get<Usuario[]>(this.apiUrl).pipe(
-      map(usuarios => this.procesarUsuariosRecibidos(usuarios)),
+    const normalize = (res: any): Usuario[] => {
+      // Si es un array directo, devolverlo
+      if (Array.isArray(res)) return res as Usuario[];
+
+      // Si es un objeto Page (Spring Boot), extraer el content
+      if (res && typeof res === 'object' && res.content && Array.isArray(res.content)) {
+        return res.content as Usuario[];
+      }
+
+      // Soporte para otras estructuras comunes
+      const data1 = res?.data ?? res;
+      const data2 = data1?.data ?? data1;
+      const list = data2?.usuarios ?? data2?.content ?? data2?.items ?? data2?.rows ?? data2?.results ?? data2?.list ?? data2;
+      return Array.isArray(list) ? (list as Usuario[]) : [];
+    };
+
+    // Intentar obtener todos los usuarios con paginación grande
+    const intento1$ = this.http.get<any>(this.apiUrl, {
+      params: new HttpParams()
+        .set('page', '0')
+        .set('size', '1000')
+        .set('sortBy', 'idUsuario')
+        .set('sortDir', 'asc')
+    }).pipe(
+      map(normalize),
+      catchError(() => of([] as Usuario[]))
+    );
+
+    // Fallback: intentar sin parámetros de paginación
+    const intento2$ = () => this.http.get<any>(this.apiUrl).pipe(
+      map(normalize),
+      catchError(() => of([] as Usuario[]))
+    );
+
+    // Fallback final: endpoint alterno
+    const intento3$ = () => this.http.get<any>(`${this.apiUrl}/activos`).pipe(
+      map(normalize),
+      catchError(() => of([] as Usuario[]))
+    );
+
+    return intento1$.pipe(
+      switchMap(list => (list && list.length > 0) ? of(list) : intento2$()),
+      switchMap(list => (list && list.length > 0) ? of(list) : intento3$()),
       catchError(this.handleError)
     );
+  }
+
+  obtenerUsuariosPaginados(page: number = 0, size: number = 10, sortBy: string = 'idUsuario', sortDir: string = 'asc'): Observable<PageResponse<Usuario>> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString())
+      .set('sortBy', sortBy)
+      .set('sortDir', sortDir);
+
+    return this.http.get<any>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
   obtenerUsuarioPorId(id: number): Observable<Usuario> {
@@ -141,14 +127,14 @@ export class UserService {
   if (!userId) {
     return throwError(() => new Error('ID de usuario requerido para actualización'));
   }
-  
+
   const usuarioRequest: UsuarioRequest = this.transformarUsuarioParaApi(usuario);
-  
+
   console.log('=== DEBUG ACTUALIZAR USUARIO ===');
   console.log('Usuario original:', usuario);
   console.log('Usuario transformado:', usuarioRequest);
   console.log('URL:', `${this.apiUrl}/${userId}`);
-  
+
   const url = `${this.apiUrl}/${userId}`;
   return this.http.put<ApiResponse>(url, usuarioRequest, this.httpOptions).pipe(
     map(response => {
@@ -166,23 +152,51 @@ export class UserService {
     );
   }
 
+  desactivarUsuario(id: number): Observable<ApiResponse> {
+    return this.http.patch<ApiResponse>(`${this.apiUrl}/${id}/desactivar`, {}, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  activarUsuario(id: number): Observable<ApiResponse> {
+    return this.http.patch<ApiResponse>(`${this.apiUrl}/${id}/activar`, {}, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  validarPasswordActual(id: number, password: string): Observable<boolean> {
+    return this.http.post<{valid: boolean}>(`${this.apiUrl}/${id}/validar-password`, { password }, this.httpOptions)
+      .pipe(
+        map(response => response.valid),
+        catchError(() => of(false))
+      );
+  }
+
+  cambiarPasswordUsuario(id: number, newPassword: string): Observable<ApiResponse> {
+    return this.http.patch<ApiResponse>(`${this.apiUrl}/${id}/password`, { newPassword }, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
   getDobleAutenticacionOpciones(): string[] {
     return Object.values(DobleAutenticacionTipo);
   }
 
-  buscarUsuarios(criterios: Partial<Usuario>): Observable<Usuario[]> {
-    const params = new URLSearchParams();
-    
-    Object.entries(criterios).forEach(([key, value]) => {
-      if (value !== null && value !== undefined && value !== '') {
-        params.append(key, value.toString());
-      }
-    });
-
-    return this.http.get<Usuario[]>(`${this.apiUrl}/buscar?${params}`).pipe(
-      map(usuarios => this.procesarUsuariosRecibidos(usuarios)),
-      catchError(this.handleError)
-    );
+  private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest {
+    return {
+      identificacion: usuario.identificacion?.trim() || '',
+      nombres: usuario.nombres?.trim() || '',
+      apellidos: usuario.apellidos?.trim() || '',
+      usuario: usuario.usuario?.trim() || '',
+      cargo: {
+        // CORRECCIÓN: Usar el mapeo de cargos, por defecto Analista (ID: 2)
+        idCargo: this.obtenerIdCargo(usuario.cargo?.descripcion ?? 'Analista')
+      },
+      correoEmpresarial: usuario.correoEmpresarial?.trim() || '',
+      correoPersonal: usuario.correoPersonal?.trim() || '',
+      telefono1: usuario.telefono1?.trim() || '',
+      telefono2: usuario.telefono2?.trim() || '',
+      direccion: usuario.direccion?.trim() || '',
+      dobleAutenticacion: this.convertirDobleAutenticacion(usuario.dobleAutenticacion),
+      perfiles: usuario.perfiles
+    };
   }
 
   private procesarUsuariosRecibidos(usuarios: any[]): Usuario[] {
@@ -192,7 +206,7 @@ export class UserService {
   private procesarUsuarioRecibido(usuario: any, index?: number): Usuario {
   let cargoDescripcion = '';
   let cargoId: string | number = '';
-  
+
   if (usuario.cargo) {
     if (typeof usuario.cargo === 'object') {
       cargoId = usuario.cargo.idCargo || '';
@@ -203,8 +217,8 @@ export class UserService {
     }
   }
 
-  const estadoActivo = typeof usuario.estado === 'object' 
-    ? usuario.estado.descripcion === 'ACTIVO' 
+  const estadoActivo = typeof usuario.estado === 'object'
+    ? usuario.estado.descripcion === 'ACTIVO'
     : usuario.estado === 'ACTIVO';
 
   return {
@@ -221,15 +235,15 @@ export class UserService {
     telefono: usuario.telefono2 || usuario.telefono || '',
     direccion: usuario.direccion || '',
     correoPersonal: usuario.correoPersonal || '',
-    dobleAutenticacion: typeof usuario.dobleAutenticacion === 'boolean' 
-      ? (usuario.dobleAutenticacion ? 'Google Authenticator' : '') 
+    dobleAutenticacion: typeof usuario.dobleAutenticacion === 'boolean'
+      ? (usuario.dobleAutenticacion ? 'Google Authenticator' : '')
       : (usuario.dobleAutenticacion || 'Google Authenticator')
   };
 }
 
   private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest {
   const rolUsuario = usuario.rol || { idRol: 2, descripcion: 'USUARIO' };
-  
+
   let estadoUsuario;
   if (typeof usuario.estado === 'object') {
     estadoUsuario = usuario.estado;
@@ -260,13 +274,13 @@ export class UserService {
     if (typeof cargo === 'number') {
       return cargo;
     }
-    
+
     if (typeof cargo === 'string') {
       const cargoNumerico = parseInt(cargo, 10);
       if (!isNaN(cargoNumerico)) {
         return cargoNumerico;
       }
-      
+
       const cargoMapFallback: { [key: string]: number } = {
         'Gerente': 1,
         'Analista': 2,
@@ -274,23 +288,26 @@ export class UserService {
         'Administrador': 4,
         'Funcionario': 5
       };
-      
+
       return cargoMapFallback[cargo] || 2;
     }
-    
+
     return 2;
   }
-  
-  private convertirDobleAutenticacion(dobleAuth?: string | null): boolean {
-    return dobleAuth !== null && 
-           dobleAuth !== undefined && 
-           dobleAuth !== '' && 
-           Object.values(DobleAutenticacionTipo).includes(dobleAuth as DobleAutenticacionTipo);
+
+  private convertirDobleAutenticacion(dobleAuth: boolean | string | undefined): boolean {
+    if (typeof dobleAuth === 'boolean') {
+      return dobleAuth;
+    }
+    if (typeof dobleAuth === 'string') {
+      return dobleAuth.toLowerCase() === 'true' || dobleAuth === '1';
+    }
+    return false; // Valor por defecto
   }
-  
+
   private handleError = (error: HttpErrorResponse): Observable<never> => {
     let errorMessage = 'Error inesperado. Por favor, intenta más tarde.';
-    
+
     if (error.error instanceof ErrorEvent) {
       errorMessage = `Error de conexión: ${error.error.message}`;
     } else {
@@ -326,51 +343,14 @@ export class UserService {
           errorMessage = error.error?.message || `Error del servidor (${error.status}). Intenta más tarde.`;
       }
     }
-    
+
     console.error('Error en UserService:', {
       status: error.status,
       message: errorMessage,
       error: error.error,
       url: error.url
     });
-    
-    return throwError(() => ({
-      status: error.status,
-      message: errorMessage,
-      details: error.error?.details || [],
-      timestamp: new Date().toISOString()
-    }));
+
+    return throwError(() => error);
   }
-
-desactivarUsuario(usuarioId: number): Observable<any> {
-  const url = `${this.apiUrl}/${usuarioId}/desactivar`;
-  return this.http.put<any>(url, {}, this.httpOptions).pipe(
-    catchError(this.handleError)
-  );
-}
-
-activarUsuario(usuarioId: number): Observable<any> {
-  const url = `${this.apiUrl}/${usuarioId}/activar`;
-  return this.http.put<any>(url, {}, this.httpOptions).pipe(
-    catchError(this.handleError)
-  );
-}
-
-cambiarPasswordUsuario(usuarioId: number, nuevaPassword: string): Observable<any> {
-  const url = `${this.apiUrl}/${usuarioId}/password`;
-  const body = { nuevaPassword: nuevaPassword };
-  return this.http.put<any>(url, body, this.httpOptions).pipe(
-    catchError(this.handleError)
-  );
-}
-
-validarPasswordActual(usuarioId: number, passwordActual: string): Observable<boolean> {
-  const url = `${this.baseUrl}/auth/login`;
-  const body = { usuario: '', password: passwordActual };
-  
-  return this.http.post<any>(url, body, this.httpOptions).pipe(
-    map(response => !!response),
-    catchError(() => of(false))
-  );
-}
 }

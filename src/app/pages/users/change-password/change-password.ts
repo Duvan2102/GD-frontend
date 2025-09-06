@@ -61,7 +61,7 @@ export class ChangePassword implements OnChanges {
     this.validateError = 'Ingrese su contraseña actual.';
     return;
   }
-  
+
   if (this.user && this.user.idUsuario) {
     this.userService.validarPasswordActual(this.user.idUsuario, this.password)
       .subscribe({
@@ -81,7 +81,6 @@ export class ChangePassword implements OnChanges {
       });
   }
 }
-
   onChangePassword() {
     if (!this.newPassword || !this.confirmPassword) {
       this.changePasswordError = 'Debes completar ambos campos.';
@@ -99,11 +98,11 @@ export class ChangePassword implements OnChanges {
     if (this.user && this.user.idUsuario) {
       this.userService.cambiarPasswordUsuario(this.user.idUsuario, this.newPassword)
         .subscribe({
-          next: (response) => {
+          next: (response: any) => {
             console.log('Contraseña cambiada exitosamente:', response);
             this.passwordChanged.emit(this.newPassword);
           },
-          error: (error) => {
+          error: (error: any) => {
             console.error('Error cambiando contraseña:', error);
             this.changePasswordError = 'Error al cambiar la contraseña: ' + (error.message || 'Error desconocido');
           }

@@ -1,7 +1,8 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ViewChild, ElementRef, input } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Usuario } from '../../../interfaces/common.interfaces';
+import { AuthService } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-password-modal',
@@ -16,16 +17,23 @@ export class PasswordModal  {
   @Input() user: Usuario | null = null;
   @Output() close = new EventEmitter<void>();
   @Output() validate = new EventEmitter<string>();
+  @Output() validationError = new EventEmitter<string>();
 
   @ViewChild('passwordInput') passwordInput!: ElementRef<HTMLInputElement>;
 
   password = '';
   passwordVisible = false;
+  isValidating = false;
+  errorMessage = '';
+
+  constructor(private authService: AuthService) {}
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['isVisible'] && this.isVisible) {
       this.password = '';
       this.passwordVisible = false;
+      this.errorMessage = '';
+      this.isValidating = false;
       setTimeout(() => {
         this.passwordInput?.nativeElement.focus();
       }, 100);
@@ -37,9 +45,35 @@ export class PasswordModal  {
   }
 
   onValidate(): void {
-    if (this.password.trim()) {
-      this.validate.emit(this.password);
+    if (!this.password.trim()) {
+      this.errorMessage = 'La contraseña no puede estar vacía';
+      return;
     }
+
+    if (this.isValidating) {
+      return;
+    }
+
+    this.isValidating = true;
+    this.errorMessage = '';
+
+    this.authService.validatePassword(this.password).subscribe({
+      next: (response) => {
+        this.isValidating = false;
+        if (response.valid) {
+          this.validate.emit(this.password);
+        } else {
+          this.errorMessage = response.message || 'Contraseña incorrecta';
+          this.validationError.emit(this.errorMessage);
+        }
+      },
+      error: (error) => {
+        this.isValidating = false;
+        this.errorMessage = 'Error al validar la contraseña. Intente nuevamente.';
+        this.validationError.emit(this.errorMessage);
+        console.error('Error validando contraseña:', error);
+      }
+    });
   }
 
   togglePasswordVisibility(): void {

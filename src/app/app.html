@@ -1,1 +1,7 @@
 <router-outlet></router-outlet>
+<app-success-modal
+  [isVisible]="isSuccessModalVisible"
+  [title]="successModalTitle"
+  [message]="successModalMessage"
+  (accept)="closeSuccessModal()">
+</app-success-modal>

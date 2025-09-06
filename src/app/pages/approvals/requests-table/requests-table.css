@@ -1,17 +1,17 @@
 .tabla-solicitudes {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 11px;
 }
 
 .tabla-solicitudes th {
   background-color: #f9fafb;
   color: #6b7280;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 16px 20px;
+  letter-spacing: 0.2px;
+  padding: 6px 10px;
   text-align: left;
   border-bottom: 1px solid #e5e7eb;
   white-space: nowrap;
@@ -21,12 +21,10 @@
 }
 
 .tabla-solicitudes td {
-  padding: 16px 20px;
+  padding: 6px 10px;
   color: #374151;
-  font-size: 14px;
-  border-bottom: 1pX solid rgb(90, 139, 129, 0.3); 
-  border-left: 1px solid transparent;
-  border-right: 1px solid transparent;
+  font-size: 11px;
+  border-bottom: 1px solid rgba(90, 139, 129, 0.3); 
 }
 
 .tabla-solicitudes tbody tr:hover {
@@ -34,21 +32,22 @@
 }
 
 .tabla-solicitudes tbody tr:hover td {
- 
   border-bottom: 2px solid #5A8B81; 
 }
 
 .tabla-solicitudes tbody tr:last-child td {
-    border-bottom: none;
+  border-bottom: none;
 }
 
 .btn-gestionar {
   background-color: #5A8B81;
-  color: white ;
+  color: white;
   border-color: #5A8B81;
   font-weight: 600;
+  font-size: 11px;
+  padding: 4px 8px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .btn-gestionar:hover {
@@ -59,7 +58,7 @@
 .icono-prioridad {
   color: #ef4444;
   font-weight: bold;
-  font-size: 30px;
+  font-size: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -69,20 +68,22 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: -4px;
+  position: relative;
+  overflow: visible;
+  max-width: 120px;
 }
 
 .aprobador-icono {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   color: white;
   font-weight: bold;
-  font-size: 12px;
-  margin-left: -12px;
+  font-size: 11px;
+  margin-left: -10px; 
   border: 2px solid white;
   box-shadow: 0 1px 3px rgba(90, 139, 129, 0.8);
   position: relative;
@@ -96,3 +97,64 @@
 .aprobador-icono:nth-child(2) { background-color: #93155a; }
 .aprobador-icono:nth-child(3) { background-color: #e6007e; }
 .aprobador-icono:nth-child(4) { background-color: #f0910f; }
+.aprobador-icono:nth-child(n+6) { display: none !important; }
+
+.aprobador-contador {
+  background-color: #6c757d !important;
+  font-weight: bold;
+}
+.aprobador-icono {
+  cursor: help;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.aprobador-icono:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(90, 139, 129, 0.4);
+  z-index: 10;
+}
+
+.aprobador-icono[title]:hover::after {
+  content: attr(title);
+  position: fixed;
+  bottom: auto;
+  top: auto;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 9999;
+  pointer-events: none;
+  margin-top: -8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.custom-tooltip {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 10000;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  max-width: 300px;
+  word-wrap: break-word;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.aprobador-icono[title]:hover::after,
+.aprobador-icono[data-tooltip]:hover::after {
+  display: none !important;
+}

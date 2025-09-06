@@ -6,7 +6,7 @@
         <th (click)="sort.emit('type')">TIPO <i class="bi" [ngClass]="getSortIcon('type')"></i></th>
         <th (click)="sort.emit('id')">ID <i class="bi" [ngClass]="getSortIcon('id')"></i></th>
         <th (click)="sort.emit('creationDate')">FECHA <i class="bi" [ngClass]="getSortIcon('creationDate')"></i></th>
-        <th (click)="sort.emit('creatorUser')">USUARIO <i class="bi" [ngClass]="getSortIcon('creatorUser')"></i></th>
+        <th (click)="sort.emit('creatorFullName')">USUARIO <i class="bi" [ngClass]="getSortIcon('creatorFullName')"></i></th>
         <th>CARGO</th>
         <th>ULT. ACTUALIZACIÓN</th>
         <th>APROBADORES</th>
@@ -38,9 +38,25 @@
         </td>
         
         <td>
-          <div *ngIf="request.approvers?.length > 0" class="aprobadores-container">
-            <span *ngFor="let initials of request.approvers" class="aprobador-icono">
-                {{ initials }}
+          <div *ngIf="request.approvers && request.approvers.length > 0" class="aprobadores-container">
+            <!-- Debug: {{ request.approvers.length }} aprobadores -->
+            <ng-container *ngFor="let approver of request.approvers | slice:0:4; let i = index; trackBy: trackByApprover">
+              <span class="aprobador-icono" 
+                    [attr.title]="approver.fullName"
+                    [attr.data-tooltip]="approver.fullName"
+                    [attr.data-index]="i"
+                    (mouseenter)="showTooltip($event, approver.fullName, 'top')"
+                    (mouseleave)="hideTooltip()">
+                {{ approver.initials }}
+              </span>
+            </ng-container>
+            <span *ngIf="request.approvers.length > 4" 
+                  class="aprobador-icono aprobador-contador" 
+                  [attr.title]="request.approvers.length - 4 + ' más'"
+                  [attr.data-tooltip]="getRemainingApproversNames(request.approvers)"
+                  (mouseenter)="showTooltip($event, getRemainingApproversNames(request.approvers), 'top')"
+                  (mouseleave)="hideTooltip()">
+              +{{ request.approvers.length - 4 }}
             </span>
           </div>
         </td>
@@ -49,12 +65,27 @@
           <span *ngIf="request.status" class="badge rounded-pill" [ngClass]="{
              'text-bg-success': request.status === 'APROBADO',
              'text-bg-warning': request.status === 'PENDIENTE',
-             'text-bg-danger': request.status === 'RECHAZADO'
+             'text-bg-danger': request.status === 'RECHAZADO',
+             'text-bg-secondary': request.status === 'CANCELADA'
            }">{{ request.status }}</span>
         </td>
         
         <td class="text-center">
-          <button class="btn btn-sm btn-gestionar" (click)="manage.emit(request.id)">GESTIONAR <br>SOLICITUD</button>
+            <button class="btn btn-sm btn-gestionar" (click)="manage.emit(request.id)">
+                <ng-container *ngIf="viewType === 'approvals'">
+                    <span *ngIf="isToggleActive; else gestionarSolicitud">VISUALIZAR <br> SOLICITUD</span>
+                    <ng-template #gestionarSolicitud>GESTIONAR <br>SOLICITUD</ng-template>
+                </ng-container>
+
+                <ng-container *ngIf="viewType === 'create-request'">
+                    VISUALIZAR <br> SOLICITUD
+                </ng-container>
+
+                <ng-container *ngIf="viewType === 'approval-details'">
+                    <span *ngIf="isToggleActive; else visualizarSolicitudDetalles">VISUALIZAR <br> METADATA</span>
+                    <ng-template #visualizarSolicitudDetalles>VISUALIZAR <br>SOLICITUD</ng-template>
+                </ng-container>
+            </button>
         </td>
 
       </tr>
@@ -63,6 +94,10 @@
       </tr>
     </tbody>
   </table>
+</div>
+
+<div #tooltipElement class="custom-tooltip" [style.display]="tooltipVisible ? 'block' : 'none'" [style.left.px]="tooltipX" [style.top.px]="tooltipY">
+  {{ tooltipText }}
 </div>
 <div class="row mt-3 align-items-center">
     </div>

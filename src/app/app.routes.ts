@@ -1,4 +1,3 @@
-import { Component } from '@angular/core';
 import { Routes } from '@angular/router';
 import { Layout } from './layout/layout';
 import { Approvals } from './pages/approvals/approvals';
@@ -7,23 +6,44 @@ import { ReportsAudits } from './pages/reports-audits/reports-audits';
 import { Users } from './pages/users/users';
 import { CreateRequest } from './pages/create-request/create-request';
 import { ApprovalDetails } from './pages/approval-details/approval-details';
-import { DepartmentCreation } from './pages/administration/department-creation/department-creation';
-
+import { LoginComponent } from './pages/login/login.component';
+import { AuthGuard } from './guards/auth.guard';
+import { LoginGuard } from './guards/login.guard';
 
 export const routes: Routes = [
   {
+    path: 'login',
+    component: LoginComponent,
+    canActivate: [LoginGuard]
+  },
+  {
     path: '',
     component: Layout,
+    canActivate: [AuthGuard],
     children: [
-      { path: '', redirectTo: 'approvals', pathMatch: 'full' },
-      { path: 'approvals', component: Approvals },
-      { path: 'department-creation', component: DepartmentCreation },
-      { path: 'reports-audits', component: ReportsAudits },
-      { path: 'users', component: Users },
+      { path: '', redirectTo: 'create-request', pathMatch: 'full' },
       { path: 'create-request', component: CreateRequest },
+      { path: 'approvals', component: Approvals },
       { path: 'approval-details', component: ApprovalDetails },
-      { path: 'administration', component: Administration },
+      {
+        path: 'users',
+        component: Users,
+        canActivate: [AuthGuard],
+        data: { permission: 'canAccessUsers' }
+      },
+      {
+        path: 'administration',
+        component: Administration,
+        canActivate: [AuthGuard],
+        data: { permission: 'canAccessAdmin' }
+      },
+      {
+        path: 'reports-audits',
+        component: ReportsAudits,
+        canActivate: [AuthGuard],
+        data: { permission: 'canAccessReports' }
+      },
     ],
   },
-  { path: '**', redirectTo: '' }
+  { path: '**', redirectTo: 'login' }
 ];

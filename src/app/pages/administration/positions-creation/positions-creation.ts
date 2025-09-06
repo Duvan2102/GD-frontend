@@ -2,12 +2,7 @@ import { Component, Input, Output, EventEmitter, OnChanges } from '@angular/core
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Area } from '../../../services/area.service';
-
-export interface Position {
-  idCargo?: number;
-  descripcion: string;
-  area: Area;
-}
+import { Position } from '../../../services/positions.service';
 
 @Component({
   selector: 'app-positions-creation',
@@ -19,7 +14,6 @@ export interface Position {
 export class PositionsCreation implements OnChanges {
   @Input() isVisible: boolean = false;
   @Input() mode: 'create' | 'update' = 'create';
-  @Input() positions: Position[] = [];
   @Input() positionToEdit?: Position;
   @Input() areas: Area[] = [];
 
@@ -27,10 +21,7 @@ export class PositionsCreation implements OnChanges {
   @Output() update = new EventEmitter<Position>();
   @Output() cancel = new EventEmitter<void>();
 
-  position: Position = {
-    descripcion: '',
-    area: { idArea: 0, descripcion: '', departamento: { idDepartamento: 0, descripcion: '' } }
-  };
+  position: Position = this.getInitialPositionState();
 
   get modalTitle(): string {
     return this.mode === 'update' ? 'Actualización del Cargo' : 'Crear Cargo';
@@ -39,7 +30,13 @@ export class PositionsCreation implements OnChanges {
   ngOnChanges() {
     if (this.isVisible) {
       if (this.mode === 'update' && this.positionToEdit) {
-        this.position = { ...this.positionToEdit, area: { ...this.positionToEdit.area } };
+        this.position = JSON.parse(JSON.stringify(this.positionToEdit));
+        if (!this.position.permisos) {
+          this.position.permisos = {
+            esAdministrador: false,
+            esAuditor: false
+          };
+        }
       } else {
         this.resetForm();
       }
@@ -54,6 +51,7 @@ export class PositionsCreation implements OnChanges {
     if (selectedArea) {
       this.position.area = { ...selectedArea };
     }
+    
     if (this.mode === 'create') {
       this.create.emit({ ...this.position });
     } else {
@@ -66,11 +64,19 @@ export class PositionsCreation implements OnChanges {
     this.resetForm();
   }
 
-  private resetForm() {
-    this.position = {
+  private getInitialPositionState(): Position {
+    return {
       descripcion: '',
-      area: { idArea: 0, descripcion: '', departamento: { idDepartamento: 0, descripcion: '' } }
+      area: { idArea: 0, descripcion: '', departamento: { idDepartamento: 0, descripcion: '' } },
+      permisos: {
+        esAdministrador: false,
+        esAuditor: false
+      }
     };
+  }
+
+  private resetForm() {
+    this.position = this.getInitialPositionState();
   }
 
   getSelectedAreaInfo(): Area | undefined {

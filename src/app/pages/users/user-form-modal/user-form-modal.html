@@ -5,16 +5,16 @@
 <div class="modal" [class.show]="isVisible" *ngIf="isVisible">
   <div class="modal-dialog modal-lg">
     <div class="modal-content user-form-modal">
-      
+
       <!-- Header -->
       <div class="modal-header">
         <h5 class="modal-title">{{ modalTitle }}</h5>
         <button type="button" class="btn-close" (click)="onClose()"></button>
       </div>
-      
+
       <!-- Body -->
       <div class="modal-body" [formGroup]="userForm">
-        
+
         <!-- ALERTAS DE ÉXITO Y ERROR DEL SERVIDOR -->
         <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show mb-3" role="alert">
           <i class="fas fa-check-circle me-2"></i>
@@ -74,10 +74,10 @@
           </div>
           <div class="col-md-6">
             <label class="form-label">Cargo <span class="text-danger">*</span></label>
-            
+
             <!-- Dropdown jerárquico personalizado -->
             <div class="hierarchical-dropdown" [class.is-invalid]="userForm.get('cargo')?.invalid && userForm.get('cargo')?.touched">
-              <div class="dropdown-display" 
+              <div class="dropdown-display"
                    (click)="toggleDropdown()"
                    [class.open]="isDropdownOpen">
                 <span class="selected-text">{{ selectedCargoText }}</span>
@@ -87,13 +87,13 @@
               <!-- Panel desplegable -->
               <div class="dropdown-panel" *ngIf="isDropdownOpen" (click)="$event.stopPropagation()">
                 <div class="dropdown-content">
-                  
+
                   <!-- Lista de departamentos -->
                   <div *ngFor="let departamento of hierarchicalData.departamentos" class="dropdown-item">
-                    
+
                     <!-- Departamento header -->
                     <div class="department-header" (click)="toggleDepartment(departamento)">
-                      <i class="fas" 
+                      <i class="fas"
                          [class.fa-chevron-down]="departamento.expanded"
                          [class.fa-chevron-right]="!departamento.expanded"></i>
                       <span class="department-name">{{ departamento.descripcion }}</span>
@@ -102,10 +102,10 @@
                     <!-- Áreas del departamento -->
                     <div *ngIf="departamento.expanded" class="areas-container">
                       <div *ngFor="let area of departamento.areas" class="dropdown-item area-item">
-                        
+
                         <!-- Área header -->
                         <div class="area-header" (click)="toggleArea(area)">
-                          <i class="fas" 
+                          <i class="fas"
                              [class.fa-chevron-down]="area.expanded"
                              [class.fa-chevron-right]="!area.expanded"></i>
                           <span class="area-name">{{ area.descripcion }}</span>
@@ -113,7 +113,7 @@
 
                         <!-- Cargos del área -->
                         <div *ngIf="area.expanded" class="cargos-container">
-                          <div *ngFor="let cargo of area.cargos" 
+                          <div *ngFor="let cargo of area.cargos"
                                class="dropdown-item cargo-item"
                                (click)="selectCargo(cargo)">
                             <span class="cargo-bullet">•</span>
@@ -207,9 +207,9 @@
         <button type="button" class="btn btn-secondary" (click)="onClose()" [disabled]="isLoading">
           Cancelar
         </button>
-        <button type="button" 
-                class="btn btn-primary-custom" 
-                (click)="onSave()" 
+        <button type="button"
+                class="btn btn-primary-custom"
+                (click)="onSave()"
                 [disabled]="userForm.invalid || isLoading">
           <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
           {{ submitButtonText }}
@@ -217,6 +217,8 @@
       </div>
     </div>
   </div>
+</div>
+
 <!-- MODALES DE CONFIRMACIÓN -->
 
 <!-- Modal de contraseña -->
@@ -225,7 +227,8 @@
   [mensajeModal]="mensajePasswordModal"
   [user]="pendingUserData"
   (close)="closePasswordModal()"
-  (validate)="handlePasswordValidation($event)">
+  (validate)="handlePasswordValidation($event)"
+  (validationError)="handlePasswordValidationError($event)">
 </app-password-modal>
 
 <!-- Modal de confirmación -->

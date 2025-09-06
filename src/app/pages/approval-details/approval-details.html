@@ -6,8 +6,9 @@
     </div>
 
     <app-controls
+      [labelAprobados]="'CANCELADAS/RECHAZADAS'"
       (quantityChange)="onQuantityChange($event)"
-      (toggleApprovedChange)="onToggleApproved($event)"
+      (toggleApprovedChange)="onToggleManaged($event)"
       (searchChange)="onSearchChange($event)">
     </app-controls>
 
@@ -16,6 +17,8 @@
       [totalItems]="totalFiltered"
       [currentOrder]="currentOrder"
       [ascendingOrder]="ascendingOrder"
+      [isToggleActive]="showOnlyManaged"
+      [viewType]="'approval-details'"
       (sort)="sortBy($event)"
       (manage)="onManage($event)">
     </app-requests-table>
@@ -28,4 +31,44 @@
     ></app-footer-controls>
 
   </div>
+</div>
+
+<app-request-success-modal
+  [isVisible]="isDetailModalVisible"
+  [data]="successModalData"
+  [usuariosDisponibles]="allUsers"
+  [isApprovalFlow]="true"
+  [hideManageButton]="true"
+  (close)="closeDetailModal()"
+  (viewApprovedDocument)="handleViewApprovedDocument($event)">
+</app-request-success-modal>
+
+<app-document-view
+  [isVisible]="isDocumentViewVisible"
+  [documentData]="documentViewData"
+  [hideManagementButtons]="true"
+  [hideSendButton]="true"
+  (close)="closeDocumentView()">
+</app-document-view>
+
+<!-- Loading overlay for historic fetch -->
+<div *ngIf="isLoading" class="loading-overlay">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Cargando...</span>
+  </div>
+  <div class="mt-2">Cargando historial...</div>
+  <style>
+    .loading-overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.6);z-index:1050}
+  </style>
+</div>
+
+<!-- Loading overlay for detail fetch -->
+<div *ngIf="isLoadingDetails" class="loading-overlay">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Cargando...</span>
+  </div>
+  <div class="mt-2">Cargando detalles...</div>
+  <style>
+    .loading-overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.6);z-index:1050}
+  </style>
 </div>
