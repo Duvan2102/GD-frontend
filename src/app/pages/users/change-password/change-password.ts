@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, Inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { UserService } from '../../../services/user.service';
@@ -65,7 +65,7 @@ export class ChangePassword implements OnChanges {
   if (this.user && this.user.idUsuario) {
     this.userService.validarPasswordActual(this.user.idUsuario, this.password)
       .subscribe({
-        next: (isValid: boolean) => {
+        next: (isValid) => {
           if (isValid) {
             this.isValidatePasswordModalVisible = false;
             this.isPasswordChangeModalVisible = true;
@@ -75,13 +75,12 @@ export class ChangePassword implements OnChanges {
             this.validateError = 'Contraseña incorrecta.';
           }
         },
-        error: (error: any) => {
+        error: (error) => {
           this.validateError = 'Error al validar la contraseña.';
         }
       });
   }
 }
-
   onChangePassword() {
     if (!this.newPassword || !this.confirmPassword) {
       this.changePasswordError = 'Debes completar ambos campos.';

@@ -48,7 +48,6 @@ export class Users implements OnInit, OnDestroy {
   isLoading = false;
   errorMessage = '';
   private destroy$ = new Subject<void>();
-
   modalSuccessVisible: boolean = false;
   modalSuccessMessage: string = '';
   modalSuccessBtn: string = 'Aceptar';
@@ -73,7 +72,6 @@ export class Users implements OnInit, OnDestroy {
   this.isLoading = true;
   this.errorMessage = '';
   this.usuarios = [];
-
   this.userService.obtenerUsuarios()
     .pipe(takeUntil(this.destroy$))
     .subscribe({
@@ -91,7 +89,6 @@ export class Users implements OnInit, OnDestroy {
       }
     });
   }
-
   mostrarModalConfirmacion(mensaje: string, textoBtn: string = 'Aceptar') {
     this.modalSuccessMessage = mensaje;
     this.modalSuccessBtn = textoBtn;
@@ -373,7 +370,6 @@ export class Users implements OnInit, OnDestroy {
   abrirConfirmModal(tipo: 'inactivar' | 'activar' | 'eliminarQR', usuario: Usuario) {
   this.confirmModalAction = tipo;
   this.currentUser = usuario;
-
   switch(tipo) {
     case 'inactivar':
       this.confirmModalMessage = '¿Está seguro de que desea inactivar el usuario?';
@@ -391,7 +387,6 @@ export class Users implements OnInit, OnDestroy {
 
 onAceptarConfirmacion() {
   this.confirmModalVisible = false;
-
   switch(this.confirmModalAction) {
     case 'inactivar':
       this.mensajePasswordModal = 'Ingrese su contraseña para inactivar el usuario.';
@@ -418,24 +413,24 @@ onAceptarConfirmacion() {
   }
 
   handlePasswordChange(nuevaPassword: string): void {
-  if (!nuevaPassword.trim()) {
-    return alert('La nueva contraseña no puede estar vacía');
-  }
+    if (!nuevaPassword.trim()) {
+      return alert('La nueva contraseña no puede estar vacía');
+    }
 
-  if (this.currentUser && this.currentUser.idUsuario) {
-    this.userService.cambiarPasswordUsuario(this.currentUser.idUsuario, nuevaPassword)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response: any) => {
-          console.log('Contraseña cambiada exitosamente:', response);
-          this.mostrarModalSuccess('Contraseña cambiada con éxito', 'Aceptar');
-          this.cargarUsuarios();
-        },
-        error: (error: any) => {
-          console.error('Error cambiando contraseña:', error);
-          alert('Error al cambiar la contraseña: ' + (error.message || 'Error desconocido'));
-        }
-      });
+    if (this.currentUser && this.currentUser.idUsuario) {
+      this.userService.cambiarPasswordUsuario(this.currentUser.idUsuario, nuevaPassword)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response: any) => {
+            console.log('Contraseña cambiada exitosamente:', response);
+            this.mostrarModalSuccess('Contraseña cambiada con éxito', 'Aceptar');
+            this.cargarUsuarios();
+          },
+          error: (error: any) => {
+            console.error('Error cambiando contraseña:', error);
+            alert('Error al cambiar la contraseña: ' + (error.message || 'Error desconocido'));
+          }
+        });
+    }
   }
-}
 }

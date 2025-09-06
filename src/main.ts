@@ -4,9 +4,10 @@ import { App } from './app/app';
 import { appConfig } from './app/app.config';
 import { environment } from './app/environments/environment';
 
+
 if (environment.production) {
   enableProdMode();
 }
 
 bootstrapApplication(App, appConfig)
-  .catch(err => console.error(err));
+  .catch(err => console.error('Error al inicializar la aplicación:', err));

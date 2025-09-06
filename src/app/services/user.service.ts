@@ -101,8 +101,11 @@ export class UserService {
   }
 
   obtenerUsuarioPorId(id: number): Observable<Usuario> {
-    return this.http.get<Usuario>(`${this.apiUrl}/${id}`).pipe(catchError(this.handleError));
-  }
+  return this.http.get<Usuario>(`${this.apiUrl}/${id}`).pipe(
+    map(usuario => this.procesarUsuarioRecibido(usuario, 0)),
+    catchError(this.handleError)
+  );
+}
 
   verificarUsuarioExiste(identificacion: string): Observable<boolean> {
     return this.http.get<Usuario[]>(`${this.apiUrl}/buscar?identificacion=${identificacion}`)
@@ -114,23 +117,39 @@ export class UserService {
 
   crearUsuario(usuario: Usuario): Observable<ApiResponse> {
     const usuarioRequest: UsuarioRequest = this.transformarUsuarioParaApi(usuario);
-    return this.http.post<ApiResponse>(this.apiUrl, usuarioRequest, this.httpOptions).pipe(catchError(this.handleError));
+    return this.http.post<ApiResponse>(this.apiUrl, usuarioRequest, this.httpOptions).pipe(
+      catchError(this.handleError)
+    );
   }
 
   actualizarUsuario(usuario: Usuario): Observable<ApiResponse> {
-    if (!usuario.noUsuario) {
-      return throwError(() => new Error('ID de usuario requerido para actualización'));
-    }
-    const usuarioRequest: UsuarioRequest = this.transformarUsuarioParaApi(usuario);
-    const url = `${this.apiUrl}/${usuario.noUsuario}`;
-    return this.http.put<ApiResponse>(url, usuarioRequest, this.httpOptions).pipe(catchError(this.handleError));
+  const userId = usuario.idUsuario || usuario.noUsuario;
+  if (!userId) {
+    return throwError(() => new Error('ID de usuario requerido para actualización'));
   }
 
+  const usuarioRequest: UsuarioRequest = this.transformarUsuarioParaApi(usuario);
+
+  console.log('=== DEBUG ACTUALIZAR USUARIO ===');
+  console.log('Usuario original:', usuario);
+  console.log('Usuario transformado:', usuarioRequest);
+  console.log('URL:', `${this.apiUrl}/${userId}`);
+
+  const url = `${this.apiUrl}/${userId}`;
+  return this.http.put<ApiResponse>(url, usuarioRequest, this.httpOptions).pipe(
+    map(response => {
+      console.log('=== RESPUESTA DEL SERVIDOR ===');
+      console.log('Response:', response);
+      return response;
+    }),
+    catchError(this.handleError)
+  );
+}
+
   eliminarUsuario(id: number): Observable<ApiResponse> {
-    return this.http.delete<ApiResponse>(`${this.apiUrl}/${id}`)
-      .pipe(
-        catchError(this.handleError)
-      );
+    return this.http.delete<ApiResponse>(`${this.apiUrl}/${id}`).pipe(
+      catchError(this.handleError)
+    );
   }
 
   desactivarUsuario(id: number): Observable<ApiResponse> {
@@ -180,33 +199,130 @@ export class UserService {
     };
   }
 
-  private obtenerIdCargo(cargo: string): number {
-    // Por defecto devolver ID 2 (Analista)
-    return this.cargoMap[cargo] || 2;
+  private procesarUsuariosRecibidos(usuarios: any[]): Usuario[] {
+  return usuarios.map((usuario, index) => this.procesarUsuarioRecibido(usuario, index));
+}
+
+  private procesarUsuarioRecibido(usuario: any, index?: number): Usuario {
+  let cargoDescripcion = '';
+  let cargoId: string | number = '';
+
+  if (usuario.cargo) {
+    if (typeof usuario.cargo === 'object') {
+      cargoId = usuario.cargo.idCargo || '';
+      cargoDescripcion = usuario.cargo.descripcion || '';
+    } else if (typeof usuario.cargo === 'string' || typeof usuario.cargo === 'number') {
+      cargoDescripcion = usuario.cargo.toString();
+      cargoId = usuario.cargo;
+    }
   }
 
-  private convertirDobleAutenticacion(dobleAuth?: boolean | string): boolean {
+  const estadoActivo = typeof usuario.estado === 'object'
+    ? usuario.estado.descripcion === 'ACTIVO'
+    : usuario.estado === 'ACTIVO';
+
+  return {
+    ...usuario,
+    idUsuario: usuario.idUsuario,
+    noUsuario: usuario.idUsuario || usuario.noUsuario || (index !== undefined ? index + 1 : 0),
+    cargo: cargoId || cargoDescripcion,
+    cargoDescripcion: cargoDescripcion,
+    estado: typeof usuario.estado === 'object' ? usuario.estado.descripcion : (usuario.estado || 'ACTIVO'),
+    activo: typeof usuario.estado === 'object' ? usuario.estado.descripcion === 'ACTIVO' : (usuario.activo !== false),
+    rol: usuario.rol || { idRol: 2, descripcion: 'USUARIO' },
+    correoEmpresarial: usuario.correoEmpresarial || '',
+    celular: usuario.telefono1 || usuario.celular || '',
+    telefono: usuario.telefono2 || usuario.telefono || '',
+    direccion: usuario.direccion || '',
+    correoPersonal: usuario.correoPersonal || '',
+    dobleAutenticacion: typeof usuario.dobleAutenticacion === 'boolean'
+      ? (usuario.dobleAutenticacion ? 'Google Authenticator' : '')
+      : (usuario.dobleAutenticacion || 'Google Authenticator')
+  };
+}
+
+  private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest {
+  const rolUsuario = usuario.rol || { idRol: 2, descripcion: 'USUARIO' };
+
+  let estadoUsuario;
+  if (typeof usuario.estado === 'object') {
+    estadoUsuario = usuario.estado;
+  } else {
+    estadoUsuario = { idEstado: 5, descripcion: 'ACTIVO' };
+  }
+
+  return {
+    identificacion: usuario.identificacion?.trim() || '',
+    nombres: usuario.nombres?.trim() || '',
+    apellidos: usuario.apellidos?.trim() || '',
+    usuario: usuario.usuario?.trim() || '',
+    cargo: {
+      idCargo: this.obtenerIdCargo(usuario.cargo)
+    },
+    estado: estadoUsuario,
+    rol: rolUsuario,
+    correoEmpresarial: usuario.correoEmpresarial?.trim() || '',
+    correoPersonal: usuario.correoPersonal?.trim() || '',
+    telefono1: usuario.celular?.trim() || '',
+    telefono2: usuario.telefono?.trim() || '',
+    direccion: usuario.direccion?.trim() || '',
+    dobleAutenticacion: this.convertirDobleAutenticacion(usuario.dobleAutenticacion)
+  };
+}
+
+  private obtenerIdCargo(cargo: string | number | undefined): number {
+    if (typeof cargo === 'number') {
+      return cargo;
+    }
+
+    if (typeof cargo === 'string') {
+      const cargoNumerico = parseInt(cargo, 10);
+      if (!isNaN(cargoNumerico)) {
+        return cargoNumerico;
+      }
+
+      const cargoMapFallback: { [key: string]: number } = {
+        'Gerente': 1,
+        'Analista': 2,
+        'Desarrollador': 3,
+        'Administrador': 4,
+        'Funcionario': 5
+      };
+
+      return cargoMapFallback[cargo] || 2;
+    }
+
+    return 2;
+  }
+
+  private convertirDobleAutenticacion(dobleAuth: boolean | string | undefined): boolean {
     if (typeof dobleAuth === 'boolean') {
       return dobleAuth;
     }
-    return dobleAuth !== null &&
-           dobleAuth !== undefined &&
-           dobleAuth !== '' &&
-           Object.values(DobleAutenticacionTipo).includes(dobleAuth as DobleAutenticacionTipo);
+    if (typeof dobleAuth === 'string') {
+      return dobleAuth.toLowerCase() === 'true' || dobleAuth === '1';
+    }
+    return false; // Valor por defecto
   }
 
   private handleError = (error: HttpErrorResponse): Observable<never> => {
     let errorMessage = 'Error inesperado. Por favor, intenta más tarde.';
 
     if (error.error instanceof ErrorEvent) {
-      errorMessage = `Error: ${error.error.message}`;
+      errorMessage = `Error de conexión: ${error.error.message}`;
     } else {
       switch (error.status) {
+        case 0:
+          errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
+          break;
         case 400:
           errorMessage = error.error?.message || 'Los datos enviados no son válidos. Por favor, revisa el formulario.';
           break;
         case 401:
           errorMessage = 'No tienes permisos para realizar esta operación.';
+          break;
+        case 403:
+          errorMessage = 'Acceso denegado. No tienes los permisos necesarios.';
           break;
         case 404:
           errorMessage = 'El usuario no fue encontrado.';
@@ -220,15 +336,21 @@ export class UserService {
         case 500:
           errorMessage = 'Error interno del servidor. Por favor, intenta más tarde.';
           break;
+        case 503:
+          errorMessage = 'El servicio no está disponible temporalmente. Intenta más tarde.';
+          break;
         default:
-          errorMessage = error.error?.message || errorMessage;
+          errorMessage = error.error?.message || `Error del servidor (${error.status}). Intenta más tarde.`;
       }
     }
-    return throwError(() => ({
+
+    console.error('Error en UserService:', {
       status: error.status,
       message: errorMessage,
-      details: error.error?.details || [],
-      timestamp: new Date().toISOString()
-    }));
+      error: error.error,
+      url: error.url
+    });
+
+    return throwError(() => error);
   }
 }

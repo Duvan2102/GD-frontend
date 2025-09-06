@@ -164,7 +164,6 @@ pendingUserData: Usuario | null = null;
         }
       }
 
-
       this.userForm.patchValue({
         noUsuario: this.user.idUsuario,
         identificacion: this.user.identificacion || '',
@@ -195,7 +194,6 @@ private setSelectedCargoFromValue(cargoValue: string): void {
   const cargoEncontrado = this.cargosDisponibles.find(cargo =>
     cargo.idCargo?.toString() === cargoValue.toString()
   );
-
   if (cargoEncontrado) {
     this.selectedCargoInfo = cargoEncontrado;
     console.log('Cargo establecido en edición:', cargoEncontrado);
@@ -214,7 +212,6 @@ private setSelectedCargoFromValue(cargoValue: string): void {
       this.areas = areas || [];
       this.cargosDisponibles = cargos || [];
       this.buildHierarchicalStructure();
-
       if (this.isEditMode && this.user) {
         this.loadFormData();
       }
@@ -229,7 +226,6 @@ private setSelectedCargoFromValue(cargoValue: string): void {
       { idDepartamento: 1, descripcion: 'Administración' },
       { idDepartamento: 2, descripcion: 'Tecnología' }
     ];
-
     this.areas = [
       { idArea: 1, descripcion: 'Gerencia', departamento: { idDepartamento: 1 } },
       { idArea: 2, descripcion: 'Análisis', departamento: { idDepartamento: 1 } },
@@ -247,7 +243,6 @@ private setSelectedCargoFromValue(cargoValue: string): void {
       { idCargo: 6, descripcion: 'Desarrollador Junior', area: { idArea: 4, descripcion: 'Desarrollo', departamento: { idDepartamento: 2, descripcion: 'Tecnología' } } },
       { idCargo: 7, descripcion: 'Administrador de Sistemas', area: { idArea: 5, descripcion: 'Infraestructura', departamento: { idDepartamento: 2, descripcion: 'Tecnología' } } }
     ];
-
     this.buildHierarchicalStructure();
     if (this.isEditMode && this.user) {
       this.loadFormData();
@@ -261,7 +256,6 @@ private setSelectedCargoFromValue(cargoValue: string): void {
   console.log('Cargos:', this.cargosDisponibles);
 
   const departamentosMap = new Map();
-
   this.departamentos.forEach(dept => {
     departamentosMap.set(dept.idDepartamento, {
       idDepartamento: dept.idDepartamento,
@@ -274,7 +268,6 @@ private setSelectedCargoFromValue(cargoValue: string): void {
   this.areas.forEach(area => {
     const deptId = area.departamento.idDepartamento;
     const departamento = departamentosMap.get(deptId);
-
     if (departamento) {
       const areaExists = departamento.areas.find((a: any) => a.idArea === area.idArea);
       if (!areaExists) {
@@ -293,7 +286,6 @@ private setSelectedCargoFromValue(cargoValue: string): void {
 
     const deptId = cargo.area.departamento.idDepartamento;
     const areaId = cargo.area.idArea;
-
     const departamento = departamentosMap.get(deptId);
     if (departamento) {
       const area = departamento.areas.find((a: any) => a.idArea === areaId);
@@ -305,7 +297,6 @@ private setSelectedCargoFromValue(cargoValue: string): void {
 
   this.hierarchicalData.departamentos = Array.from(departamentosMap.values())
     .sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
-
   this.hierarchicalData.departamentos.forEach((dept: any) => {
     dept.areas.sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
     dept.areas.forEach((area: any) => {
@@ -360,7 +351,6 @@ handlePasswordValidationError(error: string): void {
   // El error ya se muestra en el modal, no necesitamos hacer nada adicional aquí
   console.log('Error de validación de contraseña:', error);
 }
-
 handlePasswordValidation(password: string): void {
   if (!password.trim()) {
     alert('La contraseña no puede estar vacía');
@@ -377,7 +367,6 @@ handlePasswordValidation(password: string): void {
   this.confirmModalMessage = this.isEditMode
     ? `¿Confirmas la actualización del usuario ${this.pendingUserData.nombres} ${this.pendingUserData.apellidos}?`
     : `¿Confirmas la creación del usuario ${this.pendingUserData.nombres} ${this.pendingUserData.apellidos}?`;
-
   this.confirmModalVisible = true;
 }
 
@@ -400,13 +389,11 @@ onAceptarConfirmacion(): void {
         this.modalSuccessMessage = response?.message ||
           (this.isEditMode ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente');
         this.modalSuccessVisible = true;
-
         if (this.isEditMode) {
           this.userUpdated.emit(this.pendingUserData!);
         } else {
           this.userCreated.emit(this.pendingUserData!);
         }
-
         this.save.emit(this.pendingUserData!);
       },
       error: (error) => {
@@ -415,14 +402,12 @@ onAceptarConfirmacion(): void {
 
         if (error && typeof error === 'object') {
           this.errorMessage = error.message || 'Error al procesar la solicitud';
-
           if (error.details && Array.isArray(error.details) && error.details.length > 0) {
             this.errorMessage += ':\n• ' + error.details.join('\n• ');
           }
         } else {
           this.errorMessage = typeof error === 'string' ? error : 'Error inesperado al procesar la solicitud';
         }
-
         this.pendingUserData = null;
       }
     });
@@ -475,7 +460,6 @@ cerrarModalSuccess(): void {
 
   onSave(): void {
   this.resetMessages();
-
   const identificacionControl = this.userForm.get('identificacion');
   const wasDisabled = identificacionControl?.disabled;
   if (wasDisabled) {
@@ -495,8 +479,8 @@ cerrarModalSuccess(): void {
 
   this.pendingUserData = {
     ...formValue,
-    noUsuario: this.isEditMode ? this.user?.idUsuario : undefined,
-    idUsuario: this.isEditMode ? this.user?.idUsuario : undefined,
+    noUsuario: this.isEditMode ? (this.user?.noUsuario || this.user?.noUsuario) : undefined,
+    idUsuario: this.isEditMode ? (this.user?.noUsuario || this.user?.noUsuario) : undefined,
     cargo: formValue.cargo,
     correoEmpresarial: formValue.correoEmpresarial || '',
     correoPersonal: formValue.correoPersonal || '',
@@ -529,12 +513,10 @@ cerrarModalSuccess(): void {
   this.isLoading = false;
   this.selectedCargoInfo = null;
   this.isDropdownOpen = false;
-
   this.isPasswordModalVisible = false;
   this.confirmModalVisible = false;
   this.modalSuccessVisible = false;
   this.pendingUserData = null;
-
   this.close.emit();
 }
 
@@ -550,7 +532,6 @@ cerrarModalSuccess(): void {
   this.userForm.get('identificacion')?.enable();
   this.selectedCargoInfo = null;
   this.isDropdownOpen = false;
-
   this.isPasswordModalVisible = false;
   this.confirmModalVisible = false;
   this.modalSuccessVisible = false;

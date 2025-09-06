@@ -16,7 +16,7 @@ export interface Area {
 export class AreaService {
   private readonly baseUrl = (
     environment.apiUrl.endsWith('/') ? environment.apiUrl.slice(0, -1) : environment.apiUrl
-  ) + '/areas'; 
+  ) + '/areas';
 
   constructor(private http: HttpClient) {}
 

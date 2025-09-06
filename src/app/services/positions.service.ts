@@ -9,7 +9,7 @@ export interface Position {
   descripcion: string;
   area: Area;
   permisos?: {
-    esAdministrador: boolean; 
+    esAdministrador: boolean;
     esAuditor: boolean;
   };
 }
