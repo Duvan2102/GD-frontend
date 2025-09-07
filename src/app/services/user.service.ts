@@ -153,12 +153,12 @@ export class UserService {
   }
 
   desactivarUsuario(id: number): Observable<ApiResponse> {
-    return this.http.patch<ApiResponse>(`${this.apiUrl}/${id}/desactivar`, {}, this.httpOptions)
+    return this.http.put<ApiResponse>(`${this.apiUrl}/${id}/desactivar`, {}, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
   activarUsuario(id: number): Observable<ApiResponse> {
-    return this.http.patch<ApiResponse>(`${this.apiUrl}/${id}/activar`, {}, this.httpOptions)
+    return this.http.put<ApiResponse>(`${this.apiUrl}/${id}/activar`, {}, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
@@ -170,8 +170,8 @@ export class UserService {
       );
   }
 
-  cambiarPasswordUsuario(id: number, newPassword: string): Observable<ApiResponse> {
-    return this.http.patch<ApiResponse>(`${this.apiUrl}/${id}/password`, { newPassword }, this.httpOptions)
+  cambiarPasswordUsuario(id: number, nuevaPassword: string): Observable<ApiResponse> {
+    return this.http.put<ApiResponse>(`${this.apiUrl}/${id}/password`, { nuevaPassword }, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
@@ -180,22 +180,31 @@ export class UserService {
   }
 
   private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest {
+    const rolUsuario = usuario.rol || { idRol: 2, descripcion: 'USUARIO' };
+
+    let estadoUsuario;
+    if (typeof usuario.estado === 'object') {
+      estadoUsuario = usuario.estado;
+    } else {
+      estadoUsuario = { idEstado: 5, descripcion: 'ACTIVO' };
+    }
+
     return {
       identificacion: usuario.identificacion?.trim() || '',
       nombres: usuario.nombres?.trim() || '',
       apellidos: usuario.apellidos?.trim() || '',
       usuario: usuario.usuario?.trim() || '',
       cargo: {
-        // CORRECCIÓN: Usar el mapeo de cargos, por defecto Analista (ID: 2)
-        idCargo: this.obtenerIdCargo(usuario.cargo?.descripcion ?? 'Analista')
+        idCargo: this.obtenerIdCargo(usuario.cargo)
       },
+      estado: estadoUsuario,
+      rol: rolUsuario,
       correoEmpresarial: usuario.correoEmpresarial?.trim() || '',
       correoPersonal: usuario.correoPersonal?.trim() || '',
       telefono1: usuario.telefono1?.trim() || '',
       telefono2: usuario.telefono2?.trim() || '',
       direccion: usuario.direccion?.trim() || '',
-      dobleAutenticacion: this.convertirDobleAutenticacion(usuario.dobleAutenticacion),
-      perfiles: usuario.perfiles
+      dobleAutenticacion: this.convertirDobleAutenticacion(usuario.dobleAutenticacion)
     };
   }
 
@@ -241,40 +250,31 @@ export class UserService {
   };
 }
 
-  private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest {
-  const rolUsuario = usuario.rol || { idRol: 2, descripcion: 'USUARIO' };
 
-  let estadoUsuario;
-  if (typeof usuario.estado === 'object') {
-    estadoUsuario = usuario.estado;
-  } else {
-    estadoUsuario = { idEstado: 5, descripcion: 'ACTIVO' };
-  }
+  private obtenerIdCargo(cargo: any): number {
+    // Si cargo es un objeto con idCargo
+    if (cargo && typeof cargo === 'object' && cargo.idCargo) {
+      return cargo.idCargo;
+    }
 
-  return {
-    identificacion: usuario.identificacion?.trim() || '',
-    nombres: usuario.nombres?.trim() || '',
-    apellidos: usuario.apellidos?.trim() || '',
-    usuario: usuario.usuario?.trim() || '',
-    cargo: {
-      idCargo: this.obtenerIdCargo(usuario.cargo)
-    },
-    estado: estadoUsuario,
-    rol: rolUsuario,
-    correoEmpresarial: usuario.correoEmpresarial?.trim() || '',
-    correoPersonal: usuario.correoPersonal?.trim() || '',
-    telefono1: usuario.celular?.trim() || '',
-    telefono2: usuario.telefono?.trim() || '',
-    direccion: usuario.direccion?.trim() || '',
-    dobleAutenticacion: this.convertirDobleAutenticacion(usuario.dobleAutenticacion)
-  };
-}
+    // Si cargo es un objeto con descripcion
+    if (cargo && typeof cargo === 'object' && cargo.descripcion) {
+      const cargoMapFallback: { [key: string]: number } = {
+        'Gerente': 1,
+        'Analista': 2,
+        'Desarrollador': 3,
+        'Administrador': 4,
+        'Funcionario': 5
+      };
+      return cargoMapFallback[cargo.descripcion] || 2;
+    }
 
-  private obtenerIdCargo(cargo: string | number | undefined): number {
+    // Si cargo es un número
     if (typeof cargo === 'number') {
       return cargo;
     }
 
+    // Si cargo es un string
     if (typeof cargo === 'string') {
       const cargoNumerico = parseInt(cargo, 10);
       if (!isNaN(cargoNumerico)) {

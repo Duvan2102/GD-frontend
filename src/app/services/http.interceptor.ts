@@ -12,14 +12,41 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
   const auth = inject(AuthService);
   const user = auth.getCurrentUserValue();
   const token = auth.getToken();
+
   // Detectar si es una petición a la API del backend
-  const isApi = req.url.includes('localhost:8080') || req.url.startsWith('/api');
+  // Verificar si la URL contiene localhost:8080 o es una ruta de API
+  const isLocalhost = req.url.includes('localhost:8080');
+  const isApiPath = req.url.startsWith('/api');
+  const isSpecificEndpoint = req.url.includes('/usuarios') ||
+                            req.url.includes('/auth') ||
+                            req.url.includes('/solicitudes') ||
+                            req.url.includes('/areas') ||
+                            req.url.includes('/departamentos') ||
+                            req.url.includes('/cargos') ||
+                            req.url.includes('/tipologias');
+
+  const isApi = isLocalhost || isApiPath || isSpecificEndpoint;
   const isSolicitudes = req.url.includes('/solicitudes');
 
   let headers = req.headers;
 
+  // Log detallado para debugging
+  console.log('🔍 Interceptor HTTP - Analizando petición:', {
+    url: req.url,
+    method: req.method,
+    hasToken: !!token,
+    tokenLength: token?.length || 0,
+    isLocalhost,
+    isApiPath,
+    isSpecificEndpoint,
+    isApi,
+    isSolicitudes,
+    userExists: !!user,
+    userId: user?.idUsuario
+  });
+
   // Agregar token de autenticación si existe
-  if (token && (isApi || isSolicitudes)) {
+  if (token && isApi) {
     headers = headers.set('Authorization', `Bearer ${token}`);
     console.log('🔐 Token JWT agregado a la petición:', req.url);
   } else {
@@ -27,7 +54,8 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
       url: req.url,
       hasToken: !!token,
       isApi,
-      isSolicitudes
+      isSolicitudes,
+      reason: !token ? 'No hay token' : 'No es petición de API'
     });
   }
 
@@ -51,7 +79,7 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
     cloned.headers.keys().forEach(key => {
       headersObj[key] = cloned.headers.get(key) || '';
     });
-
+    console.log('Request headers:', headersObj);
   }
 
   if (environment.enableLogging) {

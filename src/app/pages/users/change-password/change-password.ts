@@ -26,7 +26,7 @@ export class ChangePassword implements OnChanges {
   validateError = '';
 
   isPasswordChangeModalVisible = false;
-  newPassword = '';
+  nuevaPassword = '';
   confirmPassword = '';
   newPasswordVisible = false;
   confirmPasswordVisible = false;
@@ -48,7 +48,7 @@ export class ChangePassword implements OnChanges {
   private resetState(): void {
     this.password = '';
     this.validateError = '';
-    this.newPassword = '';
+    this.nuevaPassword = '';
     this.confirmPassword = '';
     this.changePasswordError = '';
     this.passwordVisible = false;
@@ -82,25 +82,25 @@ export class ChangePassword implements OnChanges {
   }
 }
   onChangePassword() {
-    if (!this.newPassword || !this.confirmPassword) {
+    if (!this.nuevaPassword || !this.confirmPassword) {
       this.changePasswordError = 'Debes completar ambos campos.';
       return;
     }
-    if (this.newPassword !== this.confirmPassword) {
+    if (this.nuevaPassword !== this.confirmPassword) {
       this.changePasswordError = 'Las contraseñas no coinciden.';
       return;
     }
-    if (this.newPassword.length < 6) {
+    if (this.nuevaPassword.length < 6) {
       this.changePasswordError = 'La nueva contraseña debe tener al menos 6 caracteres.';
       return;
     }
 
     if (this.user && this.user.idUsuario) {
-      this.userService.cambiarPasswordUsuario(this.user.idUsuario, this.newPassword)
+      this.userService.cambiarPasswordUsuario(this.user.idUsuario, this.nuevaPassword)
         .subscribe({
           next: (response: any) => {
             console.log('Contraseña cambiada exitosamente:', response);
-            this.passwordChanged.emit(this.newPassword);
+            this.passwordChanged.emit(this.nuevaPassword);
           },
           error: (error: any) => {
             console.error('Error cambiando contraseña:', error);

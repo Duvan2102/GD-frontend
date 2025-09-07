@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
-import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged, forkJoin } from 'rxjs';
 import { Usuario } from '../../../interfaces/common.interfaces';
 import { UserService } from '../../../services/user.service';
 import { PositionService, Position } from '../../../services/positions.service';
@@ -203,21 +203,32 @@ private setSelectedCargoFromValue(cargoValue: string): void {
 }
 
   private loadHierarchicalData(): void {
-    Promise.all([
-      this.departmentService.getAll().toPromise(),
-      this.areaService.getAll().toPromise(),
-      this.positionService.getAll().toPromise()
-    ]).then(([departamentos, areas, cargos]) => {
-      this.departamentos = departamentos || [];
-      this.areas = areas || [];
-      this.cargosDisponibles = cargos || [];
-      this.buildHierarchicalStructure();
-      if (this.isEditMode && this.user) {
-        this.loadFormData();
+    this.isLoading = true;
+
+    // Usar forkJoin en lugar de Promise.all con toPromise()
+    forkJoin({
+      departamentos: this.departmentService.getAll(),
+      areas: this.areaService.getAll(),
+      cargos: this.positionService.getAll()
+    }).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (data) => {
+        this.departamentos = data.departamentos || [];
+        this.areas = data.areas || [];
+        this.cargosDisponibles = data.cargos || [];
+        this.buildHierarchicalStructure();
+        this.isLoading = false;
+
+        if (this.isEditMode && this.user) {
+          this.loadFormData();
+        }
+      },
+      error: (error) => {
+        console.error('Error cargando datos jerárquicos:', error);
+        this.isLoading = false;
+        this.loadFallbackData();
       }
-    }).catch(error => {
-      console.error('Error cargando datos jerárquicos:', error);
-      this.loadFallbackData();
     });
   }
 
@@ -250,62 +261,82 @@ private setSelectedCargoFromValue(cargoValue: string): void {
   }
 
   private buildHierarchicalStructure(): void {
-  console.log('Construyendo estructura jerárquica...');
-  console.log('Departamentos:', this.departamentos);
-  console.log('Areas:', this.areas);
-  console.log('Cargos:', this.cargosDisponibles);
+    console.log('Construyendo estructura jerárquica...');
+    console.log('Departamentos:', this.departamentos);
+    console.log('Areas:', this.areas);
+    console.log('Cargos:', this.cargosDisponibles);
 
-  const departamentosMap = new Map();
-  this.departamentos.forEach(dept => {
-    departamentosMap.set(dept.idDepartamento, {
-      idDepartamento: dept.idDepartamento,
-      descripcion: dept.descripcion,
-      areas: [],
-      expanded: false
+    // Inicializar la estructura jerárquica
+    this.hierarchicalData = { departamentos: [] };
+
+    // Crear mapa de departamentos
+    const departamentosMap = new Map();
+    this.departamentos.forEach(dept => {
+      departamentosMap.set(dept.idDepartamento, {
+        idDepartamento: dept.idDepartamento,
+        descripcion: dept.descripcion,
+        areas: [],
+        expanded: false
+      });
     });
-  });
 
-  this.areas.forEach(area => {
-    const deptId = area.departamento.idDepartamento;
-    const departamento = departamentosMap.get(deptId);
-    if (departamento) {
-      const areaExists = departamento.areas.find((a: any) => a.idArea === area.idArea);
-      if (!areaExists) {
-        departamento.areas.push({
-          idArea: area.idArea,
-          descripcion: area.descripcion,
-          cargos: [],
-          expanded: false
-        });
+    // Agregar áreas a sus departamentos correspondientes
+    this.areas.forEach(area => {
+      if (area.departamento && area.departamento.idDepartamento) {
+        const deptId = area.departamento.idDepartamento;
+        const departamento = departamentosMap.get(deptId);
+        if (departamento) {
+          const areaExists = departamento.areas.find((a: any) => a.idArea === area.idArea);
+          if (!areaExists) {
+            departamento.areas.push({
+              idArea: area.idArea,
+              descripcion: area.descripcion,
+              cargos: [],
+              expanded: false
+            });
+          }
+        }
       }
-    }
-  });
-
-  this.cargosDisponibles.forEach(cargo => {
-    if (!cargo.area?.departamento) return;
-
-    const deptId = cargo.area.departamento.idDepartamento;
-    const areaId = cargo.area.idArea;
-    const departamento = departamentosMap.get(deptId);
-    if (departamento) {
-      const area = departamento.areas.find((a: any) => a.idArea === areaId);
-      if (area) {
-        area.cargos.push(cargo);
-      }
-    }
-  });
-
-  this.hierarchicalData.departamentos = Array.from(departamentosMap.values())
-    .sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
-  this.hierarchicalData.departamentos.forEach((dept: any) => {
-    dept.areas.sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
-    dept.areas.forEach((area: any) => {
-      area.cargos.sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
     });
-  });
 
-  console.log('Estructura jerárquica construida:', this.hierarchicalData);
-}
+    // Agregar cargos a sus áreas correspondientes
+    this.cargosDisponibles.forEach(cargo => {
+      if (cargo.area && cargo.area.departamento && cargo.area.departamento.idDepartamento) {
+        const deptId = cargo.area.departamento.idDepartamento;
+        const areaId = cargo.area.idArea;
+        const departamento = departamentosMap.get(deptId);
+
+        if (departamento) {
+          const area = departamento.areas.find((a: any) => a.idArea === areaId);
+          if (area) {
+            area.cargos.push({
+              ...cargo,
+              idCargo: cargo.idCargo,
+              descripcion: cargo.descripcion
+            });
+          }
+        }
+      }
+    });
+
+    // Convertir a array y ordenar
+    this.hierarchicalData.departamentos = Array.from(departamentosMap.values())
+      .filter(dept => dept.areas.length > 0) // Solo departamentos con áreas
+      .sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
+
+    // Ordenar áreas y cargos dentro de cada departamento
+    this.hierarchicalData.departamentos.forEach((dept: any) => {
+      dept.areas = dept.areas
+        .filter((area: any) => area.cargos.length > 0) // Solo áreas con cargos
+        .sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
+
+      dept.areas.forEach((area: any) => {
+        area.cargos.sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
+      });
+    });
+
+    console.log('Estructura jerárquica construida:', this.hierarchicalData);
+  }
 
   toggleDropdown(): void {
     this.isDropdownOpen = !this.isDropdownOpen;
@@ -316,23 +347,42 @@ private setSelectedCargoFromValue(cargoValue: string): void {
   }
 
   toggleDepartment(departamento: any): void {
+    console.log('Toggling departamento:', departamento.descripcion, 'expanded:', departamento.expanded);
     departamento.expanded = !departamento.expanded;
+
+    // Si se está cerrando el departamento, cerrar también todas sus áreas
     if (!departamento.expanded) {
       departamento.areas.forEach((area: any) => {
         area.expanded = false;
       });
     }
+
+    console.log('Departamento después del toggle:', departamento);
   }
 
   toggleArea(area: any): void {
+    console.log('Toggling area:', area.descripcion, 'expanded:', area.expanded);
     area.expanded = !area.expanded;
+    console.log('Area después del toggle:', area);
   }
 
-  selectCargo(cargo: Position): void {
+  selectCargo(cargo: any): void {
+    console.log('Seleccionando cargo:', cargo);
+
+    if (!cargo || !cargo.idCargo) {
+      console.error('Cargo inválido:', cargo);
+      return;
+    }
+
     this.selectedCargoInfo = cargo;
     this.userForm.get('cargo')?.setValue(cargo.idCargo);
     this.closeDropdown();
-    console.log('Cargo seleccionado:', cargo);
+
+    console.log('Cargo seleccionado exitosamente:', {
+      idCargo: cargo.idCargo,
+      descripcion: cargo.descripcion,
+      formValue: this.userForm.get('cargo')?.value
+    });
   }
 
   get selectedCargoText(): string {
