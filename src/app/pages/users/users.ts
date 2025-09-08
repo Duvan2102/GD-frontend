@@ -10,6 +10,7 @@ import { SuccessModal } from './success-modal/success-modal';
 import { ConfirmModal } from './confirm-modal/confirm-modal';
 import { ChangePassword } from './change-password/change-password';
 import { UserService } from '../../services/user.service';
+import { AuthService } from '../../services/auth.service';
 import { Usuario } from '../../interfaces/common.interfaces';
 
 @Component({
@@ -57,7 +58,10 @@ export class Users implements OnInit, OnDestroy {
   confirmModalMessage = '';
   confirmModalAction: 'inactivar' | 'activar' | 'eliminarQR' | null = null;
 
-  constructor(private userService: UserService) {}
+  constructor(
+    private userService: UserService,
+    private authService: AuthService
+  ) {}
 
   ngOnInit(): void {
     this.cargarUsuarios();
@@ -196,10 +200,8 @@ export class Users implements OnInit, OnDestroy {
         break;
 
       case 'eliminarQR':
-        this.mostrarModalConfirmacion(
-          `¿Está seguro de eliminar el código QR de ${u.nombres} ${u.apellidos}?`,
-          'Sí, eliminar QR'
-        );
+        this.mensajePasswordModal = 'Ingrese su contraseña para eliminar el código QR del usuario.';
+        this.isPasswordModalVisible = true;
         break;
 
       default:
@@ -238,12 +240,40 @@ export class Users implements OnInit, OnDestroy {
     this.currentAction = '';
   }
 
+  handlePasswordValidation(password: string): void {
+    if (this.currentAction === 'eliminarQR') {
+      if (this.currentUser && this.currentUser.usuario) {
+        this.authService.removeUserQR(this.currentUser.usuario, password)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (response: any) => {
+              console.log('QR eliminado exitosamente:', response);
+              this.mostrarModalSuccess('Código QR eliminado con éxito', 'Aceptar');
+              this.cargarUsuarios();
+              this.isPasswordModalVisible = false;
+            },
+            error: (error: any) => {
+              console.error('Error eliminando QR:', error);
+              if (error.error?.code === 'PASSWORD_INCORRECT') {
+                alert('Contraseña incorrecta. Intente nuevamente.');
+              } else {
+                alert('Error al eliminar el código QR: ' + (error.error?.message || error.message || 'Error desconocido'));
+              }
+            }
+          });
+      }
+    } else {
+      // Para otras acciones que requieren contraseña
+      this.confirmAction(password);
+    }
+  }
+
   handlePasswordValidationError(error: string): void {
     // El error ya se muestra en el modal, no necesitamos hacer nada adicional aquí
     console.log('Error de validación de contraseña:', error);
   }
 
-  handlePasswordValidation(password: string): void {
+  confirmAction(password: string): void {
     if (!password.trim()) {
       return alert('La contraseña no puede estar vacía');
     }
@@ -324,23 +354,6 @@ export class Users implements OnInit, OnDestroy {
         this.isChangePasswordModalVisible = true;
         break;
 
-      case 'eliminarQR':
-        if (this.currentUser) {
-          const usuarioSinQR = { ...this.currentUser, dobleAutenticacion: false };
-          this.userService.actualizarUsuario(usuarioSinQR)
-            .pipe(takeUntil(this.destroy$))
-            .subscribe({
-              next: () => {
-                this.mostrarModalSuccess('Código QR eliminado con éxito', 'Aceptar');
-                this.cargarUsuarios();
-              },
-              error: (error: any) => {
-                console.error('Error eliminando QR:', error);
-                alert('Error al eliminar el código QR: ' + (error.message || 'Error desconocido'));
-              }
-            });
-        }
-        break;
 
       default:
         console.log('Acción no reconocida en validación:', this.currentAction);
@@ -348,8 +361,6 @@ export class Users implements OnInit, OnDestroy {
 
     if (this.currentAction !== 'cambiarContraseña') {
       this.isPasswordModalVisible = false;
-      this.currentUser = null;
-      this.currentAction = '';
     }
   }
 

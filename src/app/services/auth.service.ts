@@ -1077,4 +1077,31 @@ export class AuthService {
       })
     );
   }
+
+  // ==================== ADMINISTRACIÓN DE USUARIOS ====================
+
+  // Eliminar QR de un usuario (para administradores)
+  removeUserQR(usuario: string, password: string): Observable<{ message: string }> {
+    const token = this.getToken();
+    if (!token) {
+      return throwError(() => new Error('Token no encontrado'));
+    }
+
+    const request = {
+      usuario: usuario,
+      password: password
+    };
+
+    return this.http.post<{ message: string }>(`${this.apiUrl}/auth/remove-google-auth`, request, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }).pipe(
+      catchError((error: any) => {
+        console.error('Error eliminando QR del usuario:', error);
+        return throwError(() => error);
+      })
+    );
+  }
 }
