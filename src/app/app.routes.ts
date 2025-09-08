@@ -7,6 +7,10 @@ import { Users } from './pages/users/users';
 import { CreateRequest } from './pages/create-request/create-request';
 import { ApprovalDetails } from './pages/approval-details/approval-details';
 import { LoginComponent } from './pages/login/login.component';
+import { TwoFAVerificationComponent } from './components/two-fa-verification/two-fa-verification.component';
+import { GoogleAuthSetupComponent } from './components/google-auth-setup/google-auth-setup.component';
+import { TwoFAManagementComponent } from './components/two-fa-management/two-fa-management.component';
+import { TwoFAStateComponent } from './components/two-fa-state/two-fa-state.component';
 import { AuthGuard } from './guards/auth.guard';
 import { LoginGuard } from './guards/login.guard';
 
@@ -15,6 +19,24 @@ export const routes: Routes = [
     path: 'login',
     component: LoginComponent,
     canActivate: [LoginGuard]
+  },
+  {
+    path: 'two-fa-state',
+    component: TwoFAStateComponent
+  },
+  {
+    path: 'two-fa-verification',
+    component: TwoFAVerificationComponent
+  },
+  {
+    path: 'google-auth-setup',
+    component: GoogleAuthSetupComponent,
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'two-fa-management',
+    component: TwoFAManagementComponent,
+    canActivate: [AuthGuard]
   },
   {
     path: '',

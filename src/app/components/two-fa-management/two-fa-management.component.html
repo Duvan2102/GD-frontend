@@ -1,0 +1,175 @@
+<div class="two-fa-management">
+  <div class="header">
+    <h2>Gestión de Doble Autenticación</h2>
+    <p class="description">
+      Administra la configuración de seguridad de tu cuenta
+    </p>
+  </div>
+
+  <div class="content">
+    <!-- Estado actual -->
+    <div class="status-card">
+      <div class="status-header">
+        <div class="status-icon">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <circle cx="12" cy="16" r="1"></circle>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <div class="status-info">
+          <h3>Estado Actual</h3>
+          <div class="status-badge" [ngClass]="get2FAStatusClass()">
+            {{ get2FAStatusText() }}
+          </div>
+        </div>
+      </div>
+
+      <div class="status-description">
+        <p *ngIf="is2FAEnabled()">
+          La doble autenticación está activa en tu cuenta. Esto proporciona una capa adicional de seguridad.
+        </p>
+        <p *ngIf="!is2FAEnabled()">
+          La doble autenticación está deshabilitada. Te recomendamos activarla para mayor seguridad.
+        </p>
+      </div>
+    </div>
+
+    <!-- Estadísticas de login -->
+    <div class="stats-card" *ngIf="loginStats">
+      <div class="stats-header">
+        <h3>Estadísticas de Login</h3>
+        <button
+          type="button"
+          class="btn btn-icon"
+          (click)="onRefreshStats()"
+          [disabled]="isLoading"
+          title="Actualizar estadísticas"
+        >
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="stats-content">
+        <p>{{ loginStats }}</p>
+      </div>
+    </div>
+
+    <!-- Acciones disponibles -->
+    <div class="actions-section">
+      <!-- Configurar Google Authenticator -->
+      <div class="action-card" *ngIf="!is2FAEnabled()">
+        <div class="action-header">
+          <div class="action-icon">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="5" height="5"></rect>
+              <rect x="3" y="16" width="5" height="5"></rect>
+              <rect x="16" y="3" width="5" height="5"></rect>
+              <rect x="16" y="16" width="5" height="5"></rect>
+              <rect x="8" y="8" width="8" height="8"></rect>
+            </svg>
+          </div>
+          <div class="action-info">
+            <h3>Configurar Google Authenticator</h3>
+            <p>Activa la doble autenticación usando Google Authenticator</p>
+          </div>
+        </div>
+        <div class="action-actions">
+          <button
+            type="button"
+            class="btn btn-primary"
+            (click)="onSetupGoogleAuth()"
+          >
+            Configurar
+          </button>
+        </div>
+      </div>
+
+      <!-- Deshabilitar 2FA -->
+      <div class="action-card" *ngIf="is2FAEnabled()">
+        <div class="action-header">
+          <div class="action-icon warning">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </div>
+          <div class="action-info">
+            <h3>Deshabilitar Doble Autenticación</h3>
+            <p>Desactiva la doble autenticación de tu cuenta (no recomendado)</p>
+          </div>
+        </div>
+
+        <form [formGroup]="disableForm" (ngSubmit)="onDisable2FA()" class="disable-form">
+          <div class="form-group">
+            <label for="password" class="form-label">Confirmar Contraseña</label>
+            <input
+              type="password"
+              id="password"
+              formControlName="password"
+              class="form-input"
+              placeholder="Ingresa tu contraseña actual"
+              [class.error]="getFieldError('password')"
+            />
+            <div class="error-message" *ngIf="getFieldError('password')">
+              {{ getFieldError('password') }}
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button
+              type="submit"
+              class="btn btn-danger"
+              [disabled]="!disableForm.valid || isLoading"
+            >
+              <span *ngIf="isLoading" class="spinner"></span>
+              {{ isLoading ? 'Deshabilitando...' : 'Deshabilitar 2FA' }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Desbloquear usuario -->
+      <div class="action-card">
+        <div class="action-header">
+          <div class="action-icon info">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <circle cx="12" cy="16" r="1"></circle>
+              <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+            </svg>
+          </div>
+          <div class="action-info">
+            <h3>Desbloquear Usuario</h3>
+            <p>Desbloquea tu cuenta si ha sido bloqueada por intentos fallidos</p>
+          </div>
+        </div>
+        <div class="action-actions">
+          <button
+            type="button"
+            class="btn btn-warning"
+            (click)="onUnlockUser()"
+            [disabled]="isLoading"
+          >
+            <span *ngIf="isLoading" class="spinner"></span>
+            {{ isLoading ? 'Desbloqueando...' : 'Desbloquear' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mensajes de error y éxito -->
+    <div class="error-message main-error" *ngIf="errorMessage">
+      {{ errorMessage }}
+    </div>
+
+    <div class="success-message" *ngIf="successMessage">
+      {{ successMessage }}
+    </div>
+  </div>
+</div>
+

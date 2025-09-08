@@ -47,24 +47,23 @@ export class LoginComponent implements OnInit {
 
       const { usuario, password } = this.loginForm.value;
 
-      // Usar el método de login que consume el backend real
-      this.authService.login(usuario, password).subscribe({
-        next: (success) => {
-          console.log('Login response:', success);
-          console.log('Current user after login:', this.authService.getCurrentUserValue());
-          console.log('Is authenticated:', this.authService.isAuthenticated());
+      // Usar el método de login con 2FA OBLIGATORIO
+      this.authService.loginWith2FA(usuario, password).subscribe({
+        next: (response) => {
+          console.log('Login response:', response);
 
-          if (success) {
-            console.log('Navigating to home...');
-            this.router.navigate(['/']).then(navigated => {
-              console.log('Navigation result:', navigated);
+          if (response.success && response.requires2FA) {
+            // SIEMPRE se requiere 2FA después del login exitoso
+            console.log('2FA required, navigating to state check...');
+            this.router.navigate(['/two-fa-state']).then(navigated => {
+              console.log('2FA state navigation result:', navigated);
             });
           }
           this.isLoading = false;
         },
         error: (error) => {
           console.error('Error en login:', error);
-          this.errorMessage = 'Usuario o contraseña incorrectos';
+          this.handleLoginError(error);
           this.isLoading = false;
         }
       });
@@ -98,5 +97,26 @@ export class LoginComponent implements OnInit {
       usuario: user.usuario,
       password: '1234' // Contraseña por defecto para usuarios de prueba
     });
+  }
+
+  private handleLoginError(error: any): void {
+    if (error.error?.code) {
+      switch (error.error.code) {
+        case 'CREDENCIALES_INVALIDAS':
+          this.errorMessage = 'Usuario o contraseña incorrectos';
+          break;
+        case 'USUARIO_BLOQUEADO':
+          this.errorMessage = 'Usuario bloqueado. Intenta más tarde';
+          break;
+        default:
+          this.errorMessage = error.error.message || 'Error de autenticación';
+      }
+    } else if (error.status === 429) {
+      this.errorMessage = 'Demasiados intentos. Usuario bloqueado temporalmente';
+    } else if (error.status === 0) {
+      this.errorMessage = 'Error de conexión. Verifica tu conexión a internet';
+    } else {
+      this.errorMessage = 'Error inesperado. Intenta nuevamente';
+    }
   }
 }

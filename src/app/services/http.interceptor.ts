@@ -13,8 +13,6 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
   const user = auth.getCurrentUserValue();
   const token = auth.getToken();
 
-  // Detectar si es una petición a la API del backend
-  // Verificar si la URL contiene localhost:8080 o es una ruta de API
   const isLocalhost = req.url.includes('localhost:8080');
   const isApiPath = req.url.startsWith('/api');
   const isSpecificEndpoint = req.url.includes('/usuarios') ||

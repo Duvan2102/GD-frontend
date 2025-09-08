@@ -342,3 +342,93 @@ export interface PageResponse<T> {
   numberOfElements: number;
   empty: boolean;
 }
+
+// Interfaces para el sistema de 2FA OBLIGATORIO
+export interface TwoFARequest {
+  codigo: string;
+  tempToken?: string;
+}
+
+export interface TwoFAResponse {
+  token: string;
+  usuario: UsuarioData;
+}
+
+export interface TwoFAErrorResponse {
+  code: 'CODIGO_2FA_INVALIDO' | 'TOKEN_INVALIDO' | 'USUARIO_BLOQUEADO' | 'CREDENCIALES_INVALIDAS' | '2FA_YA_CONFIGURADO' | '2FA_DISABLED' | 'PASSWORD_INCORRECT' | 'CODIGO_INVALIDO';
+  message: string;
+}
+
+// Respuesta SIEMPRE 202 después del login exitoso
+export interface TwoFARequiredResponse {
+  message: string;
+  usuario: string;
+  dobleAutenticacion: boolean;
+  tempToken: string;
+}
+
+// Verificar estado de configuración 2FA
+export interface TwoFAStatusResponse {
+  hasGoogleAuth: boolean;
+  hasEmailBackup: boolean;
+  message: string;
+}
+
+// Obtener/Regenerar código QR
+export interface QRCodeResponse {
+  qrCodeUrl: string;
+  secret: string;
+  message: string;
+}
+
+// Configurar Google Authenticator (primera vez)
+export interface GoogleAuthSetupResponse {
+  qrCodeUrl: string;
+  secret: string;
+  message: string;
+}
+
+export interface GoogleAuthConfirmRequest {
+  usuario: string;
+  secret: string;
+  codigo: string;
+}
+
+export interface GoogleAuthConfirmResponse {
+  message: string;
+}
+
+// Desvincular Google Authenticator
+export interface UnlinkGoogleAuthRequest {
+  usuario: string;
+  password: string;
+}
+
+export interface UnlinkGoogleAuthResponse {
+  message: string;
+}
+
+// Envío de código por email (respaldo)
+export interface EmailCodeRequest {
+  usuario: string;
+}
+
+export interface EmailCodeResponse {
+  message: string;
+}
+
+// Estados de 2FA
+export interface TwoFAState {
+  hasGoogleAuth: boolean;
+  hasEmailBackup: boolean;
+  isConfigured: boolean;
+  needsSetup: boolean;
+}
+
+// Datos de configuración QR
+export interface QRSetupData {
+  qrCodeUrl: string;
+  secret: string;
+  isNew: boolean;
+  message: string;
+}

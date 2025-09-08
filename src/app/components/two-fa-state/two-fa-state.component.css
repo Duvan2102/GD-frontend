@@ -1,0 +1,407 @@
+.two-fa-state-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.two-fa-state-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  padding: 40px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.icon-container {
+  margin-bottom: 20px;
+}
+
+.security-icon {
+  width: 64px;
+  height: 64px;
+  color: #667eea;
+}
+
+.header h2 {
+  color: #2d3748;
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0 0 10px 0;
+}
+
+.user-info {
+  color: #4a5568;
+  font-size: 16px;
+  margin: 0;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid transparent;
+  border-top: 3px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+.spinner.large {
+  width: 48px;
+  height: 48px;
+  border-width: 4px;
+}
+
+.spinner.small {
+  width: 30px;
+  height: 30px;
+  border-width: 3px;
+}
+
+.loading-state p {
+  color: #4a5568;
+  font-size: 16px;
+  margin: 0;
+}
+
+.error-state {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.error-icon {
+  width: 64px;
+  height: 64px;
+  color: #e53e3e;
+  margin: 0 auto 20px;
+}
+
+.error-state h3 {
+  color: #2d3748;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 10px 0;
+}
+
+.error-state p {
+  color: #4a5568;
+  font-size: 14px;
+  margin: 0 0 20px 0;
+}
+
+.content {
+  margin-bottom: 30px;
+}
+
+.scenario-card {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.scenario-header {
+  margin-bottom: 20px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.enabled {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+.status-badge.warning {
+  background: #fef5e7;
+  color: #d69e2e;
+}
+
+.status-badge .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.scenario-content h3 {
+  color: #2d3748;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 10px 0;
+}
+
+.scenario-content p {
+  color: #4a5568;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 20px 0;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.setup-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.option-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.option-card.primary {
+  border-color: #667eea;
+  background: #f7fafc;
+}
+
+.option-card.secondary {
+  border-color: #e2e8f0;
+  background: white;
+}
+
+.option-icon {
+  width: 48px;
+  height: 48px;
+  background: #f7fafc;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4a5568;
+  flex-shrink: 0;
+}
+
+.option-card.primary .option-icon {
+  background: #ebf8ff;
+  color: #3182ce;
+}
+
+.option-content {
+  flex: 1;
+}
+
+.option-content h4 {
+  color: #2d3748;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+.option-content p {
+  color: #4a5568;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 16px 0;
+}
+
+.qr-display {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 20px;
+}
+
+.qr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.qr-header h4 {
+  color: #2d3748;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.qr-status {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.qr-status.new {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+.qr-status.existing {
+  background: #e2e8f0;
+  color: #4a5568;
+}
+
+.qr-container {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.qr-loading {
+  padding: 20px;
+  color: #4a5568;
+}
+
+.qr-loading p {
+  margin: 10px 0 0 0;
+  font-size: 14px;
+}
+
+.qr-image {
+  max-width: 200px;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.qr-actions {
+  text-align: center;
+}
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  min-width: 120px;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.btn-secondary {
+  background: #f7fafc;
+  color: #4a5568;
+  border: 2px solid #e2e8f0;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #edf2f7;
+  border-color: #cbd5e0;
+}
+
+.btn-link {
+  background: none;
+  color: #667eea;
+  text-decoration: underline;
+  padding: 8px 16px;
+  font-size: 14px;
+  min-width: auto;
+}
+
+.btn-link:hover:not(:disabled) {
+  color: #5a67d8;
+}
+
+.btn .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.footer-actions {
+  text-align: center;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .two-fa-state-container {
+    padding: 10px;
+  }
+
+  .two-fa-state-card {
+    padding: 30px 20px;
+  }
+
+  .header h2 {
+    font-size: 24px;
+  }
+
+  .option-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .action-buttons {
+    width: 100%;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .qr-image {
+    max-width: 150px;
+  }
+
+  .scenario-card {
+    padding: 16px;
+  }
+
+  .option-card {
+    padding: 16px;
+  }
+}
