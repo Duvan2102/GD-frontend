@@ -15,12 +15,12 @@ import { SuccessModal } from '../success-modal/success-modal';
   selector: 'app-user-form-modal',
   standalone: true,
   imports: [
-  CommonModule,
-  ReactiveFormsModule,
-  PasswordModal,
-  ConfirmModal,
-  SuccessModal
-],
+    CommonModule,
+    ReactiveFormsModule,
+    PasswordModal,
+    ConfirmModal,
+    SuccessModal
+  ],
   templateUrl: './user-form-modal.html',
   styleUrls: ['./user-form-modal.css']
 })
@@ -45,16 +45,16 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   isDropdownOpen = false;
   selectedCargoInfo: Position | null = null;
 
-isPasswordModalVisible = false;
-confirmModalVisible = false;
-modalSuccessVisible = false;
+  isPasswordModalVisible = false;
+  confirmModalVisible = false;
+  modalSuccessVisible = false;
 
-mensajePasswordModal = '';
-confirmModalMessage = '';
-modalSuccessMessage = '';
-modalSuccessBtn = 'Aceptar';
+  mensajePasswordModal = '';
+  confirmModalMessage = '';
+  modalSuccessMessage = '';
+  modalSuccessBtn = 'Aceptar';
 
-pendingUserData: Usuario | null = null;
+  pendingUserData: Usuario | null = null;
   isLoading = false;
   errorMessage = '';
   successMessage = '';
@@ -62,19 +62,19 @@ pendingUserData: Usuario | null = null;
   private destroy$ = new Subject<void>();
 
   constructor(
-  private fb: FormBuilder,
-  private userService: UserService,
-  private positionService: PositionService,
-  private departmentService: DepartmentService,
-  private areaService: AreaService
-) {
+    private fb: FormBuilder,
+    private userService: UserService,
+    private positionService: PositionService,
+    private departmentService: DepartmentService,
+    private areaService: AreaService
+  ) {
     this.initializeForm();
     this.setupFormValidations();
   }
 
   ngOnInit(): void {
-  this.loadHierarchicalData();
-}
+    this.loadHierarchicalData();
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['isVisible'] && this.isVisible) {
@@ -105,11 +105,8 @@ pendingUserData: Usuario | null = null;
       telefono: ['', [Validators.pattern(/^\+?[\d\s\-()]{10,15}$/)]],
       direccion: ['', [Validators.maxLength(200)]],
       dobleAutenticacion: ['Google Authenticator', Validators.required],
-      perfiles: this.fb.group({
-        administrador: [false],
-        funcionarioCreador: [false],
-        funcionarios: [false]
-      })
+      // CAMBIO: Un solo control para perfil en lugar de un FormGroup
+      perfil: ['funcionarios', Validators.required] // valor por defecto
     });
   }
 
@@ -147,6 +144,11 @@ pendingUserData: Usuario | null = null;
 
   private loadFormData(): void {
     if (this.isEditMode && this.user) {
+      console.log('=== DEBUG LOAD FORM DATA ===');
+      console.log('Usuario para editar:', this.user);
+      console.log('ID Usuario:', this.user.idUsuario);
+      console.log('No Usuario:', this.user.noUsuario);
+
       let cargoValue = '';
 
       if (this.user.cargo) {
@@ -159,8 +161,20 @@ pendingUserData: Usuario | null = null;
             c => c.descripcion === this.user?.cargo?.descripcion
           );
           cargoValue = (cargoEncontrado && cargoEncontrado.idCargo)
-          ? cargoEncontrado.idCargo.toString()
-          : '5';
+            ? cargoEncontrado.idCargo.toString()
+            : '';
+        }
+      }
+
+      // CAMBIO: Determinar qué perfil está activo
+      let perfilActivo = 'funcionarios'; // valor por defecto
+      if (this.user.perfiles) {
+        if (this.user.perfiles.administrador) {
+          perfilActivo = 'administrador';
+        } else if (this.user.perfiles.funcionarioCreador) {
+          perfilActivo = 'funcionarioCreador';
+        } else if (this.user.perfiles.funcionarios) {
+          perfilActivo = 'funcionarios';
         }
       }
 
@@ -177,35 +191,37 @@ pendingUserData: Usuario | null = null;
         telefono: this.user.telefono2 || '',
         direccion: this.user.direccion || '',
         dobleAutenticacion: this.user.dobleAutenticacion ? 'Google Authenticator' : 'Token de Seguridad',
+        perfil: perfilActivo // CAMBIO: Un solo valor
       });
 
       if (this.user.cargo) {
-  this.setSelectedCargoFromValue(cargoValue);
-}
+        this.setSelectedCargoFromValue(cargoValue);
+      }
       this.userForm.get('identificacion')?.disable();
     } else {
       this.userForm.get('identificacion')?.enable();
       this.resetForm();
     }
   }
-private setSelectedCargoFromValue(cargoValue: string): void {
-  if (!cargoValue) return;
 
-  const cargoEncontrado = this.cargosDisponibles.find(cargo =>
-    cargo.idCargo?.toString() === cargoValue.toString()
-  );
-  if (cargoEncontrado) {
-    this.selectedCargoInfo = cargoEncontrado;
-    console.log('Cargo establecido en edición:', cargoEncontrado);
-  } else {
-    console.warn('No se encontró el cargo con ID:', cargoValue);
+  private setSelectedCargoFromValue(cargoValue: string): void {
+    if (!cargoValue) return;
+
+    const cargoEncontrado = this.cargosDisponibles.find(cargo =>
+      cargo.idCargo?.toString() === cargoValue.toString()
+    );
+    if (cargoEncontrado) {
+      this.selectedCargoInfo = cargoEncontrado;
+      console.log('Cargo establecido en edición:', cargoEncontrado);
+    } else {
+      console.warn('No se encontró el cargo con ID:', cargoValue);
+    }
   }
-}
 
   private loadHierarchicalData(): void {
     this.isLoading = true;
 
-    // Usar forkJoin en lugar de Promise.all con toPromise()
+    // Cargar todos los datos para tener la estructura completa
     forkJoin({
       departamentos: this.departmentService.getAll(),
       areas: this.areaService.getAll(),
@@ -214,10 +230,17 @@ private setSelectedCargoFromValue(cargoValue: string): void {
       takeUntil(this.destroy$)
     ).subscribe({
       next: (data) => {
+        console.log('=== DATOS COMPLETOS RECIBIDOS ===');
+        console.log('Departamentos:', data.departamentos);
+        console.log('Áreas:', data.areas);
+        console.log('Cargos:', data.cargos);
+        
         this.departamentos = data.departamentos || [];
         this.areas = data.areas || [];
         this.cargosDisponibles = data.cargos || [];
-        this.buildHierarchicalStructure();
+        
+        // Construir la estructura jerárquica COMPLETA
+        this.buildHierarchicalStructureComplete();
         this.isLoading = false;
 
         if (this.isEditMode && this.user) {
@@ -233,43 +256,98 @@ private setSelectedCargoFromValue(cargoValue: string): void {
   }
 
   private loadFallbackData(): void {
-    this.departamentos = [
-      { idDepartamento: 1, descripcion: 'Administración' },
-      { idDepartamento: 2, descripcion: 'Tecnología' }
-    ];
-    this.areas = [
-      { idArea: 1, descripcion: 'Gerencia', departamento: { idDepartamento: 1 } },
-      { idArea: 2, descripcion: 'Análisis', departamento: { idDepartamento: 1 } },
-      { idArea: 3, descripcion: 'Administración General', departamento: { idDepartamento: 1 } },
-      { idArea: 4, descripcion: 'Desarrollo', departamento: { idDepartamento: 2 } },
-      { idArea: 5, descripcion: 'Infraestructura', departamento: { idDepartamento: 2 } }
+    // Datos basados en el JSON que proporcionaste
+    this.cargosDisponibles = [
+      {
+        idCargo: 1,
+        descripcion: "Analista de Desarrollo",
+        area: {
+          idArea: 7,
+          descripcion: "Aplicaciones internas",
+          departamento: {
+            idDepartamento: 1,
+            descripcion: "Tecnología"
+          }
+        }
+      },
+      {
+        idCargo: 4,
+        descripcion: "Analista de RRHH",
+        area: {
+          idArea: 7,
+          descripcion: "Aplicaciones internas",
+          departamento: {
+            idDepartamento: 1,
+            descripcion: "Tecnología"
+          }
+        }
+      },
+      {
+        idCargo: 6,
+        descripcion: "Asesor mesa de soporte Bogota",
+        area: {
+          idArea: 2,
+          descripcion: "Soporte",
+          departamento: {
+            idDepartamento: 1,
+            descripcion: "Tecnología"
+          }
+        }
+      },
+      {
+        idCargo: 5,
+        descripcion: "Contador",
+        area: {
+          idArea: 1,
+          descripcion: "Desarrollo",
+          departamento: {
+            idDepartamento: 1,
+            descripcion: "Tecnología"
+          }
+        }
+      },
+      {
+        idCargo: 2,
+        descripcion: "Desarrollador Senior",
+        area: {
+          idArea: 1,
+          descripcion: "Desarrollo",
+          departamento: {
+            idDepartamento: 1,
+            descripcion: "Tecnología"
+          }
+        }
+      },
+      {
+        idCargo: 8,
+        descripcion: "No lo se Rick",
+        area: {
+          idArea: 8,
+          descripcion: "Seleccion",
+          departamento: {
+            idDepartamento: 2,
+            descripcion: "Recursos Humanos"
+          }
+        }
+      }
     ];
 
-    this.cargosDisponibles = [
-      { idCargo: 1, descripcion: 'Gerente', area: { idArea: 1, descripcion: 'Gerencia', departamento: { idDepartamento: 1, descripcion: 'Administración' } } },
-      { idCargo: 2, descripcion: 'Subgerente', area: { idArea: 1, descripcion: 'Gerencia', departamento: { idDepartamento: 1, descripcion: 'Administración' } } },
-      { idCargo: 3, descripcion: 'Analista', area: { idArea: 2, descripcion: 'Análisis', departamento: { idDepartamento: 1, descripcion: 'Administración' } } },
-      { idCargo: 4, descripcion: 'Coordinador Administrativo', area: { idArea: 3, descripcion: 'Administración General', departamento: { idDepartamento: 1, descripcion: 'Administración' } } },
-      { idCargo: 5, descripcion: 'Desarrollador Senior', area: { idArea: 4, descripcion: 'Desarrollo', departamento: { idDepartamento: 2, descripcion: 'Tecnología' } } },
-      { idCargo: 6, descripcion: 'Desarrollador Junior', area: { idArea: 4, descripcion: 'Desarrollo', departamento: { idDepartamento: 2, descripcion: 'Tecnología' } } },
-      { idCargo: 7, descripcion: 'Administrador de Sistemas', area: { idArea: 5, descripcion: 'Infraestructura', departamento: { idDepartamento: 2, descripcion: 'Tecnología' } } }
-    ];
-    this.buildHierarchicalStructure();
+    this.buildHierarchicalStructureComplete();
     if (this.isEditMode && this.user) {
       this.loadFormData();
     }
   }
 
-  private buildHierarchicalStructure(): void {
-    console.log('Construyendo estructura jerárquica...');
-    console.log('Departamentos:', this.departamentos);
-    console.log('Areas:', this.areas);
-    console.log('Cargos:', this.cargosDisponibles);
+  private buildHierarchicalStructureComplete(): void {
+    console.log('=== CONSTRUYENDO ESTRUCTURA JERÁRQUICA COMPLETA ===');
+    console.log('Departamentos del endpoint:', this.departamentos);
+    console.log('Áreas del endpoint:', this.areas);
+    console.log('Cargos del endpoint:', this.cargosDisponibles);
 
-    // Inicializar la estructura jerárquica
+    // Inicializar la estructura
     this.hierarchicalData = { departamentos: [] };
 
-    // Crear mapa de departamentos
+    // PASO 1: Crear todos los departamentos (incluso sin cargos)
     const departamentosMap = new Map();
     this.departamentos.forEach(dept => {
       departamentosMap.set(dept.idDepartamento, {
@@ -278,75 +356,98 @@ private setSelectedCargoFromValue(cargoValue: string): void {
         areas: [],
         expanded: false
       });
+      console.log(`✓ Departamento agregado: ${dept.descripcion} (ID: ${dept.idDepartamento})`);
     });
 
-    // Agregar áreas a sus departamentos correspondientes
+    // PASO 2: Crear todas las áreas y asignarlas a sus departamentos
+    const areasMap = new Map();
     this.areas.forEach(area => {
       if (area.departamento && area.departamento.idDepartamento) {
-        const deptId = area.departamento.idDepartamento;
-        const departamento = departamentosMap.get(deptId);
+        const areaKey = `${area.departamento.idDepartamento}-${area.idArea}`;
+        const areaObj = {
+          idArea: area.idArea,
+          descripcion: area.descripcion,
+          departamentoId: area.departamento.idDepartamento,
+          cargos: [],
+          expanded: false
+        };
+        areasMap.set(areaKey, areaObj);
+        
+        // Asignar área al departamento
+        const departamento = departamentosMap.get(area.departamento.idDepartamento);
         if (departamento) {
-          const areaExists = departamento.areas.find((a: any) => a.idArea === area.idArea);
-          if (!areaExists) {
-            departamento.areas.push({
-              idArea: area.idArea,
-              descripcion: area.descripcion,
-              cargos: [],
-              expanded: false
-            });
-          }
+          departamento.areas.push(areaObj);
+          console.log(`✓ Área agregada: ${area.descripcion} → ${departamento.descripcion}`);
         }
       }
     });
 
-    // Agregar cargos a sus áreas correspondientes
+    // PASO 3: Agregar cargos a sus áreas correspondientes
     this.cargosDisponibles.forEach(cargo => {
-      if (cargo.area && cargo.area.departamento && cargo.area.departamento.idDepartamento) {
-        const deptId = cargo.area.departamento.idDepartamento;
-        const areaId = cargo.area.idArea;
-        const departamento = departamentosMap.get(deptId);
-
-        if (departamento) {
-          const area = departamento.areas.find((a: any) => a.idArea === areaId);
-          if (area) {
-            area.cargos.push({
-              ...cargo,
+      if (cargo.area && cargo.area.departamento) {
+        const areaKey = `${cargo.area.departamento.idDepartamento}-${cargo.area.idArea}`;
+        const areaObj = areasMap.get(areaKey);
+        
+        if (areaObj) {
+          const cargoExists = areaObj.cargos.find((c: any) => c.idCargo === cargo.idCargo);
+          if (!cargoExists) {
+            areaObj.cargos.push({
               idCargo: cargo.idCargo,
               descripcion: cargo.descripcion
             });
+            console.log(`✓ Cargo agregado: ${cargo.descripcion} → ${areaObj.descripcion}`);
           }
         }
       }
     });
 
-    // Convertir a array y ordenar
+    // PASO 4: Convertir a array y ordenar - MOSTRAR TODOS LOS DEPARTAMENTOS
     this.hierarchicalData.departamentos = Array.from(departamentosMap.values())
-      .filter(dept => dept.areas.length > 0) // Solo departamentos con áreas
       .sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
 
-    // Ordenar áreas y cargos dentro de cada departamento
+    // PASO 5: Ordenar áreas y cargos dentro de cada departamento
     this.hierarchicalData.departamentos.forEach((dept: any) => {
-      dept.areas = dept.areas
-        .filter((area: any) => area.cargos.length > 0) // Solo áreas con cargos
-        .sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
-
+      dept.areas.sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
       dept.areas.forEach((area: any) => {
         area.cargos.sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
       });
     });
 
-    console.log('Estructura jerárquica construida:', this.hierarchicalData);
+    console.log('=== ESTRUCTURA FINAL COMPLETA ===');
+    console.log('Total departamentos:', this.hierarchicalData.departamentos.length);
+    console.log('Estructura completa:', JSON.stringify(this.hierarchicalData, null, 2));
+    
+    this.hierarchicalData.departamentos.forEach((dept: any, index: number) => {
+      console.log(`Departamento ${index + 1}: ${dept.descripcion} (${dept.areas.length} áreas)`);
+      dept.areas.forEach((area: any, areaIndex: number) => {
+        console.log(`  Área ${areaIndex + 1}: ${area.descripcion} (${area.cargos.length} cargos)`);
+      });
+    });
   }
 
   toggleDropdown(): void {
     this.isDropdownOpen = !this.isDropdownOpen;
+    console.log('Dropdown toggled:', this.isDropdownOpen);
   }
 
   closeDropdown(): void {
     this.isDropdownOpen = false;
+    console.log('Dropdown closed');
   }
 
-  toggleDepartment(departamento: any): void {
+  // Método para prevenir el cierre accidental del dropdown
+  preventDropdownClose(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+  }
+
+  toggleDepartment(departamento: any, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
     console.log('Toggling departamento:', departamento.descripcion, 'expanded:', departamento.expanded);
     departamento.expanded = !departamento.expanded;
 
@@ -360,13 +461,23 @@ private setSelectedCargoFromValue(cargoValue: string): void {
     console.log('Departamento después del toggle:', departamento);
   }
 
-  toggleArea(area: any): void {
+  toggleArea(area: any, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
     console.log('Toggling area:', area.descripcion, 'expanded:', area.expanded);
     area.expanded = !area.expanded;
     console.log('Area después del toggle:', area);
   }
 
-  selectCargo(cargo: any): void {
+  selectCargo(cargo: any, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
     console.log('Seleccionando cargo:', cargo);
 
     if (!cargo || !cargo.idCargo) {
@@ -392,89 +503,89 @@ private setSelectedCargoFromValue(cargoValue: string): void {
     return 'Selecciona un cargo';
   }
 
-closePasswordModal(): void {
-  this.isPasswordModalVisible = false;
-  this.pendingUserData = null;
-}
-
-handlePasswordValidationError(error: string): void {
-  // El error ya se muestra en el modal, no necesitamos hacer nada adicional aquí
-  console.log('Error de validación de contraseña:', error);
-}
-handlePasswordValidation(password: string): void {
-  if (!password.trim()) {
-    alert('La contraseña no puede estar vacía');
-    return;
+  closePasswordModal(): void {
+    this.isPasswordModalVisible = false;
+    this.pendingUserData = null;
   }
 
-  if (!this.pendingUserData) {
-    this.closePasswordModal();
-    return;
+  handlePasswordValidationError(error: string): void {
+    console.log('Error de validación de contraseña:', error);
   }
 
-  this.isPasswordModalVisible = false;
+  handlePasswordValidation(password: string): void {
+    if (!password.trim()) {
+      alert('La contraseña no puede estar vacía');
+      return;
+    }
 
-  this.confirmModalMessage = this.isEditMode
-    ? `¿Confirmas la actualización del usuario ${this.pendingUserData.nombres} ${this.pendingUserData.apellidos}?`
-    : `¿Confirmas la creación del usuario ${this.pendingUserData.nombres} ${this.pendingUserData.apellidos}?`;
-  this.confirmModalVisible = true;
-}
+    if (!this.pendingUserData) {
+      this.closePasswordModal();
+      return;
+    }
 
-onAceptarConfirmacion(): void {
-  this.confirmModalVisible = false;
+    this.isPasswordModalVisible = false;
 
-  if (!this.pendingUserData) return;
+    this.confirmModalMessage = this.isEditMode
+      ? `¿Confirmas la actualización del usuario ${this.pendingUserData.nombres} ${this.pendingUserData.apellidos}?`
+      : `¿Confirmas la creación del usuario ${this.pendingUserData.nombres} ${this.pendingUserData.apellidos}?`;
+    this.confirmModalVisible = true;
+  }
 
-  this.isLoading = true;
-  const operacion = this.isEditMode
-    ? this.userService.actualizarUsuario(this.pendingUserData)
-    : this.userService.crearUsuario(this.pendingUserData);
+  onAceptarConfirmacion(): void {
+    this.confirmModalVisible = false;
 
-  operacion
-    .pipe(takeUntil(this.destroy$))
-    .subscribe({
-      next: (response) => {
-        this.isLoading = false;
+    if (!this.pendingUserData) return;
 
-        this.modalSuccessMessage = response?.message ||
-          (this.isEditMode ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente');
-        this.modalSuccessVisible = true;
-        if (this.isEditMode) {
-          this.userUpdated.emit(this.pendingUserData!);
-        } else {
-          this.userCreated.emit(this.pendingUserData!);
-        }
-        this.save.emit(this.pendingUserData!);
-      },
-      error: (error) => {
-        this.isLoading = false;
-        console.error('Error en operación:', error);
+    this.isLoading = true;
+    const operacion = this.isEditMode
+      ? this.userService.actualizarUsuario(this.pendingUserData)
+      : this.userService.crearUsuario(this.pendingUserData);
 
-        if (error && typeof error === 'object') {
-          this.errorMessage = error.message || 'Error al procesar la solicitud';
-          if (error.details && Array.isArray(error.details) && error.details.length > 0) {
-            this.errorMessage += ':\n• ' + error.details.join('\n• ');
+    operacion
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.isLoading = false;
+
+          this.modalSuccessMessage = response?.message ||
+            (this.isEditMode ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente');
+          this.modalSuccessVisible = true;
+          if (this.isEditMode) {
+            this.userUpdated.emit(this.pendingUserData!);
+          } else {
+            this.userCreated.emit(this.pendingUserData!);
           }
-        } else {
-          this.errorMessage = typeof error === 'string' ? error : 'Error inesperado al procesar la solicitud';
+          this.save.emit(this.pendingUserData!);
+        },
+        error: (error) => {
+          this.isLoading = false;
+          console.error('Error en operación:', error);
+
+          if (error && typeof error === 'object') {
+            this.errorMessage = error.message || 'Error al procesar la solicitud';
+            if (error.details && Array.isArray(error.details) && error.details.length > 0) {
+              this.errorMessage += ':\n• ' + error.details.join('\n• ');
+            }
+          } else {
+            this.errorMessage = typeof error === 'string' ? error : 'Error inesperado al procesar la solicitud';
+          }
+          this.pendingUserData = null;
         }
-        this.pendingUserData = null;
-      }
-    });
-}
+      });
+  }
 
-onCancelarConfirmacion(): void {
-  this.confirmModalVisible = false;
-  this.pendingUserData = null;
-}
+  onCancelarConfirmacion(): void {
+    this.confirmModalVisible = false;
+    this.pendingUserData = null;
+  }
 
-cerrarModalSuccess(): void {
-  this.modalSuccessVisible = false;
-  this.pendingUserData = null;
-  setTimeout(() => {
-    this.onClose();
-  }, 500);
-}
+  cerrarModalSuccess(): void {
+    this.modalSuccessVisible = false;
+    this.pendingUserData = null;
+    setTimeout(() => {
+      this.onClose();
+    }, 500);
+  }
 
   private validateUniqueIdentification(identificacion: string): void {
     this.validatingUser = true;
@@ -508,85 +619,100 @@ cerrarModalSuccess(): void {
     }
   }
 
-  onSave(): void {
-  this.resetMessages();
-  const identificacionControl = this.userForm.get('identificacion');
-  const wasDisabled = identificacionControl?.disabled;
-  if (wasDisabled) {
-    identificacionControl?.enable();
+  // CAMBIO: Nuevo método helper para convertir perfil
+  private convertirPerfilSeleccionado(perfilSeleccionado: string): any {
+    return {
+      administrador: perfilSeleccionado === 'administrador',
+      funcionarioCreador: perfilSeleccionado === 'funcionarioCreador',
+      funcionarios: perfilSeleccionado === 'funcionarios'
+    };
   }
 
-  if (this.userForm.invalid) {
-    this.markFormGroupTouched();
-    this.errorMessage = 'Por favor, corrige los errores en el formulario.';
+  onSave(): void {
+    this.resetMessages();
+    const identificacionControl = this.userForm.get('identificacion');
+    const wasDisabled = identificacionControl?.disabled;
+    if (wasDisabled) {
+      identificacionControl?.enable();
+    }
+
+    if (this.userForm.invalid) {
+      this.markFormGroupTouched();
+      this.errorMessage = 'Por favor, corrige los errores en el formulario.';
+      if (wasDisabled) {
+        identificacionControl?.disable();
+      }
+      return;
+    }
+
+    const formValue = this.userForm.getRawValue();
+
+    this.pendingUserData = {
+      ...formValue,
+      // CORREGIR ESTA PARTE - asegurar que el ID se pase correctamente
+      noUsuario: this.isEditMode ? (this.user?.idUsuario || this.user?.noUsuario) : undefined,
+      idUsuario: this.isEditMode ? (this.user?.idUsuario || this.user?.noUsuario) : undefined,
+      // Agregar también estos campos para mayor compatibilidad
+      id: this.isEditMode ? (this.user?.idUsuario || this.user?.noUsuario) : undefined,
+      
+      cargo: formValue.cargo,
+      correoEmpresarial: formValue.correoEmpresarial || '',
+      correoPersonal: formValue.correoPersonal || '',
+      celular: formValue.celular || '',
+      telefono: formValue.telefono || '',
+      direccion: formValue.direccion || '',
+      dobleAutenticacion: formValue.dobleAutenticacion || 'Google Authenticator',
+      estado: this.isEditMode ? (this.user?.estado || 'Activo') : 'Activo',
+      activo: this.isEditMode ? (this.user?.activo !== false) : true,
+      
+      // CAMBIO: Convertir el perfil seleccionado a la estructura esperada
+      perfiles: this.convertirPerfilSeleccionado(formValue.perfil)
+    };
+
+    // Debug: verificar que el ID está presente
+    console.log('=== DEBUG USUARIO PENDIENTE ===');
+    console.log('Usuario original:', this.user);
+    console.log('Usuario pendiente:', this.pendingUserData);
+    console.log('ID Usuario:', this.pendingUserData?.idUsuario);
+    console.log('No Usuario:', this.pendingUserData?.noUsuario);
+
     if (wasDisabled) {
       identificacionControl?.disable();
     }
-    return;
+
+    this.mensajePasswordModal = this.isEditMode
+      ? 'Ingrese su contraseña para guardar los cambios del usuario.'
+      : 'Ingrese su contraseña para crear el nuevo usuario.';
+    this.isPasswordModalVisible = true;
   }
-
-  const formValue = this.userForm.getRawValue();
-
-  this.pendingUserData = {
-    ...formValue,
-    noUsuario: this.isEditMode ? (this.user?.noUsuario || this.user?.noUsuario) : undefined,
-    idUsuario: this.isEditMode ? (this.user?.noUsuario || this.user?.noUsuario) : undefined,
-    cargo: formValue.cargo,
-    correoEmpresarial: formValue.correoEmpresarial || '',
-    correoPersonal: formValue.correoPersonal || '',
-    celular: formValue.celular || '',
-    telefono: formValue.telefono || '',
-    direccion: formValue.direccion || '',
-    dobleAutenticacion: formValue.dobleAutenticacion || 'Google Authenticator',
-    estado: this.isEditMode ? (this.user?.estado || 'Activo') : 'Activo',
-    activo: this.isEditMode ? (this.user?.activo !== false) : true,
-    perfiles: formValue.perfiles || {
-      administrador: false,
-      funcionarioCreador: false,
-      funcionarios: true
-    }
-  };
-
-  if (wasDisabled) {
-    identificacionControl?.disable();
-  }
-
-  this.mensajePasswordModal = this.isEditMode
-    ? 'Ingrese su contraseña para guardar los cambios del usuario.'
-    : 'Ingrese su contraseña para crear el nuevo usuario.';
-  this.isPasswordModalVisible = true;
-}
 
   onClose(): void {
-  this.resetMessages();
-  this.resetForm();
-  this.isLoading = false;
-  this.selectedCargoInfo = null;
-  this.isDropdownOpen = false;
-  this.isPasswordModalVisible = false;
-  this.confirmModalVisible = false;
-  this.modalSuccessVisible = false;
-  this.pendingUserData = null;
-  this.close.emit();
-}
+    this.resetMessages();
+    this.resetForm();
+    this.isLoading = false;
+    this.selectedCargoInfo = null;
+    this.isDropdownOpen = false;
+    this.isPasswordModalVisible = false;
+    this.confirmModalVisible = false;
+    this.modalSuccessVisible = false;
+    this.pendingUserData = null;
+    this.close.emit();
+  }
 
   private resetForm(): void {
-  this.userForm.reset({
-    dobleAutenticacion: 'Google Authenticator',
-    perfiles: {
-      administrador: false,
-      funcionarioCreador: false,
-      funcionarios: false
-    }
-  });
-  this.userForm.get('identificacion')?.enable();
-  this.selectedCargoInfo = null;
-  this.isDropdownOpen = false;
-  this.isPasswordModalVisible = false;
-  this.confirmModalVisible = false;
-  this.modalSuccessVisible = false;
-  this.pendingUserData = null;
-}
+    this.userForm.reset({
+      dobleAutenticacion: 'Google Authenticator',
+      // CAMBIO: Un solo valor en lugar de un objeto
+      perfil: 'funcionarios' // valor por defecto
+    });
+    this.userForm.get('identificacion')?.enable();
+    this.selectedCargoInfo = null;
+    this.isDropdownOpen = false;
+    this.isPasswordModalVisible = false;
+    this.confirmModalVisible = false;
+    this.modalSuccessVisible = false;
+    this.pendingUserData = null;
+  }
 
   private resetMessages(): void {
     this.errorMessage = '';
@@ -631,36 +757,6 @@ cerrarModalSuccess(): void {
     const errorMessages: { [key: string]: { [key: string]: string } } = {
       identificacion: {
         required: 'La identificación es requerida',
-        pattern: 'La identificación debe tener entre 6 y 12 dígitos',
-        userExists: 'Ya existe un usuario con esta identificación'
-      },
-      nombres: {
-        required: 'Los nombres son requeridos',
-        minlength: 'Los nombres deben tener al menos 2 caracteres',
-        maxlength: 'Los nombres no pueden exceder 50 caracteres'
-      },
-      apellidos: {
-        required: 'Los apellidos son requeridos',
-        minlength: 'Los apellidos deben tener al menos 2 caracteres',
-        maxlength: 'Los apellidos no pueden exceder 50 caracteres'
-      },
-      usuario: {
-        required: 'El usuario es requerido',
-        minlength: 'El usuario debe tener al menos 3 caracteres',
-        maxlength: 'El usuario no puede exceder 20 caracteres'
-      },
-      cargo: {
-        required: 'El cargo es requerido'
-      },
-      correoEmpresarial: {
-        required: 'El correo empresarial es requerido',
-        email: 'Ingresa un correo electrónico válido'
-      },
-      correoPersonal: {
-        email: 'Ingresa un correo electrónico válido'
-      },
-      celular: {
-        required: 'El número de celular es requerido',
         pattern: 'Ingresa un número de celular válido'
       },
       telefono: {
@@ -671,6 +767,9 @@ cerrarModalSuccess(): void {
       },
       dobleAutenticacion: {
         required: 'La doble autenticación es requerida'
+      },
+      perfil: {
+        required: 'Debe seleccionar un perfil'
       }
     };
 
@@ -683,5 +782,18 @@ cerrarModalSuccess(): void {
       }
     }
     return 'Campo inválido';
+  }
+
+  // Métodos de tracking para mejorar performance del *ngFor
+  trackByDepartamento(index: number, item: any): any {
+    return item?.idDepartamento || index;
+  }
+
+  trackByArea(index: number, item: any): any {
+    return item?.idArea || index;
+  }
+
+  trackByCargo(index: number, item: any): any {
+    return item?.idCargo || index;
   }
 }

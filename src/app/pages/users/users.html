@@ -15,7 +15,7 @@
     <!-- CONTROLES -->
     <app-controls
       [textoboton]="'Crear usuario'"
-      [labelAprobados]="'ACTIVOS'"
+      [labelAprobados]="activos ? 'ACTIVOS' : 'TODOS'"
       [quantity]="itemsPerPage"
       [toggleApproved]="activos"
       [search]="searchTerm"

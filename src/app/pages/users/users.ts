@@ -127,13 +127,19 @@ export class Users implements OnInit, OnDestroy {
 
   filtrarUsuarios() {
     let filtrados = this.usuarios.filter(u => {
-  if (this.activos) {
-    return u.estado.descripcion === 'ACTIVO';
-  } else {
-    return true;
-  }
-  });
-
+      if (this.activos) {
+        // Verificar múltiples formas de saber si está activo
+        const estadoDescripcion = typeof u.estado === 'object' 
+          ? (u.estado.descripcion || '').toString().trim().toUpperCase()
+          : String(u.estado || '').trim().toUpperCase();
+        
+        // Usar tanto la propiedad activo como el estado.descripcion para filtrar
+        return estadoDescripcion === 'ACTIVO' || u.activo === true;
+      } else {
+        return true;
+      }
+    });
+  
     if (this.searchTerm.trim()) {
       const t = this.searchTerm.trim().toLowerCase();
       filtrados = filtrados.filter(u =>
@@ -143,7 +149,14 @@ export class Users implements OnInit, OnDestroy {
         u.identificacion.toLowerCase().includes(t)
       );
     }
-
+  
+    // Debug para ver qué usuarios se están filtrando
+    console.log('Usuarios filtrados:', filtrados.map(u => ({
+      nombre: u.nombres,
+      estado: u.estado,
+      activo: u.activo
+    })));
+  
     this.usuariosFiltradosLength = filtrados.length;
     const start = (this.paginaActual - 1) * this.itemsPerPage;
     this.usuariosFiltrados = filtrados.slice(start, start + this.itemsPerPage);
