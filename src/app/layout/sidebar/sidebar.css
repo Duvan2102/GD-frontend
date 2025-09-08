@@ -1,9 +1,9 @@
 .sidebar {
   background-color: #3d6b63;
   padding: 0.5rem;
-  margin: 1rem 0.5rem 0.5rem 0.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(90, 139, 129, 1);
+  margin: 1rem;
+  border-radius: 15px;
+  box-shadow: 0 4px 8px rgba(90, 139, 129, 0.5);
   justify-content: space-between;
   width: auto;
   min-width: 200px;
@@ -18,17 +18,19 @@
 
 .sidebar li {
   display: flex;
-  margin: 0.5rem 0 0.5rem 0.8rem;
+  margin: 8% 0;
   align-items: center;
 }
 
 .sidebar a {
-  padding: 0.3rem 1rem;
+  padding: 0.5rem;
   color: white;
   text-decoration: none;
   border-radius: 6px;
   transition: background-color 0.3s;
-  font-size: 1rem;
+  font-size: 1.1rem;
+  white-space: normal;
+  flex-grow: 1;
 }
 
 .sidebar i,
@@ -38,7 +40,6 @@
 
 .sidebar i {
   font-size: 2rem;
-  margin-right: 1rem;
 }
 
 .ico-dev-gear {
@@ -48,6 +49,7 @@
   display: inline-block;
   width: var(--icon-size);
   height: var(--icon-size);
+  margin-right: 0.6rem;
 }
 
 .ico-dev-gear .base {
