@@ -1,0 +1,78 @@
+<div class="principal-wrapper">
+  <div class="container-fluid p-4">
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="content-wrapper">
+      <!-- Sección de Estado Solicitudes Recibidas -->
+      <div class="status-card">
+        <h3 class="card-title">Estado Solicitudes Recibidas</h3>
+        <div class="status-details">
+          <div class="status-item">
+            <span class="status-label">Solicitudes Aprobadas:</span>
+            <span class="status-value">{{ receivedStats.aprobadas }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Solicitudes Pendientes:</span>
+            <span class="status-value">{{ receivedStats.pendientes }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Solicitudes Rechazadas:</span>
+            <span class="status-value">{{ receivedStats.rechazadas }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Solicitudes Canceladas:</span>
+            <span class="status-value">{{ receivedStats.canceladas }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Solicitudes Gestionadas:</span>
+            <span class="status-value">{{ receivedStats.gestionadas }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Solicitudes Totales:</span>
+            <span class="status-value">{{ receivedStats.totales }}</span>
+          </div>
+          <div class="status-item highlight">
+            <i class="bi bi-eye eye-icon"></i>
+            <span class="status-label">Solicitudes Por Atender:</span>
+            <span class="status-value">{{ receivedStats.porAtender }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección de Estado Solicitudes Enviadas -->
+      <div class="status-card">
+        <h3 class="card-title">Estado Solicitudes Enviadas</h3>
+        <div class="status-details">
+          <div class="status-item">
+            <span class="status-label">Solicitudes Aprobadas:</span>
+            <span class="status-value">{{ sentStats.aprobadas }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Solicitudes Pendientes:</span>
+            <span class="status-value">{{ sentStats.pendientes }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Solicitudes Rechazadas:</span>
+            <span class="status-value">{{ sentStats.rechazadas }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Solicitudes Canceladas:</span>
+            <span class="status-value">{{ sentStats.canceladas }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Solicitudes Gestionadas:</span>
+            <span class="status-value">{{ sentStats.gestionadas }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Solicitudes Totales:</span>
+            <span class="status-value">{{ sentStats.totales }}</span>
+          </div>
+          <div class="status-item highlight">
+            <i class="bi bi-eye eye-icon"></i>
+            <span class="status-label">Solicitudes En Curso:</span>
+            <span class="status-value">{{ sentStats.enCurso }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

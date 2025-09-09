@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { Layout } from './layout/layout';
+import { PageMain } from './pages/page-main/page-main';
 import { Approvals } from './pages/approvals/approvals';
 import { Administration } from './pages/administration/administration';
 import { ReportsAudits } from './pages/reports-audits/reports-audits';
@@ -43,7 +44,8 @@ export const routes: Routes = [
     component: Layout,
     canActivate: [AuthGuard],
     children: [
-      { path: '', redirectTo: 'create-request', pathMatch: 'full' },
+      { path: '', redirectTo: 'page-main', pathMatch: 'full' },
+      { path: 'page-main', component: PageMain },
       { path: 'create-request', component: CreateRequest },
       { path: 'approvals', component: Approvals },
       { path: 'approval-details', component: ApprovalDetails },
