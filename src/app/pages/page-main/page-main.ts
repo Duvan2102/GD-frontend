@@ -163,10 +163,15 @@ export class PageMain implements OnInit, OnDestroy {
     approvals.forEach(approval => {
       stats.totales++;
       
+      // Verificar si el usuario actual aprobó o rechazó esta solicitud
+      const userApprovedOrRejected = this.didUserApproveOrReject(approval);
+      
       switch (approval.status) {
         case 'APROBADO':
           stats.aprobadas++;
-          stats.atendidas++;
+          if (userApprovedOrRejected) {
+            stats.atendidas++;
+          }
           stats.gestionadas++;
           break;
         case 'PENDIENTE':
@@ -174,16 +179,22 @@ export class PageMain implements OnInit, OnDestroy {
           break;
         case 'RECHAZADO':
           stats.rechazadas++;
-          stats.atendidas++;
+          if (userApprovedOrRejected) {
+            stats.atendidas++;
+          }
           stats.gestionadas++;
           break;
         case 'CANCELADA':
           stats.canceladas++;
-          stats.atendidas++;
+          if (userApprovedOrRejected) {
+            stats.atendidas++;
+          }
           stats.gestionadas++;
           break;
         default:
-          stats.atendidas++;
+          if (userApprovedOrRejected) {
+            stats.atendidas++;
+          }
           stats.gestionadas++;
       }
     });
@@ -239,6 +250,46 @@ export class PageMain implements OnInit, OnDestroy {
       rechazadas: 0,
       canceladas: 0
     };
+  }
+
+  /**
+   * Verifica si el usuario actual aprobó o rechazó esta solicitud
+   */
+  private didUserApproveOrReject(approval: any): boolean {
+    if (!this.currentUser?.idUsuario) {
+      return false;
+    }
+
+    const userId = this.currentUser.idUsuario;
+    
+    // Buscar en el historial de acciones si el usuario aprobó o rechazó
+    const historial = approval.fullData?.historialAcciones || approval.fullData?.historial || [];
+    const userAction = historial.find((action: any) => {
+      const actionUserId = action.actorUsuarioId || action.usuarioId || action.usuario;
+      return actionUserId === userId || actionUserId === String(userId);
+    });
+
+    if (userAction) {
+      const accion = userAction.accion || userAction.action || '';
+      const accionUpper = accion.toUpperCase();
+      return accionUpper.includes('APROBAR') || accionUpper.includes('RECHAZAR') || 
+             accionUpper === 'APROBADO' || accionUpper === 'RECHAZADO';
+    }
+
+    // Si no hay historial, verificar en los destinatarios
+    const destinatarios = approval.fullData?.destinatarios || [];
+    const userDestinatario = destinatarios.find((dest: any) => {
+      const destUserId = dest.usuarioId || dest.noUsuarioId;
+      return destUserId === userId || destUserId === String(userId);
+    });
+
+    if (userDestinatario) {
+      const decision = userDestinatario.decision || userDestinatario.estado || '';
+      const decisionUpper = decision.toUpperCase();
+      return decisionUpper === 'APROBADO' || decisionUpper === 'RECHAZADO';
+    }
+
+    return false;
   }
 }
 
