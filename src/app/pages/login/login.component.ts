@@ -35,9 +35,7 @@ export class LoginComponent implements OnInit {
     }
 
     // Cargar usuarios de prueba (solo los activos)
-    this.testUsers = this.authService.getAllUsers()
-      .filter(user => user.activo)
-      .slice(0, 5); // Mostrar solo los primeros 5
+    // Mostrar solo los primeros 5
   }
 
   onSubmit(): void {

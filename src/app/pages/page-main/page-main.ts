@@ -60,14 +60,14 @@ export class PageMain implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadUserData();
-    
+
     // Actualizar estadísticas cada 30 segundos
     const updateInterval = setInterval(() => {
       if (this.currentUser) {
         this.loadApprovalStats();
       }
     }, 30000);
-    
+
     // Limpiar el interval cuando el componente se destruya
     this.subscriptions.push({
       unsubscribe: () => clearInterval(updateInterval)
@@ -95,13 +95,10 @@ export class PageMain implements OnInit, OnDestroy {
     }
 
     const userId = this.currentUser.idUsuario;
-    
-    // Obtener todos los usuarios para mapear correctamente
-    const allUsers = this.authService.getAllUsers();
-    
+
     // Recibidas: combinar pendientes a gestionar + histórico para incluir todos los estados
     const pendientes$ = this.approvalService
-      .getApprovalsForApprover(userId, allUsers, 0, 1000)
+      .getApprovalsForApprover(userId, [], 0, 1000)
       .pipe(
         catchError(error => {
           console.error('Error cargando pendientes para aprobar:', error);
@@ -110,7 +107,7 @@ export class PageMain implements OnInit, OnDestroy {
       );
 
     const historico$ = this.approvalService
-      .getHistorico(userId, allUsers, 0, 1000)
+      .getHistorico(userId, [], 0, 1000)
       .pipe(
         catchError(error => {
           console.error('Error cargando histórico de aprobaciones:', error);
@@ -141,7 +138,7 @@ export class PageMain implements OnInit, OnDestroy {
       });
 
     // Enviadas: creadas por el usuario (incluye todos los estados devueltos por el backend)
-    const sentSub = this.approvalService.getApprovalsByCreator(userId, allUsers, 0, 1000)
+    const sentSub = this.approvalService.getApprovalsByCreator(userId, [], 0, 1000)
       .pipe(
         map(approvals => this.calculateSentStats(approvals)),
         catchError(error => {
@@ -159,13 +156,13 @@ export class PageMain implements OnInit, OnDestroy {
 
   private calculateReceivedStats(approvals: any[]): StatusStats {
     const stats = this.getEmptyStats();
-    
+
     approvals.forEach(approval => {
       stats.totales++;
-      
+
       // Verificar si el usuario actual aprobó o rechazó esta solicitud
       const userApprovedOrRejected = this.didUserApproveOrReject(approval);
-      
+
       switch (approval.status) {
         case 'APROBADO':
           stats.aprobadas++;
@@ -207,10 +204,10 @@ export class PageMain implements OnInit, OnDestroy {
 
   private calculateSentStats(approvals: any[]): StatusStats {
     const stats = this.getEmptyStats();
-    
+
     approvals.forEach(approval => {
       stats.totales++;
-      
+
       switch (approval.status) {
         case 'APROBADO':
           stats.aprobadas++;
@@ -261,7 +258,7 @@ export class PageMain implements OnInit, OnDestroy {
     }
 
     const userId = this.currentUser.idUsuario;
-    
+
     // Buscar en el historial de acciones si el usuario aprobó o rechazó
     const historial = approval.fullData?.historialAcciones || approval.fullData?.historial || [];
     const userAction = historial.find((action: any) => {
@@ -272,7 +269,7 @@ export class PageMain implements OnInit, OnDestroy {
     if (userAction) {
       const accion = userAction.accion || userAction.action || '';
       const accionUpper = accion.toUpperCase();
-      return accionUpper.includes('APROBAR') || accionUpper.includes('RECHAZAR') || 
+      return accionUpper.includes('APROBAR') || accionUpper.includes('RECHAZAR') ||
              accionUpper === 'APROBADO' || accionUpper === 'RECHAZADO';
     }
 
