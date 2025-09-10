@@ -89,14 +89,12 @@ export class AuthService {
 
 
 
-  // Métodos de permisos (simplificados para el nuevo modelo)
   canAccessAdmin(): boolean {
-    // En el nuevo modelo, se puede determinar por el rol o cargo
-    return this.currentUser?.rol?.toLowerCase().includes('admin') ?? false;
+    return this.currentUser?.rol?.toLowerCase().includes('administrador') ?? false;
   }
 
   canAccessUsers(): boolean {
-    return this.currentUser?.rol?.toLowerCase().includes('admin') ?? false;
+    return this.currentUser?.rol?.toLowerCase().includes('administrador') ?? false;
   }
 
   canAccessReports(): boolean {
