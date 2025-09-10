@@ -86,6 +86,12 @@ export class AuthService {
     return this.currentUser;
   }
 
+  updateCurrentUser(updatedUserData: UsuarioData): Observable<UsuarioData> {
+    this.currentUser = { ...this.currentUser, ...updatedUserData };
+    this.currentUserSubject.next(this.currentUser);
+    return of(this.currentUser);
+  }
+
 
 
 

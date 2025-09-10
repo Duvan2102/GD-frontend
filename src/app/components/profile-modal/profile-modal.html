@@ -1,0 +1,87 @@
+<!-- Backdrop con efecto de difuminado -->
+<div class="custom-backdrop" [class.show]="isVisible" (click)="onBackdropClick($event)"></div>
+
+<!-- Modal -->
+<div class="modal" 
+      [class.show]="isVisible" 
+     [style.display]="isVisible ? 'flex' : 'none'">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content profile-modal">
+      
+      <!-- Header del modal -->
+      <div class="modal-header">
+        <h5 class="modal-title">Perfil de Usuario</h5>
+        <button type="button" class="btn-close" (click)="onClose()" aria-label="Cerrar">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+
+       <!-- Body del modal -->
+       <div class="modal-body" *ngIf="editedUser">
+         <!-- Mensajes de estado -->
+         <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
+           {{ errorMessage }}
+         </div>
+         
+         <div class="profile-form">
+           <div class="form-row">
+             <!-- Columna izquierda -->
+             <div class="form-column">
+               <div class="form-group">
+                 <label class="form-label">Nombres</label>
+                 <input type="text" class="form-control" [(ngModel)]="editedUser.nombres" readonly />
+               </div>
+               <div class="form-group">
+                 <label class="form-label">Correo empresarial</label>
+                 <input type="email" class="form-control" [(ngModel)]="editedUser.correoEmpresarial" readonly />
+               </div>
+               <div class="form-group">
+                 <label class="form-label">Teléfono movil</label>
+                 <input type="tel" class="form-control" [(ngModel)]="editedUser.telefono1" />
+               </div>
+               <div class="form-group">
+                 <label class="form-label">Dirección</label>
+                 <input type="text" class="form-control" [(ngModel)]="editedUser.direccion" />
+               </div>
+             </div>
+
+             <!-- Columna derecha -->
+             <div class="form-column">
+               <div class="form-group">
+                 <label class="form-label">Apellidos</label>
+                 <input type="text" class="form-control" [(ngModel)]="editedUser.apellidos" readonly />
+               </div>
+               <div class="form-group">
+                 <label class="form-label">Correo personal</label>
+                 <input type="email" class="form-control" [(ngModel)]="editedUser.correoPersonal" />
+               </div>
+               <div class="form-group">
+                 <label class="form-label">Teléfono</label>
+                 <input type="tel" class="form-control" [(ngModel)]="editedUser.telefono2" />
+               </div>
+             </div>
+           </div>
+         </div>
+       </div>
+
+      <!-- Footer del modal -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-cancel" (click)="onClose()">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-save" (click)="onSave()" [disabled]="isLoading">
+          <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          {{ isLoading ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de éxito -->
+<app-success-modal
+  [visible]="modalSuccessVisible"
+  [mensaje]="modalSuccessMessage"
+  [textoBtn]="modalSuccessBtn"
+  (aceptar)="cerrarModalSuccess()">
+</app-success-modal>

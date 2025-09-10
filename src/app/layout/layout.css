@@ -193,6 +193,17 @@
   gap: 15px;
 }
 
+/* Estilos para el avatar del usuario */
+.user-avatar {
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
 /* Responsive para pantallas pequeñas */
 @media (max-width: 576px) {
   .modal-body {
