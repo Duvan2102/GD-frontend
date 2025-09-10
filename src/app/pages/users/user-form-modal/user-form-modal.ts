@@ -105,7 +105,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       telefono: ['', [Validators.pattern(/^\+?[\d\s\-()]{10,15}$/)]],
       direccion: ['', [Validators.maxLength(200)]],
       dobleAutenticacion: ['Google Authenticator', Validators.required],
-      // CAMBIO: Un solo control para perfil en lugar de un FormGroup
+      // CAMBIO: Un solo control para perfil en lugar de un
       perfil: ['funcionarios', Validators.required] // valor por defecto
     });
   }
@@ -234,11 +234,11 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         console.log('Departamentos:', data.departamentos);
         console.log('Áreas:', data.areas);
         console.log('Cargos:', data.cargos);
-        
+
         this.departamentos = data.departamentos || [];
         this.areas = data.areas || [];
         this.cargosDisponibles = data.cargos || [];
-        
+
         // Construir la estructura jerárquica COMPLETA
         this.buildHierarchicalStructureComplete();
         this.isLoading = false;
@@ -372,7 +372,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
           expanded: false
         };
         areasMap.set(areaKey, areaObj);
-        
+
         // Asignar área al departamento
         const departamento = departamentosMap.get(area.departamento.idDepartamento);
         if (departamento) {
@@ -387,7 +387,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       if (cargo.area && cargo.area.departamento) {
         const areaKey = `${cargo.area.departamento.idDepartamento}-${cargo.area.idArea}`;
         const areaObj = areasMap.get(areaKey);
-        
+
         if (areaObj) {
           const cargoExists = areaObj.cargos.find((c: any) => c.idCargo === cargo.idCargo);
           if (!cargoExists) {
@@ -416,7 +416,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     console.log('=== ESTRUCTURA FINAL COMPLETA ===');
     console.log('Total departamentos:', this.hierarchicalData.departamentos.length);
     console.log('Estructura completa:', JSON.stringify(this.hierarchicalData, null, 2));
-    
+
     this.hierarchicalData.departamentos.forEach((dept: any, index: number) => {
       console.log(`Departamento ${index + 1}: ${dept.descripcion} (${dept.areas.length} áreas)`);
       dept.areas.forEach((area: any, areaIndex: number) => {
@@ -447,7 +447,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       event.preventDefault();
       event.stopPropagation();
     }
-    
+
     console.log('Toggling departamento:', departamento.descripcion, 'expanded:', departamento.expanded);
     departamento.expanded = !departamento.expanded;
 
@@ -466,7 +466,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       event.preventDefault();
       event.stopPropagation();
     }
-    
+
     console.log('Toggling area:', area.descripcion, 'expanded:', area.expanded);
     area.expanded = !area.expanded;
     console.log('Area después del toggle:', area);
@@ -477,7 +477,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       event.preventDefault();
       event.stopPropagation();
     }
-    
+
     console.log('Seleccionando cargo:', cargo);
 
     if (!cargo || !cargo.idCargo) {
@@ -654,7 +654,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       idUsuario: this.isEditMode ? (this.user?.idUsuario || this.user?.noUsuario) : undefined,
       // Agregar también estos campos para mayor compatibilidad
       id: this.isEditMode ? (this.user?.idUsuario || this.user?.noUsuario) : undefined,
-      
+
       cargo: formValue.cargo,
       correoEmpresarial: formValue.correoEmpresarial || '',
       correoPersonal: formValue.correoPersonal || '',
@@ -664,7 +664,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       dobleAutenticacion: formValue.dobleAutenticacion || 'Google Authenticator',
       estado: this.isEditMode ? (this.user?.estado || 'Activo') : 'Activo',
       activo: this.isEditMode ? (this.user?.activo !== false) : true,
-      
+
       // CAMBIO: Convertir el perfil seleccionado a la estructura esperada
       perfiles: this.convertirPerfilSeleccionado(formValue.perfil)
     };

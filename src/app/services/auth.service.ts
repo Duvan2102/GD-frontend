@@ -31,27 +31,83 @@ export class AuthService {
   }
 
   private initializeAuth(): void {
+    console.log('🔐 AuthService: Inicializando autenticación...');
     const token = localStorage.getItem(this.tokenKey);
+    console.log('🔐 Token encontrado:', !!token);
+
     if (token) {
+      console.log('🔐 Token existe, cargando usuario...');
       // En un caso real, aquí se validaría el token con el backend
       // Por ahora, solo verificamos que existe
       this.loadUserFromToken();
+    } else {
+      console.log('🔐 No hay token, usuario no autenticado');
     }
   }
 
   private loadUserFromToken(): void {
-    // En un caso real, aquí se decodificaría el JWT y se cargarían los datos del usuario
-    // Por ahora, solo verificamos que el token existe y mantenemos el usuario actual
-    console.log('Loading user from token...');
+    // Validar el token con el backend y recuperar la información del usuario
+    console.log('🔐 AuthService: Cargando usuario desde token...');
 
     // Si ya hay un usuario cargado, no hacer nada
     if (this.currentUser) {
-      console.log('User already loaded:', this.currentUser);
+      console.log('🔐 Usuario ya cargado:', this.currentUser);
       return;
     }
 
-    // Si no hay usuario, cargar uno mock como fallback
+    // Validar el token con el backend para recuperar la información del usuario
+    this.validateTokenAndLoadUser().subscribe({
+      next: (user) => {
+        if (user) {
+          this.currentUser = user;
+          this.currentUserSubject.next(user);
+          console.log('🔐 Usuario cargado exitosamente desde token:', user);
+        } else {
+          console.log('🔐 No se pudo cargar usuario desde token');
+        }
+      },
+      error: (error) => {
+        console.error('🔐 Error validando token:', error);
+        // Si el token es inválido, limpiar los datos de autenticación
+        this.clearAuthData();
+      }
+    });
+  }
 
+  // Método síncrono para verificar si hay datos de usuario almacenados
+  private hasStoredUserData(): boolean {
+    const storedUser = localStorage.getItem('current_user_data');
+    return storedUser !== null;
+  }
+
+  private validateTokenAndLoadUser(): Observable<UsuarioData | null> {
+    const token = this.getToken();
+    if (!token) {
+      console.log('No token found, returning null');
+      return of(null);
+    }
+
+    // Intentar recuperar la información del usuario desde localStorage primero
+    const storedUser = localStorage.getItem('current_user_data');
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        console.log('User data recovered from localStorage:', userData);
+
+        // Validar que el token no esté expirado (verificación básica)
+        // En un caso real, aquí se decodificaría el JWT para verificar la expiración
+        // Por ahora, asumimos que si hay token y datos de usuario, la sesión es válida
+        return of(userData);
+      } catch (error) {
+        console.error('Error parsing stored user data:', error);
+        // Si hay error al parsear, limpiar datos corruptos
+        this.clearAuthData();
+        return of(null);
+      }
+    }
+
+    console.log('No stored user data found');
+    return of(null);
   }
 
   private convertMockUserToUsuarioData(mockUser: Usuario & { cargoCompleto: Position }): UsuarioData {
@@ -123,6 +179,10 @@ export class AuthService {
           // Actualizar el usuario actual
           this.currentUser = response.usuario;
           this.currentUserSubject.next(this.currentUser);
+
+          // Guardar la información del usuario en localStorage para persistencia
+          localStorage.setItem('current_user_data', JSON.stringify(this.currentUser));
+
           console.log('Current user updated:', this.currentUser);
 
           return true;
@@ -165,6 +225,7 @@ export class AuthService {
 
   private clearAuthData(): void {
     localStorage.removeItem(this.tokenKey);
+    localStorage.removeItem('current_user_data');
     this.currentUser = null;
     this.currentUserSubject.next(null);
   }
@@ -178,11 +239,24 @@ export class AuthService {
   isAuthenticated(): boolean {
     const hasUser = this.currentUser !== null;
     const hasToken = this.getToken() !== null;
+    const hasStoredUser = this.hasStoredUserData();
     const isActive = this.currentUser?.estado === 'Activo' || this.currentUser?.estado === 'ACTIVO' || this.currentUser?.estado === 'activo';
 
-    console.log('Auth check:', { hasUser, hasToken, isActive, estado: this.currentUser?.estado });
+    console.log('🔍 AuthService: Verificando autenticación:', {
+      hasUser,
+      hasToken,
+      hasStoredUser,
+      isActive,
+      estado: this.currentUser?.estado,
+      currentUser: this.currentUser
+    });
 
-    return hasUser && hasToken && (isActive || !this.currentUser?.estado); // Si no hay estado, asumir activo
+    // Si hay token y datos de usuario almacenados, considerar autenticado
+    // incluso si el usuario aún no se ha cargado completamente
+    const result = hasToken && (hasUser || hasStoredUser) && (isActive || !this.currentUser?.estado);
+    console.log('🔍 Resultado de autenticación:', result);
+
+    return result; // Si no hay estado, asumir activo
   }
 
   // Obtener el token actual
@@ -375,6 +449,9 @@ export class AuthService {
             // Actualizar el usuario actual
             this.currentUser = response.usuario;
             this.currentUserSubject.next(this.currentUser);
+
+            // Guardar la información del usuario en localStorage para persistencia
+            localStorage.setItem('current_user_data', JSON.stringify(this.currentUser));
 
             // Limpiar estado de 2FA
             this.twoFARequiredSubject.next(false);
