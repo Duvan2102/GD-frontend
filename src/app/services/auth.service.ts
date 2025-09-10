@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable, of, BehaviorSubject, throwError } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { map, catchError } from 'rxjs/operators';
-import { Usuario, LoginRequest, AuthResponse, UsuarioData, AuthErrorResponse, MessageResponse, PasswordValidationRequest, PasswordValidationResponse, TwoFARequest, TwoFAResponse, TwoFARequiredResponse, TwoFAErrorResponse, TwoFAStatusResponse, QRCodeResponse, GoogleAuthSetupResponse, GoogleAuthConfirmRequest, GoogleAuthConfirmResponse, UnlinkGoogleAuthRequest, UnlinkGoogleAuthResponse, EmailCodeRequest, EmailCodeResponse, TwoFAState, QRSetupData } from '../interfaces/common.interfaces';
+import { Usuario, LoginRequest, AuthResponse, UsuarioData, AuthErrorResponse, MessageResponse, PasswordValidationRequest, PasswordValidationResponse, TwoFARequest, TwoFAResponse, TwoFARequiredResponse, TwoFAErrorResponse, TwoFAStatusResponse, QRCodeResponse, GoogleAuthSetupResponse, GoogleAuthConfirmRequest, GoogleAuthConfirmResponse, UnlinkGoogleAuthRequest, UnlinkGoogleAuthResponse, EmailCodeRequest, EmailCodeResponse, TwoFAState, QRSetupData, Change2FAMethodRequest, Change2FAMethodResponse } from '../interfaces/common.interfaces';
 import { Position } from './positions.service';
 import { environment } from '../environments/environment';
 
@@ -769,8 +769,8 @@ export class AuthService {
 
   // ==================== FLUJO PRINCIPAL DE 2FA ====================
 
-  // 1. Login SIEMPRE retorna 202 (requiere 2FA)
-  loginWith2FA(username: string, password: string): Observable<{ success: boolean; requires2FA: boolean; tempToken: string; user: string }> {
+  // 1. Login que maneja diferentes tipos de respuesta según el estado de 2FA (actualizado)
+  loginWith2FA(username: string, password: string): Observable<{ success: boolean; requires2FA: boolean; tempToken: string; user: string; qrCodeUrl?: string; secret?: string; requiereConfiguracion?: boolean; dobleAutenticacion?: boolean }> {
     const loginRequest: LoginRequest = {
       usuario: username,
       password: password
@@ -779,7 +779,10 @@ export class AuthService {
     return this.http.post<TwoFARequiredResponse>(`${this.apiUrl}/auth/login`, loginRequest)
       .pipe(
         map((response: TwoFARequiredResponse) => {
-          // SIEMPRE se requiere 2FA después del login exitoso
+          console.log('Login response received:', response);
+
+          // El backend SIEMPRE devuelve tempToken y dobleAutenticacion: true
+          // Guardar el token temporal y configurar estado de 2FA
           this.setTempToken(response.tempToken);
           this.twoFARequiredSubject.next(true);
           this.twoFAUserSubject.next(response.usuario);
@@ -788,7 +791,8 @@ export class AuthService {
             success: true,
             requires2FA: true,
             tempToken: response.tempToken,
-            user: response.usuario
+            user: response.usuario,
+            dobleAutenticacion: response.dobleAutenticacion
           };
         }),
         catchError((error: any) => {
@@ -798,7 +802,7 @@ export class AuthService {
       );
   }
 
-  // 2. Verificar estado de configuración 2FA
+  // 2. Verificar estado de configuración 2FA (actualizado)
   check2FAStatus(): Observable<TwoFAStatusResponse> {
     const currentUser = this.twoFAUserSubject.value;
 
@@ -808,12 +812,14 @@ export class AuthService {
 
     return this.http.get<TwoFAStatusResponse>(`${this.apiUrl}/auth/2fa-status/${currentUser}`).pipe(
       map((response: TwoFAStatusResponse) => {
-        // Actualizar estado interno
+        // Actualizar estado interno con el nuevo campo googleAuthPending
         const state: TwoFAState = {
           hasGoogleAuth: response.hasGoogleAuth,
           hasEmailBackup: response.hasEmailBackup,
+          googleAuthPending: response.googleAuthPending,
           isConfigured: response.hasGoogleAuth || response.hasEmailBackup,
-          needsSetup: !response.hasGoogleAuth
+          needsSetup: response.googleAuthPending || (!response.hasGoogleAuth && !response.hasEmailBackup),
+          metodoActual: response.hasGoogleAuth ? 'GOOGLE_AUTH' : 'EMAIL'
         };
         this.twoFAStateSubject.next(state);
         return response;
@@ -855,8 +861,8 @@ export class AuthService {
     );
   }
 
-  // 4. Validar código de 2FA (Google Authenticator o Email)
-  validate2FACode(codigo: string): Observable<boolean> {
+  // 4. Validar código de 2FA (Google Authenticator o Email) - actualizado
+  validate2FACode(codigo: string): Observable<{ success: boolean; qrCodeUrl?: string; secret?: string; message?: string }> {
     const tempToken = this.getTempToken();
     if (!tempToken) {
       return throwError(() => new Error('Token temporal no encontrado'));
@@ -867,26 +873,42 @@ export class AuthService {
       codigo2FA: codigo
     };
 
-    return this.http.post<TwoFAResponse>(`${this.apiUrl}/auth/validate-2fa`, request, {
+    return this.http.post<any>(`${this.apiUrl}/auth/validate-2fa`, request, {
       headers: {
         'Content-Type': 'application/json'
       }
     }).pipe(
-        map((response: TwoFAResponse) => {
-          // Guardar el token final
-          localStorage.setItem(this.tokenKey, response.token);
-          this.clearTempToken();
+        map((response: any) => {
+          // Si la respuesta contiene token y usuario, el código fue válido
+          if (response.token && response.usuario) {
+            // Guardar el token final
+            localStorage.setItem(this.tokenKey, response.token);
+            this.clearTempToken();
 
-          // Actualizar el usuario actual
-          this.currentUser = response.usuario;
-          this.currentUserSubject.next(this.currentUser);
+            // Actualizar el usuario actual
+            this.currentUser = response.usuario;
+            this.currentUserSubject.next(this.currentUser);
 
-          // Limpiar estado de 2FA
-          this.twoFARequiredSubject.next(false);
-          this.twoFAUserSubject.next('');
-          this.twoFAStateSubject.next(null);
+            // Limpiar estado de 2FA
+            this.twoFARequiredSubject.next(false);
+            this.twoFAUserSubject.next('');
+            this.twoFAStateSubject.next(null);
 
-          return true;
+            return { success: true };
+          }
+
+          // Si la respuesta contiene QR, significa que Google Auth está pendiente
+          if (response.qrCodeUrl && response.secret) {
+            return {
+              success: false,
+              qrCodeUrl: response.qrCodeUrl,
+              secret: response.secret,
+              message: response.message
+            };
+          }
+
+          // Si no es ninguno de los casos anteriores, asumir error
+          return { success: false, message: 'Respuesta inesperada del servidor' };
         }),
         catchError((error: any) => {
           console.error('Error validando código 2FA:', error);
@@ -1100,6 +1122,31 @@ export class AuthService {
     }).pipe(
       catchError((error: any) => {
         console.error('Error eliminando QR del usuario:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  // Cambiar método de 2FA de un usuario (para administradores) - actualizado
+  change2FAMethod(idUsuario: number, nuevoMetodo: 'EMAIL' | 'GOOGLE_AUTH'): Observable<Change2FAMethodResponse> {
+    const token = this.getToken();
+    if (!token) {
+      return throwError(() => new Error('Token no encontrado'));
+    }
+
+    const request: Change2FAMethodRequest = {
+      idUsuario: idUsuario,
+      nuevoMetodo: nuevoMetodo
+    };
+
+    return this.http.post<Change2FAMethodResponse>(`${this.apiUrl}/auth/change-2fa-method`, request, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }).pipe(
+      catchError((error: any) => {
+        console.error('Error cambiando método 2FA:', error);
         return throwError(() => error);
       })
     );

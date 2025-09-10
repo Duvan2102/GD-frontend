@@ -86,14 +86,19 @@ export class TwoFAStateComponent implements OnInit, OnDestroy {
 
     console.log('Determinando acción con estado:', this.twoFAState);
 
-    if (this.twoFAState.hasGoogleAuth) {
-      // Usuario tiene Google Auth configurado, ir a verificación
-      console.log('Usuario tiene Google Auth, navegando a verificación');
+    // Nuevo flujo basado en la documentación actualizada
+    if (this.twoFAState.googleAuthPending) {
+      // Google Auth está pendiente de configuración
+      console.log('Google Auth pendiente, navegando a verificación para obtener QR');
       this.router.navigate(['/two-fa-verification']);
-    } else if (!this.twoFAState.hasGoogleAuth && !this.twoFAState.hasEmailBackup) {
-      // Usuario necesita configurar Google Auth (no tiene nada configurado)
-      console.log('Usuario necesita configurar Google Auth');
-      this.loadQRCode();
+    } else if (this.twoFAState.hasGoogleAuth) {
+      // Usuario tiene Google Auth configurado y confirmado
+      console.log('Usuario tiene Google Auth configurado, navegando a verificación');
+      this.router.navigate(['/two-fa-verification']);
+    } else if (this.twoFAState.hasEmailBackup && !this.twoFAState.hasGoogleAuth) {
+      // Usuario tiene solo email configurado
+      console.log('Usuario tiene solo email configurado, navegando a verificación');
+      this.router.navigate(['/two-fa-verification']);
     } else {
       // Estado inesperado
       console.log('Estado inesperado:', this.twoFAState);
@@ -168,7 +173,7 @@ export class TwoFAStateComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Getters para el template
+  // Getters para el template (actualizados)
   get hasGoogleAuth(): boolean {
     return this.twoFAState?.hasGoogleAuth || false;
   }
@@ -177,8 +182,12 @@ export class TwoFAStateComponent implements OnInit, OnDestroy {
     return this.twoFAState?.hasEmailBackup || false;
   }
 
+  get googleAuthPending(): boolean {
+    return this.twoFAState?.googleAuthPending || false;
+  }
+
   get needsSetup(): boolean {
-    return this.twoFAState ? (!this.twoFAState.hasGoogleAuth && !this.twoFAState.hasEmailBackup) : false;
+    return this.twoFAState ? this.twoFAState.googleAuthPending || (!this.twoFAState.hasGoogleAuth && !this.twoFAState.hasEmailBackup) : false;
   }
 
   get isConfigured(): boolean {

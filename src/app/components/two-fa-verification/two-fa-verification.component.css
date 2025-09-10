@@ -77,6 +77,111 @@
   color: #667eea;
 }
 
+/* Estilos para el QR */
+.qr-container {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 20px 0;
+}
+
+.qr-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.qr-icon {
+  width: 24px;
+  height: 24px;
+  color: #667eea;
+}
+
+.qr-header h3 {
+  color: #2d3748;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.qr-instructions {
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.qr-instructions p {
+  color: #4a5568;
+  font-size: 14px;
+  margin: 8px 0;
+  padding-left: 16px;
+  position: relative;
+}
+
+.qr-instructions p::before {
+  content: "•";
+  color: #667eea;
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+}
+
+.qr-code-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.qr-code {
+  max-width: 256px;
+  max-height: 256px;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.secret-info {
+  background: #edf2f7;
+  padding: 16px;
+  border-radius: 8px;
+  margin-top: 16px;
+  text-align: left;
+}
+
+.secret-info p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #4a5568;
+}
+
+.secret-info p:first-child {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.secret-note {
+  font-style: italic;
+  color: #718096 !important;
+}
+
+.qr-actions {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.qr-actions .btn {
+  width: auto;
+  min-width: 200px;
+  padding: 12px 24px;
+}
+
 .verification-form {
   margin-bottom: 30px;
 }

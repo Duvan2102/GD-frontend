@@ -47,17 +47,25 @@ export class LoginComponent implements OnInit {
 
       const { usuario, password } = this.loginForm.value;
 
-      // Usar el método de login con 2FA OBLIGATORIO
+      // Usar el método de login con 2FA OBLIGATORIO (actualizado)
       this.authService.loginWith2FA(usuario, password).subscribe({
         next: (response) => {
           console.log('Login response:', response);
+          console.log('Response details:', {
+            success: response.success,
+            requires2FA: response.requires2FA,
+            dobleAutenticacion: response.dobleAutenticacion,
+            tempToken: response.tempToken
+          });
 
           if (response.success && response.requires2FA) {
-            // SIEMPRE se requiere 2FA después del login exitoso
+            // Siempre requiere 2FA - verificar estado para determinar el flujo
             console.log('2FA required, navigating to state check...');
             this.router.navigate(['/two-fa-state']).then(navigated => {
-              console.log('2FA state navigation result:', navigated);
+              console.log('Navigation to two-fa-state result:', navigated);
             });
+          } else {
+            console.log('Unexpected response state:', response);
           }
           this.isLoading = false;
         },

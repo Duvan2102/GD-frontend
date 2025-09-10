@@ -4,6 +4,8 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
+import { TwoFAState } from '../../interfaces/common.interfaces';
+import * as QRCode from 'qrcode';
 
 @Component({
   selector: 'app-two-fa-verification',
@@ -17,7 +19,11 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
   errorMessage: string = '';
   isLoading: boolean = false;
   currentUser: string = '';
-  twoFAState: any = null;
+  twoFAState: TwoFAState | null = null;
+  qrCodeDataUrl: string = '';
+  showQRCode: boolean = false;
+  qrScanned: boolean = false;
+  qrSecret: string = '';
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -50,6 +56,12 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
       .subscribe(state => {
         if (state) {
           this.twoFAState = state;
+          console.log('Estado 2FA en verificación:', state);
+
+          // Si Google Auth está pendiente, intentar validar para obtener QR
+          if (state.googleAuthPending) {
+            this.attemptValidationForQR();
+          }
         }
       });
   }
@@ -66,10 +78,26 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
 
       const { codigo } = this.verificationForm.value;
 
+      // Si ya se escaneó el QR, confirmar Google Auth
+      if (this.qrScanned && this.qrSecret) {
+        this.confirmGoogleAuthWithCode(codigo);
+        return;
+      }
+
+      // Validación normal de código 2FA
       this.authService.validate2FACode(codigo).subscribe({
-        next: (success) => {
-          if (success) {
+        next: (response) => {
+          if (response.success) {
             this.router.navigate(['/']);
+          } else if (response.qrCodeUrl && response.secret) {
+            // Google Auth pendiente - mostrar QR
+            this.showQRCode = true;
+            this.qrScanned = false;
+            this.qrSecret = response.secret;
+            this.generateQRCode(response.qrCodeUrl);
+            this.errorMessage = response.message || 'Configura Google Authenticator escaneando el código QR';
+          } else {
+            this.errorMessage = response.message || 'Error validando código';
           }
           this.isLoading = false;
         },
@@ -111,6 +139,104 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
   onBackToLogin(): void {
     this.authService.clear2FAState();
     this.router.navigate(['/login']);
+  }
+
+  // Nuevo método para cuando el usuario ya escaneó el QR
+  onQRScanned(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    // Ocultar el QR y mostrar el formulario de código
+    this.showQRCode = false;
+    this.qrScanned = true;
+
+    // Limpiar el formulario para que el usuario ingrese el código
+    this.verificationForm.patchValue({ codigo: '' });
+
+    this.isLoading = false;
+  }
+
+  // Nuevo método para intentar validación y obtener QR automáticamente
+  private attemptValidationForQR(): void {
+    // Intentar validar con un código vacío para obtener el QR
+    this.authService.validate2FACode('').subscribe({
+      next: (response) => {
+        if (response.qrCodeUrl && response.secret) {
+          this.showQRCode = true;
+          this.qrSecret = response.secret;
+          this.generateQRCode(response.qrCodeUrl);
+          this.errorMessage = response.message || 'Configura Google Authenticator escaneando el código QR';
+        } else {
+          // Si no hay QR, continuar con el flujo normal
+          console.log('No se obtuvo QR, continuando con flujo normal');
+        }
+      },
+      error: (error) => {
+        console.log('No se pudo obtener QR automáticamente:', error);
+        // No mostrar error, simplemente continuar con el flujo normal
+      }
+    });
+  }
+
+  // Generar código QR
+  private generateQRCode(otpauthUrl: string): void {
+    QRCode.toDataURL(otpauthUrl, {
+      width: 256,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    }).then((dataUrl: string) => {
+      this.qrCodeDataUrl = dataUrl;
+    }).catch((error: any) => {
+      console.error('Error generando código QR:', error);
+      this.errorMessage = 'Error generando código QR';
+    });
+  }
+
+  // Confirmar configuración de Google Auth con código
+  private confirmGoogleAuthWithCode(codigo: string): void {
+    if (!this.qrSecret) {
+      this.errorMessage = 'Error: Secret no encontrado';
+      this.isLoading = false;
+      return;
+    }
+
+    this.authService.confirmGoogleAuthenticator(codigo, this.qrSecret).subscribe({
+      next: (response) => {
+        console.log('Google Auth confirmado:', response.message);
+        // Después de confirmar, intentar validar nuevamente para obtener el token final
+        this.validateAfterGoogleAuthSetup();
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error confirmando Google Auth:', error);
+        this.handleError(error);
+        this.isLoading = false;
+      }
+    });
+  }
+
+  // Validar código después de configurar Google Auth
+  private validateAfterGoogleAuthSetup(): void {
+    // Intentar validar con un código vacío para obtener el token final
+    this.authService.validate2FACode('').subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.router.navigate(['/']);
+        } else {
+          // Si aún no funciona, pedir al usuario que ingrese un código
+          this.errorMessage = 'Google Auth configurado. Ahora ingresa un código de 6 dígitos de tu aplicación.';
+          this.qrScanned = false; // Permitir que ingrese código manualmente
+        }
+      },
+      error: (error) => {
+        console.error('Error validando después de configurar Google Auth:', error);
+        this.errorMessage = 'Google Auth configurado. Ahora ingresa un código de 6 dígitos de tu aplicación.';
+        this.qrScanned = false;
+      }
+    });
   }
 
   private markFormGroupTouched(): void {
@@ -174,6 +300,27 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
       return false;
     }
     return true;
+  }
+
+  // Getters para el template
+  get hasGoogleAuth(): boolean {
+    return this.twoFAState?.hasGoogleAuth || false;
+  }
+
+  get hasEmailBackup(): boolean {
+    return this.twoFAState?.hasEmailBackup || false;
+  }
+
+  get googleAuthPending(): boolean {
+    return this.twoFAState?.googleAuthPending || false;
+  }
+
+  get shouldShowEmailOption(): boolean {
+    return this.hasEmailBackup && !this.googleAuthPending;
+  }
+
+  get shouldShowGoogleAuthOption(): boolean {
+    return this.hasGoogleAuth && !this.googleAuthPending;
   }
 }
 

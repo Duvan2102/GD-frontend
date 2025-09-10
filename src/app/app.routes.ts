@@ -13,6 +13,7 @@ import { TwoFAManagementComponent } from './components/two-fa-management/two-fa-
 import { TwoFAStateComponent } from './components/two-fa-state/two-fa-state.component';
 import { AuthGuard } from './guards/auth.guard';
 import { LoginGuard } from './guards/login.guard';
+import { TwoFAGuard } from './guards/two-fa.guard';
 
 export const routes: Routes = [
   {
@@ -22,16 +23,18 @@ export const routes: Routes = [
   },
   {
     path: 'two-fa-state',
-    component: TwoFAStateComponent
+    component: TwoFAStateComponent,
+    canActivate: [TwoFAGuard]
   },
   {
     path: 'two-fa-verification',
-    component: TwoFAVerificationComponent
+    component: TwoFAVerificationComponent,
+    canActivate: [TwoFAGuard]
   },
   {
     path: 'google-auth-setup',
     component: GoogleAuthSetupComponent,
-    canActivate: [AuthGuard]
+    canActivate: [TwoFAGuard]
   },
   {
     path: 'two-fa-management',

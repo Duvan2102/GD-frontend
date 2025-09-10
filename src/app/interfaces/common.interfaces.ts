@@ -359,7 +359,7 @@ export interface TwoFAErrorResponse {
   message: string;
 }
 
-// Respuesta SIEMPRE 202 después del login exitoso
+// Respuesta SIEMPRE después del login exitoso (nueva estructura)
 export interface TwoFARequiredResponse {
   message: string;
   usuario: string;
@@ -367,10 +367,11 @@ export interface TwoFARequiredResponse {
   tempToken: string;
 }
 
-// Verificar estado de configuración 2FA
+// Verificar estado de configuración 2FA (actualizada)
 export interface TwoFAStatusResponse {
   hasGoogleAuth: boolean;
   hasEmailBackup: boolean;
+  googleAuthPending: boolean;
   message: string;
 }
 
@@ -417,12 +418,14 @@ export interface EmailCodeResponse {
   message: string;
 }
 
-// Estados de 2FA
+// Estados de 2FA (actualizada)
 export interface TwoFAState {
   hasGoogleAuth: boolean;
   hasEmailBackup: boolean;
+  googleAuthPending: boolean;
   isConfigured: boolean;
   needsSetup: boolean;
+  metodoActual?: 'GOOGLE_AUTH' | 'EMAIL';
 }
 
 // Datos de configuración QR
@@ -431,4 +434,18 @@ export interface QRSetupData {
   secret: string;
   isNew: boolean;
   message: string;
+}
+
+// Cambio de método 2FA por administrador (actualizada)
+export interface Change2FAMethodRequest {
+  idUsuario: number;
+  nuevoMetodo: 'EMAIL' | 'GOOGLE_AUTH';
+}
+
+export interface Change2FAMethodResponse {
+  success: boolean;
+  message: string;
+  qrCodeUrl?: string;
+  secret?: string;
+  nuevoMetodo: 'GOOGLE_AUTH' | 'EMAIL';
 }

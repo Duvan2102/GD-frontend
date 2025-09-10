@@ -11,9 +11,46 @@
       <h2>Verificación de Seguridad</h2>
       <p class="user-info">Usuario: <strong>{{ currentUser }}</strong></p>
 
-      <!-- Mostrar opciones basadas en el estado de 2FA -->
-      <div class="verification-options" *ngIf="twoFAState">
-        <div class="option-info" *ngIf="twoFAState.hasGoogleAuth">
+      <!-- Mostrar QR si está disponible (Google Auth pendiente) -->
+      <div class="qr-container" *ngIf="showQRCode && qrCodeDataUrl">
+        <div class="qr-header">
+          <svg class="qr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="5" height="5"></rect>
+            <rect x="3" y="16" width="5" height="5"></rect>
+            <rect x="16" y="3" width="5" height="5"></rect>
+            <rect x="16" y="16" width="5" height="5"></rect>
+            <rect x="8" y="8" width="8" height="8"></rect>
+          </svg>
+          <h3>Configurar Google Authenticator</h3>
+        </div>
+        <div class="qr-instructions">
+          <p>1. Abre Google Authenticator en tu dispositivo</p>
+          <p>2. Escanea el código QR que aparece abajo</p>
+          <p>3. Una vez escaneado, haz clic en "Ya escaneé el código"</p>
+        </div>
+        <div class="qr-code-wrapper">
+          <img [src]="qrCodeDataUrl" alt="Código QR para Google Authenticator" class="qr-code">
+        </div>
+        <div class="secret-info">
+          <p><strong>Secret:</strong> {{ qrSecret }}</p>
+          <p class="secret-note">Guarda este código por si necesitas configurar manualmente</p>
+        </div>
+        <div class="qr-actions">
+          <button
+            type="button"
+            class="btn btn-primary"
+            (click)="onQRScanned()"
+            [disabled]="isLoading"
+          >
+            <span *ngIf="isLoading" class="spinner"></span>
+            {{ isLoading ? 'Procesando...' : 'Ya escaneé el código' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Mostrar método actual si no hay QR -->
+      <div class="verification-options" *ngIf="!showQRCode && twoFAState">
+        <div class="option-info" *ngIf="shouldShowGoogleAuthOption">
           <svg class="option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="5" height="5"></rect>
             <rect x="3" y="16" width="5" height="5"></rect>
@@ -24,7 +61,7 @@
           <span>Google Authenticator</span>
         </div>
 
-        <div class="option-info" *ngIf="!twoFAState.hasGoogleAuth && twoFAState.hasEmailBackup">
+        <div class="option-info" *ngIf="shouldShowEmailOption">
           <svg class="option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
             <polyline points="22,6 12,13 2,6"></polyline>
@@ -33,12 +70,13 @@
         </div>
       </div>
 
-      <p class="description">
+      <p class="description" *ngIf="!showQRCode">
         Ingresa el código de 6 dígitos de tu método de autenticación
       </p>
     </div>
 
-    <form [formGroup]="verificationForm" (ngSubmit)="onSubmit()" class="verification-form">
+    <!-- Mostrar formulario solo si no hay QR o si ya se escaneó el QR -->
+    <form [formGroup]="verificationForm" (ngSubmit)="onSubmit()" class="verification-form" *ngIf="!showQRCode || qrScanned">
       <div class="form-group">
         <label for="codigo" class="form-label">Código de Verificación</label>
         <input
@@ -74,13 +112,13 @@
     </form>
 
     <div class="alternative-actions">
-      <!-- Mostrar botón de email solo si no tiene Google Auth configurado -->
+      <!-- Mostrar botón de email solo si usa email y no hay QR -->
       <button
         type="button"
         class="btn btn-secondary"
         (click)="onSendEmailCode()"
         [disabled]="isLoading"
-        *ngIf="!twoFAState?.hasGoogleAuth"
+        *ngIf="shouldShowEmailOption && !showQRCode"
       >
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
@@ -89,23 +127,6 @@
         Enviar Código por Email
       </button>
 
-      <!-- Mostrar botón de configuración si no tiene Google Auth -->
-      <button
-        type="button"
-        class="btn btn-secondary"
-        (click)="onSetupGoogleAuth()"
-        [disabled]="isLoading"
-        *ngIf="!twoFAState?.hasGoogleAuth"
-      >
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="5" height="5"></rect>
-          <rect x="3" y="16" width="5" height="5"></rect>
-          <rect x="16" y="3" width="5" height="5"></rect>
-          <rect x="16" y="16" width="5" height="5"></rect>
-          <rect x="8" y="8" width="8" height="8"></rect>
-        </svg>
-        Configurar Google Authenticator
-      </button>
 
       <button
         type="button"
