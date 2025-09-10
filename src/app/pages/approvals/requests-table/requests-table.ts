@@ -13,6 +13,7 @@ export interface Approval {
   approvers: { initials: string; fullName: string }[];
   priority: boolean;
   fullData?: any;
+  _creadorId?: number;
 }
 
 @Component({
