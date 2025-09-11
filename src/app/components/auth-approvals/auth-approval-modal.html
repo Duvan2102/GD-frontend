@@ -60,12 +60,7 @@
               (input)="onTokenInput($event)">
           </div>
 
-          <!-- Error Message -->
-          <div class="auth-approval-error" *ngIf="errorMessage">
-            {{ errorMessage }}
-          </div>
-
-          <!-- Session Expired Message -->
+          <!-- Session Expired Message (only one alert) -->
           <div class="auth-approval-session-expired" *ngIf="errorMessage && errorMessage.includes('Sesión expirada')" 
                style="background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 5px; margin: 10px 0;">
             <div style="display: flex; align-items: center; margin-bottom: 10px;">
@@ -74,6 +69,11 @@
             </div>
             <p style="margin: 0;">{{ errorMessage }}</p>
             <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.8;">El modal se cerrará automáticamente en unos segundos...</p>
+          </div>
+
+          <!-- Error Message (only for non-session-expired errors) -->
+          <div class="auth-approval-error" *ngIf="errorMessage && !errorMessage.includes('Sesión expirada')">
+            {{ errorMessage }}
           </div>
 
           <!-- Action Button -->
