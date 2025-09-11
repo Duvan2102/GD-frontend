@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { NgxExtendedPdfViewerModule, PdfLoadedEvent, NgxExtendedPdfViewerService, PagesLoadedEvent } from 'ngx-extended-pdf-viewer';
 import { PdfService } from '../../../services/pdf.service';
 import { ApprovalService } from '../../../services/approval.service';
+import { AuthService } from '../../../services/auth.service';
 import { ConfirmationModal, ConfirmationModalData } from '../confirmation-modal/confirmation-modal';
 import { AuthApprovalModal } from '../../../components/auth-approvals/auth-approval-modal';
 
@@ -56,7 +57,8 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
     private cdr: ChangeDetectorRef,
     private pdfViewerService: NgxExtendedPdfViewerService,
     private pdfService: PdfService,
-    private approvalService: ApprovalService
+    private approvalService: ApprovalService,
+    private authService: AuthService
   ) {}
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -249,6 +251,29 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
     this.isAuthApprovalModalVisible = false;
     this.pendingAction = null;
     this.pendingComment = '';
+  }
+
+  onLogoutRequired(): void {
+    this.isAuthApprovalModalVisible = false;
+    this.pendingAction = null;
+    this.pendingComment = '';
+    this.close.emit();
+    
+    this.authService.logout().subscribe({
+      next: () => {
+        alert('Su sesión ha expirado. Será redirigido al login automáticamente.');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      },
+      error: () => {
+        this.authService.logoutSync();
+        alert('Su sesión ha expirado. Será redirigido al login automáticamente.');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      }
+    });
   }
 
   private recordActionMetadata(action: 'approve' | 'reject', comentario?: string): void {

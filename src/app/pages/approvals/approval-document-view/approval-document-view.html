@@ -93,5 +93,6 @@
   [action]="pendingAction!"
   (validate)="onAuthApprovalValidate($event)"
   (close)="onAuthApprovalClose()"
-  (cancel)="onAuthApprovalCancel()">
+  (cancel)="onAuthApprovalCancel()"
+  (logoutRequired)="onLogoutRequired()">
 </app-auth-approval-modal>

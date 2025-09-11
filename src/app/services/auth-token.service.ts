@@ -19,6 +19,7 @@ export interface TokenValidationResponse {
   message: string;
   valid: boolean;
   tokenType?: DobleAutenticacionTipo;
+  requiresLogout?: boolean;
 }
 
 export interface UserAuthType {
@@ -91,17 +92,28 @@ export class AuthTokenService {
       const persisted = localStorage.getItem('user_2fa_method');
       if (persisted) {
         const data = JSON.parse(persisted);
-        // Verificar que no sea muy antiguo (máximo 24 horas)
+        const now = Date.now();
+        const age = now - data.timestamp;
         const maxAge = 24 * 60 * 60 * 1000; // 24 horas en ms
-        if (Date.now() - data.timestamp < maxAge) {
+        
+        console.log('🔐 ===== VERIFICANDO MÉTODO 2FA PERSISTIDO =====');
+        console.log('🔐 Timestamp del método:', new Date(data.timestamp).toISOString());
+        console.log('🔐 Tiempo actual:', new Date(now).toISOString());
+        console.log('🔐 Edad del método:', Math.round(age / (60 * 1000)), 'minutos');
+        console.log('🔐 Límite de edad:', Math.round(maxAge / (60 * 1000)), 'minutos');
+        
+        if (age < maxAge) {
+          console.log('🔐 ✅ Método 2FA persistido válido');
           return data;
         } else {
-          console.log('🔐 Método 2FA persistido expirado, eliminando...');
+          console.log('🔐 ⚠️ Método 2FA persistido expirado, eliminando...');
           localStorage.removeItem('user_2fa_method');
         }
+      } else {
+        console.log('🔐 No hay método 2FA persistido');
       }
     } catch (error) {
-      console.error('🔐 Error leyendo método 2FA persistido:', error);
+      console.error('🔐 ❌ Error leyendo método 2FA persistido:', error);
       localStorage.removeItem('user_2fa_method');
     }
     return null;
@@ -145,70 +157,27 @@ export class AuthTokenService {
    */
   validateToken(request: TokenValidationRequest): Observable<TokenValidationResponse> {
     const currentUser = this.authService.getCurrentUserValue();
+    
     if (!currentUser) {
       return of({ success: false, message: 'Usuario no autenticado', valid: false });
     }
 
-    // Usar tempToken si está disponible
-    const tempToken = request.tempToken || this.authService.getTempToken?.();
+    const tempToken = request.tempToken || this.authService.getTempToken();
+    
     if (tempToken) {
       return this.validateWithTempToken(request.token, tempToken, request.action);
     }
 
-    // Validar usando el método 2FA del usuario
-    return this.getUserAuthType().pipe(
-      switchMap(authType => this.validate2FACode(request.token, authType.authType!)),
-      catchError(error => of({ 
-        success: false, 
-        message: 'Error en validación: ' + (error.message || 'Error desconocido'), 
-        valid: false 
-      }))
-    );
+    return of({
+      success: false,
+      valid: false,
+      message: 'Sesión expirada. Debe cerrar sesión e iniciar sesión nuevamente.',
+      requiresLogout: true
+    });
   }
 
-  /**
-   * Valida código 2FA usando el endpoint de login
-   */
-  private validate2FACode(code: string, authType: DobleAutenticacionTipo): Observable<TokenValidationResponse> {
-    const currentUser = this.authService.getCurrentUserValue();
-    if (!currentUser) {
-      return of({ 
-        success: false, 
-        message: 'Usuario no autenticado', 
-        valid: false 
-      });
-    }
-
-    const endpoint = `${this.apiUrl}/auth/validate-2fa`;
-    const payload = {
-      usuario: currentUser.usuario,
-      codigo2FA: code
-    };
-    
-    const authTypeName = authType === DobleAutenticacionTipo.GOOGLE_AUTHENTICATOR ? 'Google Authenticator' : 'email';
-    
-    return this.http.post<any>(endpoint, payload, {
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.authService.getToken()}`
-      }
-    }).pipe(
-      map(response => ({
-        success: response.success || response.valid || false,
-        message: response.success || response.valid ? 
-          `Código ${authTypeName} validado exitosamente` : 
-          `Código ${authTypeName} inválido`,
-        valid: response.success || response.valid || false
-      })),
-      catchError(error => of({ 
-        success: false, 
-        message: error.status === 401 || error.status === 403 ? 
-          `Código ${authTypeName} inválido` : 
-          'Error de conexión con el servidor', 
-        valid: false 
-      }))
-    );
-  }
+  // MÉTODO ELIMINADO: validate2FACode ya no se usa
+  // El sistema solo debe usar tempToken, nunca usuario
 
 
   /**
@@ -308,7 +277,6 @@ export class AuthTokenService {
       headers: { 'Content-Type': 'application/json' }
     }).pipe(
       map(response => {
-        // Caso 1: backend devuelve flags explícitos
         if (response?.success === true || response?.valid === true) {
           return {
             success: true,
@@ -317,11 +285,12 @@ export class AuthTokenService {
           };
         }
 
-        // Caso 2: backend devuelve token y usuario (mismo formato del login)
         if (response?.token && response?.usuario) {
           try {
             localStorage.setItem('auth_token', response.token);
-          } catch {}
+          } catch (error) {
+            // Error silencioso
+          }
           return {
             success: true,
             valid: true,
@@ -329,7 +298,6 @@ export class AuthTokenService {
           };
         }
 
-        // Caso 3: cualquier otra respuesta
         return {
           success: Boolean(response?.success) || false,
           valid: Boolean(response?.valid) || false,
@@ -337,14 +305,27 @@ export class AuthTokenService {
         };
       }),
       catchError(error => {
-        // Fallback: si el tempToken está inválido/expirado intentar validación directa
-        if (error?.status === 401 || error?.error?.code === 'TOKEN_INVALIDO') {
-          return this.getUserAuthType().pipe(
-            switchMap(authType => this.validate2FACode(code, authType.authType!))
-          );
+        if (error?.status === 401 || 
+            error?.error?.code === 'TOKEN_INVALIDO' || 
+            error?.error?.message?.includes('token') ||
+            error?.error?.message?.includes('expired') ||
+            error?.error?.message?.includes('invalid')) {
+          
+          this.authService.clearTempTokenOnly();
+          
+          return of({
+            success: false,
+            valid: false,
+            message: 'Sesión expirada. Debe cerrar sesión e iniciar sesión nuevamente.',
+            requiresLogout: true
+          });
         }
 
-        return throwError(() => error);
+        return of({
+          success: false,
+          valid: false,
+          message: 'Error de conexión. Intente nuevamente.'
+        });
       })
     );
   }

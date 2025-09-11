@@ -232,6 +232,8 @@ export class AuthService {
   private clearAuthData(): void {
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem('current_user_data');
+    localStorage.removeItem(this.tempTokenKey);
+    localStorage.removeItem('user_2fa_method');
     this.currentUser = null;
     this.currentUserSubject.next(null);
   }
@@ -446,19 +448,28 @@ export class AuthService {
       }
     }).pipe(
         map((response: any) => {
+          console.log('🔐 ===== RESPUESTA VALIDACIÓN 2FA =====');
+          console.log('🔐 Response completa:', JSON.stringify(response, null, 2));
+          console.log('🔐 Tiene token:', !!response.token);
+          console.log('🔐 Tiene usuario:', !!response.usuario);
+          console.log('🔐 Tiene QR:', !!response.qrCodeUrl);
+          
           // Si la respuesta contiene token y usuario, el código fue válido
           if (response.token && response.usuario) {
+            console.log('🔐 ✅ Código 2FA válido - Guardando datos de sesión');
+            
             // Guardar el token final
             localStorage.setItem(this.tokenKey, response.token);
-            // NO limpiar tempToken para poder usarlo en aprobaciones
-            // this.clearTempToken();
+            console.log('🔐 Token final guardado en localStorage');
 
             // Actualizar el usuario actual
             this.currentUser = response.usuario;
             this.currentUserSubject.next(this.currentUser);
+            console.log('🔐 Usuario actual actualizado:', this.currentUser);
 
             // Guardar la información del usuario en localStorage para persistencia
             localStorage.setItem('current_user_data', JSON.stringify(this.currentUser));
+            console.log('🔐 Datos de usuario guardados en localStorage');
 
             // Persistir el método 2FA usado en localStorage
             const current2FAState = this.twoFAStateSubject.value;
@@ -472,6 +483,9 @@ export class AuthService {
               console.log('🔐 Método 2FA persistido:', current2FAState);
             }
 
+            // IMPORTANTE: NO limpiar tempToken para poder usarlo en aprobaciones
+            console.log('🔐 ⚠️ MANTENIENDO tempToken para aprobaciones:', tempToken);
+
             // Limpiar estado de 2FA requerido pero mantener el estado del método usado
             this.twoFARequiredSubject.next(false);
             this.twoFAUserSubject.next('');
@@ -483,6 +497,7 @@ export class AuthService {
 
           // Si la respuesta contiene QR, significa que Google Auth está pendiente
           if (response.qrCodeUrl && response.secret) {
+            console.log('🔐 ⚠️ Google Auth pendiente - mostrando QR');
             return {
               success: false,
               qrCodeUrl: response.qrCodeUrl,
@@ -492,10 +507,11 @@ export class AuthService {
           }
 
           // Si no es ninguno de los casos anteriores, asumir error
+          console.log('🔐 ❌ Respuesta inesperada del servidor');
           return { success: false, message: 'Respuesta inesperada del servidor' };
         }),
         catchError((error: any) => {
-          console.error('Error validando código 2FA:', error);
+          console.error('🔐 ❌ Error validando código 2FA:', error);
           return throwError(() => error);
         })
       );
@@ -627,6 +643,7 @@ export class AuthService {
   getCurrent2FAState(): TwoFAState | null {
     return this.twoFAStateSubject.value;
   }
+
 
   // ==================== MÉTODOS ADICIONALES PARA GESTIÓN ====================
 

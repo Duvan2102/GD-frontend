@@ -65,6 +65,17 @@
             {{ errorMessage }}
           </div>
 
+          <!-- Session Expired Message -->
+          <div class="auth-approval-session-expired" *ngIf="errorMessage && errorMessage.includes('Sesión expirada')" 
+               style="background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 5px; margin: 10px 0;">
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+              <i class="bi bi-exclamation-triangle-fill" style="font-size: 20px; margin-right: 10px;"></i>
+              <strong>Sesión Expirada</strong>
+            </div>
+            <p style="margin: 0;">{{ errorMessage }}</p>
+            <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.8;">El modal se cerrará automáticamente en unos segundos...</p>
+          </div>
+
           <!-- Action Button -->
           <button 
             type="button" 
@@ -74,6 +85,7 @@
             <span *ngIf="!isLoading">{{ buttonText }}</span>
             <span *ngIf="isLoading">Validando...</span>
           </button>
+
         </div>
       </div>
     </div>

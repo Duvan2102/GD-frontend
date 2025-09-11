@@ -19,6 +19,7 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
   @Output() close = new EventEmitter<void>();
   @Output() validate = new EventEmitter<{ token: string, action: 'approve' | 'reject' }>();
   @Output() cancel = new EventEmitter<void>();
+  @Output() logoutRequired = new EventEmitter<void>();
 
   tokenCode = '';
   timeRemaining = 90;
@@ -34,6 +35,7 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
   infoMessage = '';
 
   constructor(private authTokenService: AuthTokenService) {}
+
 
   ngOnInit(): void {
     if (this.isVisible) {
@@ -55,46 +57,18 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
   }
 
   private loadAuthType(): void {
-    console.log('🔐 ===== CARGANDO TIPO DE AUTENTICACIÓN =====');
-    console.log('🔐 Document ID:', this.documentId);
-    console.log('🔐 Acción:', this.action);
-    
     this.authTokenService.getUserAuthType().subscribe({
       next: (authType: UserAuthType) => {
-        console.log('🔐 ===== TIPO DE AUTENTICACIÓN DETECTADO =====');
-        console.log('🔐 AuthType recibido:', JSON.stringify(authType, null, 2));
-        console.log('🔐 hasGoogleAuth:', authType.hasGoogleAuth);
-        console.log('🔐 hasEmailBackup:', authType.hasEmailBackup);
-        console.log('🔐 authType:', authType.authType);
-        
         this.authType = authType.authType || DobleAutenticacionTipo.TOKEN_SEGURIDAD;
         this.instructions = this.authTokenService.getInstructionsText(this.authType);
         this.buttonText = this.authTokenService.getButtonText(this.authType);
         this.timeRemaining = this.authTokenService.getTimerDuration(this.authType);
         
-        console.log('🔐 Configuración final del modal:');
-        console.log('🔐 - Tipo de autenticación:', this.authType);
-        console.log('🔐 - Instrucciones:', this.instructions);
-        console.log('🔐 - Texto del botón:', this.buttonText);
-        console.log('🔐 - Tiempo restante:', this.timeRemaining);
-        
-        // If using email token, trigger sending a fresh code
         if (this.authType === DobleAutenticacionTipo.TOKEN_SEGURIDAD) {
-          console.log('🔐 Enviando código por email...');
           this.sendEmailCode();
-        } else {
-          console.log('🔐 Usando Google Authenticator - no se envía email');
         }
       },
       error: (error) => {
-        console.error('🔐 ===== ERROR CARGANDO TIPO DE AUTENTICACIÓN =====');
-        console.error('🔐 Error completo:', error);
-        console.error('🔐 Status del error:', error.status);
-        console.error('🔐 Mensaje del error:', error.message);
-        console.error('🔐 Stack trace:', error.stack);
-        
-        // Fallback to email token
-        console.log('🔐 Usando fallback a email token');
         this.authType = DobleAutenticacionTipo.TOKEN_SEGURIDAD;
         this.instructions = this.authTokenService.getInstructionsText(this.authType);
         this.buttonText = this.authTokenService.getButtonText(this.authType);
@@ -141,27 +115,11 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
   }
 
   private sendEmailCode(): void {
-    console.log('🔐 ===== ENVIANDO CÓDIGO POR EMAIL =====');
-    console.log('🔐 Document ID:', this.documentId);
-    console.log('🔐 Acción:', this.action);
-    
     this.authTokenService.sendEmailCode(this.documentId, this.action).subscribe({
       next: (res) => { 
-        console.log('🔐 ===== CÓDIGO EMAIL ENVIADO =====');
-        console.log('🔐 Respuesta:', JSON.stringify(res, null, 2));
-        console.log('🔐 Success:', res.success);
-        console.log('🔐 Message:', res.message);
-        
         this.infoMessage = res.message || 'Se envió un código a su correo.'; 
       },
       error: (error) => { 
-        console.error('🔐 ===== ERROR ENVIANDO CÓDIGO EMAIL =====');
-        console.error('🔐 Error completo:', error);
-        console.error('🔐 Status del error:', error.status);
-        console.error('🔐 Mensaje del error:', error.message);
-        console.error('🔐 URL del error:', error.url);
-        console.error('🔐 Stack trace:', error.stack);
-        
         this.errorMessage = 'No se pudo enviar el código. Intente nuevamente.'; 
         this.infoMessage = ''; 
       }
@@ -169,65 +127,43 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
   }
 
   onValidate(): void {
-    console.log('🔐 ===== INICIO VALIDACIÓN EN MODAL =====');
-    console.log('🔐 Código ingresado:', this.tokenCode);
-    console.log('🔐 Longitud del código:', this.tokenCode?.length || 0);
-    console.log('🔐 Acción:', this.action);
-    console.log('🔐 Document ID:', this.documentId);
-    console.log('🔐 Tipo de autenticación:', this.authType);
-    console.log('🔐 Tiempo restante:', this.timeRemaining);
-    console.log('🔐 Estado de carga:', this.isLoading);
-    
     if (!this.tokenCode || this.tokenCode.trim().length < 6) {
-      console.log('🔐 ERROR: Código muy corto');
       this.errorMessage = 'Por favor ingrese un código de 6 dígitos';
       return;
     }
     if (this.isLoading) {
-      console.log('🔐 ERROR: Ya hay una validación en progreso');
       return;
     }
 
-    console.log('🔐 Iniciando validación...');
     this.isLoading = true;
     this.errorMessage = '';
     this.infoMessage = '';
 
-    // Validación directa: el servicio tomará el tempToken persistido o el explícito si se provee
     const request: TokenValidationRequest = {
       token: this.tokenCode.trim(),
       action: this.action,
       documentId: this.documentId ?? undefined
     };
 
-    console.log('🔐 Request de validación enviado al servicio:', JSON.stringify(request, null, 2));
-
     this.authTokenService.validateToken(request).subscribe({
       next: (response: TokenValidationResponse) => {
-        console.log('🔐 ===== RESPUESTA EN MODAL =====');
-        console.log('🔐 Respuesta completa:', JSON.stringify(response, null, 2));
-        console.log('🔐 Success:', response.success);
-        console.log('🔐 Valid:', response.valid);
-        console.log('🔐 Message:', response.message);
-        
         this.isLoading = false;
         
         if (response.success && response.valid) {
-          console.log('🔐 ✅ VALIDACIÓN EXITOSA - Emitiendo evento');
           this.validate.emit({ token: this.tokenCode.trim(), action: this.action });
+        } else if (response.requiresLogout) {
+          this.errorMessage = response.message || 'Sesión expirada. Debe cerrar sesión e iniciar sesión nuevamente.';
+          this.infoMessage = 'Por favor, cierre sesión e inicie sesión nuevamente para continuar.';
+          
+          setTimeout(() => {
+            this.onClose();
+            this.logoutRequired.emit();
+          }, 3000);
         } else {
-          console.log('🔐 ❌ VALIDACIÓN FALLIDA:', response.message);
           this.errorMessage = response.message || 'Código inválido. Intente nuevamente.';
         }
       },
       error: (error) => {
-        console.error('🔐 ===== ERROR EN VALIDACIÓN =====');
-        console.error('🔐 Error completo:', error);
-        console.error('🔐 Status del error:', error.status);
-        console.error('🔐 Mensaje del error:', error.message);
-        console.error('🔐 URL del error:', error.url);
-        console.error('🔐 Stack trace:', error.stack);
-        
         this.isLoading = false;
         this.errorMessage = 'Error de conexión. Intente nuevamente.';
       }
@@ -242,9 +178,7 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
   onCancel(): void { this.clearTimer(); this.cancel.emit(); }
 
   onBackdropClick(event: Event): void {
-    // Solo cerrar si el click fue en el backdrop (no en el contenido del modal)
     if (event.target === event.currentTarget) {
-      console.log('🔐 Click en backdrop - cerrando modal');
       this.onClose();
     }
   }
