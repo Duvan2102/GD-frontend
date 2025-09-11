@@ -131,24 +131,49 @@ export class AuthTokenService {
 
     const endpoint = `${this.apiUrl}/auth/2fa-status/${currentUser.usuario}`;
     
+    console.log('🔍 ===== VALIDANDO ESTADO 2FA =====');
+    console.log('🔍 Endpoint:', endpoint);
+    console.log('🔍 Usuario:', currentUser.usuario);
+    console.log('🔍 Token disponible:', !!this.authService.getToken());
+    
     return this.http.get<any>(endpoint, {
       headers: {
         'Authorization': `Bearer ${this.authService.getToken()}`,
         'Content-Type': 'application/json'
       }
     }).pipe(
-      map(response => ({
-        hasGoogleAuth: response.hasGoogleAuth || false,
-        hasEmailBackup: response.hasEmailBackup || true,
-        authType: response.hasGoogleAuth ? 
-          DobleAutenticacionTipo.GOOGLE_AUTHENTICATOR : 
-          DobleAutenticacionTipo.TOKEN_SEGURIDAD
-      })),
-      catchError(() => of({
-        hasGoogleAuth: false,
-        hasEmailBackup: true,
-        authType: DobleAutenticacionTipo.TOKEN_SEGURIDAD
-      }))
+      map(response => {
+        console.log('✅ ===== RESPUESTA 2FA STATUS =====');
+        console.log('✅ hasGoogleAuth:', response.hasGoogleAuth);
+        console.log('✅ hasEmailBackup:', response.hasEmailBackup);
+        console.log('✅ googleAuthPending:', response.googleAuthPending);
+        console.log('✅ message:', response.message);
+        
+        const result = {
+          hasGoogleAuth: response.hasGoogleAuth || false,
+          hasEmailBackup: response.hasEmailBackup || true,
+          authType: response.hasGoogleAuth ? 
+            DobleAutenticacionTipo.GOOGLE_AUTHENTICATOR : 
+            DobleAutenticacionTipo.TOKEN_SEGURIDAD
+        };
+        
+        console.log('✅ ===== RESULTADO FINAL =====');
+        console.log('✅ Tipo de autenticación:', result.authType);
+        console.log('✅ Enviará correo:', result.authType === DobleAutenticacionTipo.TOKEN_SEGURIDAD);
+        
+        return result;
+      }),
+      catchError((error) => {
+        console.error('❌ ===== ERROR 2FA STATUS =====');
+        console.error('❌ Error:', error);
+        console.log('❌ Usando fallback: TOKEN_SEGURIDAD');
+        
+        return of({
+          hasGoogleAuth: false,
+          hasEmailBackup: true,
+          authType: DobleAutenticacionTipo.TOKEN_SEGURIDAD
+        });
+      })
     );
   }
 
@@ -189,23 +214,56 @@ export class AuthTokenService {
       return of({ success: false, message: 'Usuario no autenticado' });
     }
 
+    // Obtener tempToken para enviar el correo
+    const tempToken = this.authService.getTempToken();
+    if (!tempToken) {
+      return of({ 
+        success: false, 
+        message: 'Sesión expirada. Debe cerrar sesión e iniciar sesión nuevamente.' 
+      });
+    }
+
     const endpoint = `${this.apiUrl}/auth/send-email-code`;
-    const payload = { usuario: currentUser.usuario };
+    const payload = { 
+      tempToken: tempToken,
+      usuario: currentUser.usuario,  // Agregar usuario como en el login
+      documentId: documentId,
+      action: action
+    };
+    
+    console.log('📧 ===== ENVIANDO CÓDIGO POR EMAIL =====');
+    console.log('📧 Endpoint:', endpoint);
+    console.log('📧 DocumentId:', documentId);
+    console.log('📧 Action:', action);
+    console.log('📧 Usuario:', currentUser.usuario);
+    console.log('📧 TempToken disponible:', !!tempToken);
+    console.log('📧 Payload:', payload);
     
     return this.http.post<{ message: string }>(endpoint, payload, {
       headers: { 'Content-Type': 'application/json' }
     }).pipe(
-      map(response => ({ 
-        success: true, 
-        message: response.message || 'Código enviado exitosamente' 
-      })),
-      catchError(error => of({ 
-        success: false, 
-        message: error.status === 400 ? 'Error en los datos enviados' :
-                error.status === 500 ? 'Error del servidor. Intente más tarde.' :
-                error.status === 401 ? 'Usuario no autenticado' :
-                'Error de conexión. Intente nuevamente.'
-      }))
+      map(response => {
+        console.log('✅ ===== CORREO ENVIADO EXITOSAMENTE =====');
+        console.log('✅ Respuesta:', response);
+        return { 
+          success: true, 
+          message: response.message || 'Código enviado exitosamente' 
+        };
+      }),
+      catchError(error => {
+        console.error('❌ ===== ERROR ENVIANDO CORREO =====');
+        console.error('❌ Error:', error);
+        console.error('❌ Status:', error.status);
+        console.error('❌ Error body:', error.error);
+        
+        return of({ 
+          success: false, 
+          message: error.status === 400 ? 'Error en los datos enviados' :
+                  error.status === 500 ? 'Error del servidor. Intente más tarde.' :
+                  error.status === 401 ? 'Sesión expirada. Debe cerrar sesión e iniciar sesión nuevamente.' :
+                  'Error de conexión. Intente nuevamente.'
+        });
+      })
     );
   }
 

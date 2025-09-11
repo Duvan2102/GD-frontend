@@ -57,18 +57,40 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
   }
 
   private loadAuthType(): void {
+    console.log('🔐 ===== CARGANDO TIPO DE AUTENTICACIÓN =====');
+    console.log('🔐 DocumentId:', this.documentId);
+    console.log('🔐 Action:', this.action);
+    
     this.authTokenService.getUserAuthType().subscribe({
       next: (authType: UserAuthType) => {
+        console.log('✅ ===== TIPO DE AUTENTICACIÓN OBTENIDO =====');
+        console.log('✅ hasGoogleAuth:', authType.hasGoogleAuth);
+        console.log('✅ hasEmailBackup:', authType.hasEmailBackup);
+        console.log('✅ authType:', authType.authType);
+        
         this.authType = authType.authType || DobleAutenticacionTipo.TOKEN_SEGURIDAD;
         this.instructions = this.authTokenService.getInstructionsText(this.authType);
         this.buttonText = this.authTokenService.getButtonText(this.authType);
         this.timeRemaining = this.authTokenService.getTimerDuration(this.authType);
         
+        console.log('✅ ===== CONFIGURACIÓN FINAL =====');
+        console.log('✅ Tipo seleccionado:', this.authType);
+        console.log('✅ Instrucciones:', this.instructions);
+        console.log('✅ Texto del botón:', this.buttonText);
+        console.log('✅ Tiempo restante:', this.timeRemaining);
+        
         if (this.authType === DobleAutenticacionTipo.TOKEN_SEGURIDAD) {
+          console.log('📧 ===== ENVIANDO CORREO AUTOMÁTICAMENTE =====');
           this.sendEmailCode();
+        } else {
+          console.log('🔐 ===== USANDO GOOGLE AUTHENTICATOR =====');
         }
       },
       error: (error) => {
+        console.error('❌ ===== ERROR CARGANDO TIPO DE AUTENTICACIÓN =====');
+        console.error('❌ Error:', error);
+        console.log('❌ Usando fallback: TOKEN_SEGURIDAD');
+        
         this.authType = DobleAutenticacionTipo.TOKEN_SEGURIDAD;
         this.instructions = this.authTokenService.getInstructionsText(this.authType);
         this.buttonText = this.authTokenService.getButtonText(this.authType);
