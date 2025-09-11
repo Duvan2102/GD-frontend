@@ -979,6 +979,73 @@ export class ApprovalService {
     );
   }
 
+  /**
+   * Obtiene todas las solicitudes del área del usuario (independientemente de su rol)
+   */
+  getApprovalsByArea(usuarioId: number, users: Usuario[], page = 0, size = 1000): Observable<Approval[]> {
+    const params = new HttpParams()
+      .set('usuarioId', String(usuarioId))
+      .set('page', String(page))
+      .set('size', String(size));
+    const url = `${this.baseUrl}/solicitudes/por-area`;
+    return this.http.get<any>(url, { headers: this.headersForUser(usuarioId), params }).pipe(
+      map(res => {
+        if (Array.isArray(res)) return res;
+        const data = res?.data ?? res;
+        return Array.isArray(data?.content) ? data.content : (Array.isArray(data) ? data : []);
+      }),
+      switchMap((list: any[]) => {
+        const approvals = list.map((item: any) => this.mapServerToApproval(item));
+        
+        // Obtener IDs únicos de creadores que necesitan resolución
+        const creatorIds = [...new Set(approvals
+          .filter((approval: any) => approval._creadorId)
+          .map((approval: any) => approval._creadorId!))];
+        
+        if (creatorIds.length === 0) {
+          return of(approvals);
+        }
+        
+        // Resolver información de usuarios creadores
+        const userRequests = creatorIds.map(creatorId => 
+          this.userService.obtenerUsuarioPorId(creatorId).pipe(
+            catchError(() => of(null))
+          )
+        );
+        
+        return forkJoin(userRequests).pipe(
+          map(resolvedUsers => {
+            const userMap = new Map<number, Usuario>();
+            resolvedUsers.forEach(user => {
+              if (user) {
+                userMap.set(user.noUsuario || (user as any).idUsuario, user);
+              }
+            });
+            
+            // Actualizar approvals con información resuelta
+            return approvals.map((approval: any) => {
+              if (approval._creadorId && userMap.has(approval._creadorId)) {
+                const user = userMap.get(approval._creadorId)!;
+                return {
+                  ...approval,
+                  creatorFullName: `${user.nombres} ${user.apellidos}`,
+                  creatorUser: user
+                };
+              }
+              return approval;
+            });
+          })
+        );
+      }),
+      catchError(error => {
+        console.error('Error obteniendo solicitudes por área:', error);
+        // Fallback al método original si el endpoint no existe
+        console.log('Fallback a getHistorico por área no disponible');
+        return this.getHistorico(usuarioId, users, page, size);
+      })
+    );
+  }
+
   getAllApprovals(): Observable<Approval[]> {
     return this.approvals$;
   }

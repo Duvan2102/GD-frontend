@@ -450,7 +450,8 @@ export class AuthService {
           if (response.token && response.usuario) {
             // Guardar el token final
             localStorage.setItem(this.tokenKey, response.token);
-            this.clearTempToken();
+            // NO limpiar tempToken para poder usarlo en aprobaciones
+            // this.clearTempToken();
 
             // Actualizar el usuario actual
             this.currentUser = response.usuario;
@@ -459,10 +460,23 @@ export class AuthService {
             // Guardar la información del usuario en localStorage para persistencia
             localStorage.setItem('current_user_data', JSON.stringify(this.currentUser));
 
-            // Limpiar estado de 2FA
+            // Persistir el método 2FA usado en localStorage
+            const current2FAState = this.twoFAStateSubject.value;
+            if (current2FAState) {
+              localStorage.setItem('user_2fa_method', JSON.stringify({
+                hasGoogleAuth: current2FAState.hasGoogleAuth,
+                hasEmailBackup: current2FAState.hasEmailBackup,
+                metodoActual: current2FAState.metodoActual,
+                timestamp: Date.now()
+              }));
+              console.log('🔐 Método 2FA persistido:', current2FAState);
+            }
+
+            // Limpiar estado de 2FA requerido pero mantener el estado del método usado
             this.twoFARequiredSubject.next(false);
             this.twoFAUserSubject.next('');
-            this.twoFAStateSubject.next(null);
+            // NO limpiar twoFAStateSubject para mantener el método 2FA usado durante el login
+            // NO limpiar tempToken para poder usarlo en aprobaciones
 
             return { success: true };
           }
@@ -600,6 +614,12 @@ export class AuthService {
     this.twoFARequiredSubject.next(false);
     this.twoFAUserSubject.next('');
     this.twoFAStateSubject.next(null);
+    // NO limpiar tempToken para poder usarlo en aprobaciones
+    // this.clearTempToken();
+  }
+
+  // Limpiar tempToken solo cuando sea necesario (ej: logout)
+  clearTempTokenOnly(): void {
     this.clearTempToken();
   }
 

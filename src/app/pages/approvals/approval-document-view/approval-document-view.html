@@ -1,8 +1,8 @@
-<div class="custom-backdrop" [class.show]="isVisible && !isConfirmationModalVisible"></div>
+<div class="custom-backdrop" [class.show]="isVisible && !isConfirmationModalVisible && !isAuthApprovalModalVisible"></div>
 
 <div class="modal" tabindex="-1"
-     [class.show]="isVisible && !isConfirmationModalVisible"
-     [style.display]="(isVisible && !isConfirmationModalVisible) ? 'block' : 'none'">
+     [class.show]="isVisible && !isConfirmationModalVisible && !isAuthApprovalModalVisible"
+     [style.display]="(isVisible && !isConfirmationModalVisible && !isAuthApprovalModalVisible) ? 'block' : 'none'">
   <div class="modal-dialog modal-fullscreen">
     <div class="modal-content">
 
@@ -85,3 +85,13 @@
   (confirm)="onConfirmationModalConfirm($event)"
   (cancel)="onConfirmationModalCancel()">
 </app-confirmation-modal>
+
+<!-- Auth Approval Modal -->
+<app-auth-approval-modal
+  [isVisible]="isAuthApprovalModalVisible"
+  [documentId]="documentData?.id"
+  [action]="pendingAction!"
+  (validate)="onAuthApprovalValidate($event)"
+  (close)="onAuthApprovalClose()"
+  (cancel)="onAuthApprovalCancel()">
+</app-auth-approval-modal>

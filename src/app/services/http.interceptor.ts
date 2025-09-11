@@ -25,6 +25,8 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
 
   const isApi = isLocalhost || isApiPath || isSpecificEndpoint;
   const isSolicitudes = req.url.includes('/solicitudes');
+  const isTwoFAValidation = req.url.includes('/auth/validate-2fa');
+  const hasTempTokenInBody = !!req.body && typeof req.body === 'object' && 'tempToken' in req.body;
 
   let headers = req.headers;
 
@@ -43,8 +45,8 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
     userId: user?.idUsuario
   });
 
-  // Agregar token de autenticación si existe
-  if (token && isApi) {
+  // Agregar token de autenticación si existe, excepto cuando se valida con tempToken
+  if (token && isApi && !(isTwoFAValidation && hasTempTokenInBody)) {
     headers = headers.set('Authorization', `Bearer ${token}`);
     console.log('🔐 Token JWT agregado a la petición:', req.url);
   } else {
@@ -53,7 +55,7 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
       hasToken: !!token,
       isApi,
       isSolicitudes,
-      reason: !token ? 'No hay token' : 'No es petición de API'
+      reason: !token ? 'No hay token' : ((isTwoFAValidation && hasTempTokenInBody) ? 'Validación con tempToken' : 'No es petición de API')
     });
   }
 
