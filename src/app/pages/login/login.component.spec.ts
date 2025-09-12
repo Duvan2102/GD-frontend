@@ -55,7 +55,7 @@ describe('LoginComponent', () => {
   });
 
   it('should call authService.login when form is valid', () => {
-    mockAuthService.login.and.returnValue(true);
+    mockAuthService.login.and.returnValue(of(true));
     component.loginForm.patchValue({ usuario: 'test', password: '1234' });
 
     component.onSubmit();
@@ -64,7 +64,7 @@ describe('LoginComponent', () => {
   });
 
   it('should navigate to home on successful login', () => {
-    mockAuthService.login.and.returnValue(true);
+    mockAuthService.login.and.returnValue(of(true));
     component.loginForm.patchValue({ usuario: 'test', password: '1234' });
 
     component.onSubmit();
