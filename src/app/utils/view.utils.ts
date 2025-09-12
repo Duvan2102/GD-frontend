@@ -75,7 +75,8 @@ export function applyApprovalDetailsViewLogic(
   itemsPerPage: number,
   currentPage: number,
   typologies: Typology[],
-  users: Usuario[]
+  users: Usuario[],
+  currentUser?: Usuario
 ): { displayedRequests: any[], totalFiltered: number } {
   const getTypologyDescription = (typeId: string): string => {
     const typology = typologies.find(t => t.idTipologia.toString() === typeId);
@@ -87,7 +88,39 @@ export function applyApprovalDetailsViewLogic(
     return user ? `${user.nombres} ${user.apellidos}` : username;
   };
 
+  // Función para verificar si una tipología pertenece al área del usuario actual
+  const isTypologyInUserArea = (typeId: string): boolean => {
+    if (!currentUser || !currentUser.cargo?.area?.idArea) {
+      console.log('🔍 Filtro por área: Usuario sin área definida, mostrando todas las solicitudes');
+      return true; // Si no hay usuario o área, mostrar todas
+    }
+
+    const typology = typologies.find(t => t.idTipologia.toString() === typeId);
+    if (!typology || !typology.cargo?.area?.idArea) {
+      console.log(`🔍 Filtro por área: Tipología ${typeId} sin área definida, mostrando`);
+      return true; // Si no se encuentra la tipología o no tiene área, mostrar
+    }
+
+    const userAreaId = currentUser.cargo.area.idArea;
+    const typologyAreaId = typology.cargo.area.idArea;
+    const isInSameArea = typologyAreaId === userAreaId;
+    
+    console.log(`🔍 Filtro por área: Usuario área ${userAreaId}, Tipología área ${typologyAreaId}, Coincide: ${isInSameArea}`);
+    
+    return isInSameArea;
+  };
+
   let result = [...approvalsList];
+
+  // Filtrar por área del usuario: mostrar solo solicitudes cuya tipología pertenece al área del usuario
+  // Esto incluye todas las solicitudes del área (creadas por otros, aprobadas por otros, etc.)
+  const originalCount = result.length;
+  result = result.filter(req => isTypologyInUserArea(req.type));
+  const filteredCount = result.length;
+  
+  if (currentUser && currentUser.cargo?.area?.idArea) {
+    console.log(`🔍 Filtro por área aplicado: ${originalCount} -> ${filteredCount} solicitudes del área ${currentUser.cargo.area.idArea}`);
+  }
 
   if (showOnlyManaged) {
     result = result.filter(req => ['RECHAZADO', 'CANCELADA'].includes(req.status));

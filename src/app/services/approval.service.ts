@@ -98,18 +98,18 @@ export class ApprovalService {
     return of([]);
   }
 
-  private mapServerToApproval(item: any, users: Usuario[]): Approval {
+  private mapServerToApproval(item: any): Approval {
     // Use proper ID from server, fallback to a more descriptive ID if needed
     const id = item?.id ?? item?.numeroRadicado ?? item?.solicitudId ?? `temp-${Date.now()}`;
     const estado = (item?.estado || 'PENDIENTE').toUpperCase();
     const createdAt = item?.createdAt || item?.fechaCreacion || new Date().toISOString();
     const updatedAt = item?.updatedAt || item?.fechaActualizacion || createdAt;
-    const creador = users.find(u => u.usuario === item?.creador?.usuario || u.noUsuario === item?.creadorId);
 
+    // Extraer información de aprobadores únicamente del servidor
     const approvers = (item?.destinatarios || []).map((d: any) => {
-      const approverUser = users.find(u => u.noUsuario === d.usuarioId);
-      const nombres = approverUser?.nombres || d?.nombres || (d?.nombre?.split(' ')[0] || '');
-      const apellidos = approverUser?.apellidos || d?.apellidos || (d?.nombre?.split(' ')[1] || '');
+      // Extraer información directamente del objeto del servidor
+      const nombres = d?.nombres || (d?.nombre?.split(' ')[0] || '');
+      const apellidos = d?.apellidos || (d?.nombre?.split(' ')[1] || '');
 
       return {
         initials: `${nombres?.[0] || ''}${apellidos?.[0] || ''}`.toUpperCase(),
@@ -117,19 +117,29 @@ export class ApprovalService {
       };
     });
 
+    // Extraer información del usuario creador del response del servidor
+    const creadorId = item?.createdBy || item?.creadorId || item?.idSolicitante;
+    
+    // Información básica del creador (sin resolver aún)
+    const creatorUser = 'Usuario no encontrado';
+    const creatorFullName = 'Usuario no encontrado';
+    const position = 'Funcionario';
+
     return {
       id: String(id),
       type: String(item?.tipologiaId ?? item?.idTipologia ?? ''),
       creationDate: createdAt,
-      creatorUser: creador?.usuario || 'desconocido',
-      creatorFullName: `${creador?.nombres} ${creador?.apellidos}`.trim() || 'Desconocido',
-      position: this.extractAreaString(creador) || 'Funcionario',
+      creatorUser: creatorUser,
+      creatorFullName: creatorFullName,
+      position: position,
       lastUpdate: updatedAt,
       status: ['APROBADO', 'RECHAZADO', 'PENDIENTE', 'CANCELADA'].includes(estado) ? estado : 'PENDIENTE',
       approvers: approvers,
       priority: Boolean(item?.prioridad === 'IMPORTANTE' || item?.prioridad === true),
-      fullData: item
-    };
+      fullData: item,
+      // Agregar el ID del creador para resolver después
+      _creadorId: creadorId
+    } as Approval;
   }
 
   private extractAreaString(user: Usuario | undefined): string | null {
@@ -580,7 +590,50 @@ export class ApprovalService {
         const data = res?.data ?? res;
         return Array.isArray(data?.content) ? data.content : (Array.isArray(data) ? data : []);
       }),
-      map((list: any[]) => list.map((item: any) => this.mapServerToApproval(item, users))),
+      switchMap((list: any[]) => {
+        const approvals = list.map((item: any) => this.mapServerToApproval(item));
+        
+        // Obtener IDs únicos de creadores que necesitan resolución
+        const creatorIds = [...new Set(approvals
+          .filter((approval: any) => approval._creadorId)
+          .map((approval: any) => approval._creadorId!))];
+        
+        if (creatorIds.length === 0) {
+          return of(approvals);
+        }
+        
+        // Resolver información de usuarios creadores
+        const userRequests = creatorIds.map(creatorId => 
+          this.userService.obtenerUsuarioPorId(creatorId).pipe(
+            catchError(() => of(null))
+          )
+        );
+        
+        return forkJoin(userRequests).pipe(
+          map(resolvedUsers => {
+            const userMap = new Map<number, Usuario>();
+            resolvedUsers.forEach(user => {
+              if (user) {
+                userMap.set(user.noUsuario || (user as any).idUsuario, user);
+              }
+            });
+            
+            // Actualizar approvals con información resuelta
+            return approvals.map((approval: any) => {
+              if (approval._creadorId && userMap.has(approval._creadorId)) {
+                const user = userMap.get(approval._creadorId)!;
+                return {
+                  ...approval,
+                  creatorUser: user.usuario || 'Usuario no encontrado',
+                  creatorFullName: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario no encontrado',
+                  position: this.extractAreaString(user) || 'Funcionario'
+                };
+              }
+              return approval;
+            });
+          })
+        );
+      }),
       tap(list => this.approvalsSubject.next(list)),
       catchError(() => of([]))
     );
@@ -598,7 +651,50 @@ export class ApprovalService {
         const data = res?.data ?? res;
         return Array.isArray(data?.content) ? data.content : (Array.isArray(data) ? data : []);
       }),
-      map((list: any[]) => list.map((item: any) => this.mapServerToApproval(item, users))),
+      switchMap((list: any[]) => {
+        const approvals = list.map((item: any) => this.mapServerToApproval(item));
+        
+        // Obtener IDs únicos de creadores que necesitan resolución
+        const creatorIds = [...new Set(approvals
+          .filter((approval: any) => approval._creadorId)
+          .map((approval: any) => approval._creadorId!))];
+        
+        if (creatorIds.length === 0) {
+          return of(approvals);
+        }
+        
+        // Resolver información de usuarios creadores
+        const userRequests = creatorIds.map(creatorId => 
+          this.userService.obtenerUsuarioPorId(creatorId).pipe(
+            catchError(() => of(null))
+          )
+        );
+        
+        return forkJoin(userRequests).pipe(
+          map(resolvedUsers => {
+            const userMap = new Map<number, Usuario>();
+            resolvedUsers.forEach(user => {
+              if (user) {
+                userMap.set(user.noUsuario || (user as any).idUsuario, user);
+              }
+            });
+            
+            // Actualizar approvals con información resuelta
+            return approvals.map((approval: any) => {
+              if (approval._creadorId && userMap.has(approval._creadorId)) {
+                const user = userMap.get(approval._creadorId)!;
+                return {
+                  ...approval,
+                  creatorUser: user.usuario || 'Usuario no encontrado',
+                  creatorFullName: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario no encontrado',
+                  position: this.extractAreaString(user) || 'Funcionario'
+                };
+              }
+              return approval;
+            });
+          })
+        );
+      }),
       tap(list => this.approvalsSubject.next(list)),
       catchError(() => of([]))
     );
@@ -751,7 +847,7 @@ export class ApprovalService {
     (payload.adjuntos || []).forEach(a => form.append('adjuntos', a));
 
     return this.http.post<any>(`${this.baseUrl}/solicitudes`, form, { headers: this.headersForUser(payload.idSolicitante) }).pipe(
-      map(item => this.mapServerToApproval(item, [])),
+      map(item => this.mapServerToApproval(item)),
       tap(appr => this.addApproval(appr)),
       catchError(() => of(null))
     );
@@ -764,7 +860,7 @@ export class ApprovalService {
     
     return this.http.post<any>(url, body).pipe(
       map(item => {
-        return this.mapServerToApproval(item, []);
+        return this.mapServerToApproval(item);
       }),
       tap(appr => this.updateApproval(appr)),
       catchError((error) => {
@@ -780,7 +876,7 @@ export class ApprovalService {
     
     return this.http.post<any>(url, body).pipe(
       map(item => {
-        return this.mapServerToApproval(item, []);
+        return this.mapServerToApproval(item);
       }),
       tap(appr => this.updateApproval(appr)),
       catchError((error) => {
@@ -796,7 +892,7 @@ export class ApprovalService {
     
     return this.http.post<any>(url, body).pipe(
       map(item => {
-        return this.mapServerToApproval(item, []);
+        return this.mapServerToApproval(item);
       }),
       tap(appr => this.updateApproval(appr)),
       catchError((error) => {
@@ -817,7 +913,50 @@ export class ApprovalService {
         const data = res?.data ?? res;
         return Array.isArray(data?.content) ? data.content : (Array.isArray(data) ? data : []);
       }),
-      map((list: any[]) => list.map((item: any) => this.mapServerToApproval(item, users))),
+      switchMap((list: any[]) => {
+        const approvals = list.map((item: any) => this.mapServerToApproval(item));
+        
+        // Obtener IDs únicos de creadores que necesitan resolución
+        const creatorIds = [...new Set(approvals
+          .filter((approval: any) => approval._creadorId)
+          .map((approval: any) => approval._creadorId!))];
+        
+        if (creatorIds.length === 0) {
+          return of(approvals);
+        }
+        
+        // Resolver información de usuarios creadores
+        const userRequests = creatorIds.map(creatorId => 
+          this.userService.obtenerUsuarioPorId(creatorId).pipe(
+            catchError(() => of(null))
+          )
+        );
+        
+        return forkJoin(userRequests).pipe(
+          map(resolvedUsers => {
+            const userMap = new Map<number, Usuario>();
+            resolvedUsers.forEach(user => {
+              if (user) {
+                userMap.set(user.noUsuario || (user as any).idUsuario, user);
+              }
+            });
+            
+            // Actualizar approvals con información resuelta
+            return approvals.map((approval: any) => {
+              if (approval._creadorId && userMap.has(approval._creadorId)) {
+                const user = userMap.get(approval._creadorId)!;
+                return {
+                  ...approval,
+                  creatorUser: user.usuario || 'Usuario no encontrado',
+                  creatorFullName: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario no encontrado',
+                  position: this.extractAreaString(user) || 'Funcionario'
+                };
+              }
+              return approval;
+            });
+          })
+        );
+      }),
       catchError(() => of([]))
     );
   }
@@ -835,8 +974,75 @@ export class ApprovalService {
         const data = res?.data ?? res;
         return Array.isArray(data?.content) ? data.content : (Array.isArray(data) ? data : []);
       }),
-      map((list: any[]) => list.map((item: any) => this.mapServerToApproval(item, []))),
+      map((list: any[]) => list.map((item: any) => this.mapServerToApproval(item))),
       catchError(() => of([]))
+    );
+  }
+
+  /**
+   * Obtiene todas las solicitudes del área del usuario (independientemente de su rol)
+   */
+  getApprovalsByArea(usuarioId: number, users: Usuario[], page = 0, size = 1000): Observable<Approval[]> {
+    const params = new HttpParams()
+      .set('usuarioId', String(usuarioId))
+      .set('page', String(page))
+      .set('size', String(size));
+    const url = `${this.baseUrl}/solicitudes/por-area`;
+    return this.http.get<any>(url, { headers: this.headersForUser(usuarioId), params }).pipe(
+      map(res => {
+        if (Array.isArray(res)) return res;
+        const data = res?.data ?? res;
+        return Array.isArray(data?.content) ? data.content : (Array.isArray(data) ? data : []);
+      }),
+      switchMap((list: any[]) => {
+        const approvals = list.map((item: any) => this.mapServerToApproval(item));
+        
+        // Obtener IDs únicos de creadores que necesitan resolución
+        const creatorIds = [...new Set(approvals
+          .filter((approval: any) => approval._creadorId)
+          .map((approval: any) => approval._creadorId!))];
+        
+        if (creatorIds.length === 0) {
+          return of(approvals);
+        }
+        
+        // Resolver información de usuarios creadores
+        const userRequests = creatorIds.map(creatorId => 
+          this.userService.obtenerUsuarioPorId(creatorId).pipe(
+            catchError(() => of(null))
+          )
+        );
+        
+        return forkJoin(userRequests).pipe(
+          map(resolvedUsers => {
+            const userMap = new Map<number, Usuario>();
+            resolvedUsers.forEach(user => {
+              if (user) {
+                userMap.set(user.noUsuario || (user as any).idUsuario, user);
+              }
+            });
+            
+            // Actualizar approvals con información resuelta
+            return approvals.map((approval: any) => {
+              if (approval._creadorId && userMap.has(approval._creadorId)) {
+                const user = userMap.get(approval._creadorId)!;
+                return {
+                  ...approval,
+                  creatorFullName: `${user.nombres} ${user.apellidos}`,
+                  creatorUser: user
+                };
+              }
+              return approval;
+            });
+          })
+        );
+      }),
+      catchError(error => {
+        console.error('Error obteniendo solicitudes por área:', error);
+        // Fallback al método original si el endpoint no existe
+        console.log('Fallback a getHistorico por área no disponible');
+        return this.getHistorico(usuarioId, users, page, size);
+      })
     );
   }
 

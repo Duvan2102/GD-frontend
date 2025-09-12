@@ -125,19 +125,39 @@ export class UserService {
       return throwError(() => new Error('ID de usuario requerido para actualización'));
     }
 
+    if (!usuario.identificacion || !usuario.nombres || !usuario.apellidos || !usuario.usuario || !usuario.correoEmpresarial) {
+      return throwError(() => new Error('Datos requeridos faltantes para la actualización'));
+    }
+
     const usuarioRequest: UsuarioRequest = this.transformarUsuarioParaApi(usuario);
 
-    console.log('=== DEBUG ACTUALIZAR USUARIO ===');
-    console.log('Usuario original:', usuario);
-    console.log('Usuario transformado:', usuarioRequest);
-    console.log('URL:', `${this.apiUrl}/${userId}`);
+    const camposRequeridos = ['identificacion', 'nombres', 'apellidos', 'usuario', 'correoEmpresarial'];
+    const camposFaltantes = camposRequeridos.filter(campo => !usuarioRequest[campo as keyof UsuarioRequest]);
+    
+    if (camposFaltantes.length > 0) {
+      return throwError(() => new Error(`Campos requeridos faltantes: ${camposFaltantes.join(', ')}`));
+    }
 
     const url = `${this.apiUrl}/${userId}`;
-    return this.http.put<ApiResponse>(url, usuarioRequest, this.httpOptions).pipe(
+    return this.http.put<any>(url, usuarioRequest, this.httpOptions).pipe(
       map(response => {
-        console.log('=== RESPUESTA DEL SERVIDOR ===');
-        console.log('Response:', response);
-        return response;
+        if (response && response.idUsuario) {
+          return {
+            success: true,
+            message: 'Usuario actualizado correctamente',
+            data: response
+          };
+        }
+        
+        if (response && typeof response.success !== 'undefined') {
+          return response;
+        }
+        
+        return {
+          success: true,
+          message: 'Usuario actualizado correctamente',
+          data: response
+        };
       }),
       catchError(this.handleError)
     );
@@ -176,23 +196,33 @@ export class UserService {
     return Object.values(DobleAutenticacionTipo);
   }
 
-  private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest {
+  private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest & { idUsuario?: number } {
     const rolUsuario = usuario.rol || { idRol: 2, descripcion: 'USUARIO' };
 
     let estadoUsuario;
-    if (typeof usuario.estado === 'object') {
+    if (typeof usuario.estado === 'object' && usuario.estado) {
       estadoUsuario = usuario.estado;
     } else {
       estadoUsuario = { idEstado: 5, descripcion: 'ACTIVO' };
     }
 
+    let cargoId = 2;
+    if (usuario.cargo && typeof usuario.cargo === 'object' && usuario.cargo.idCargo) {
+      cargoId = usuario.cargo.idCargo;
+    } else if (usuario.cargo && typeof usuario.cargo === 'number') {
+      cargoId = usuario.cargo;
+    } else if (usuario.cargo && typeof usuario.cargo === 'string') {
+      cargoId = parseInt(usuario.cargo, 10) || 2;
+    }
+
     return {
+      idUsuario: usuario.idUsuario,
       identificacion: usuario.identificacion?.trim() || '',
       nombres: usuario.nombres?.trim() || '',
       apellidos: usuario.apellidos?.trim() || '',
       usuario: usuario.usuario?.trim() || '',
       cargo: {
-        idCargo: this.obtenerIdCargo(usuario.cargo)
+        idCargo: cargoId
       },
       estado: estadoUsuario,
       rol: rolUsuario,

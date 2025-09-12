@@ -98,7 +98,8 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   subscribeToApprovals(): void {
     if (!this.currentUserId || this.allUsers.length === 0) return;
     this.isLoading = true;
-    this.approvalsSubscription = this.approvalService.getHistorico(this.currentUserId, this.allUsers)
+    // Usar el nuevo método que trae todas las solicitudes del área
+    this.approvalsSubscription = this.approvalService.getApprovalsByArea(this.currentUserId, this.allUsers)
       .subscribe(approvals => {
         this.approvalsList = approvals;
         this.applyViewLogic();
@@ -107,6 +108,8 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   }
 
   applyViewLogic(): void {
+    const currentUserData = this.authService.getCurrentUserValue();
+    const currentUser = currentUserData ? this.convertUsuarioDataToUsuario(currentUserData) : undefined;
     const { displayedRequests, totalFiltered } = applyApprovalDetailsViewLogic(
       this.approvalsList,
       this.showOnlyManaged,
@@ -116,10 +119,58 @@ export class ApprovalDetails implements OnInit, OnDestroy {
       this.itemsPerPage,
       this.currentPage,
       this.tipologias,
-      this.allUsers
+      this.allUsers,
+      currentUser
     );
     this.displayedRequests = displayedRequests;
     this.totalFiltered = totalFiltered;
+  }
+
+  private convertUsuarioDataToUsuario(usuarioData: any): Usuario {
+    // Buscar el área real en la lista de áreas disponibles
+    const areaReal = this.findAreaByName(usuarioData.cargo?.area || '');
+    
+    return {
+      noUsuario: usuarioData.idUsuario,
+      idUsuario: usuarioData.idUsuario,
+      identificacion: usuarioData.identificacion,
+      nombres: usuarioData.nombres,
+      apellidos: usuarioData.apellidos,
+      usuario: usuarioData.usuario,
+      estado: {
+        idEstado: 1,
+        descripcion: usuarioData.estado || 'Activo'
+      },
+      activo: usuarioData.estado === 'Activo',
+      cargo: {
+        idCargo: usuarioData.cargo?.idCargo || 0,
+        descripcion: usuarioData.cargo?.descripcion || '',
+        area: {
+          idArea: areaReal?.idArea || 0,
+          descripcion: usuarioData.cargo?.area || '',
+          departamento: {
+            idDepartamento: 0,
+            descripcion: usuarioData.cargo?.departamento || ''
+          }
+        }
+      },
+      rol: {
+        idRol: 0,
+        descripcion: usuarioData.rol || 'Usuario'
+      },
+      correoEmpresarial: usuarioData.correoEmpresarial,
+      correoPersonal: usuarioData.correoPersonal,
+      telefono1: usuarioData.telefono1,
+      telefono2: usuarioData.telefono2,
+      direccion: usuarioData.direccion,
+      dobleAutenticacion: false // Valor por defecto
+    };
+  }
+
+  private findAreaByName(areaName: string): any {
+    // Buscar en las tipologías para encontrar el área correcta
+    const typology = this.tipologias.find(t => t.cargo?.area?.descripcion === areaName);
+    return typology?.cargo?.area;
   }
 
   onToggleManaged(value: boolean): void {
