@@ -12,7 +12,7 @@ jobs:
     runs-on: self-hosted
     env:
       APP_DIR: /var/www/docmanager-frontend
-      DIST_DIR: dist/gd-frontend
+      DIST_DIR: dist/gd-frontend/browser   # antes: dist/gd-frontend
     steps:
       - uses: actions/checkout@v4
 
