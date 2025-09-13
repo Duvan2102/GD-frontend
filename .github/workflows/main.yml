@@ -29,11 +29,15 @@ jobs:
 
       - name: Publicar en Nginx
         run: |
-          sudo mkdir -p "$APP_DIR"
-          sudo rsync -a --delete "$DIST_DIR/" "$APP_DIR/"
+          sudo -n mkdir -p "$APP_DIR"
+          sudo -n rsync -a --delete "$DIST_DIR/" "$APP_DIR/"
           if command -v getenforce >/dev/null && [ "$(getenforce)" = "Enforcing" ]; then
-            sudo semanage fcontext -a -t httpd_sys_content_t "$APP_DIR(/.*)?" || true
-            sudo restorecon -Rv "$APP_DIR" || true
+            sudo -n semanage fcontext -a -t httpd_sys_content_t "$APP_DIR(/.*)?" || true
+            sudo -n restorecon -Rv "$APP_DIR" || true
+          fi
+          sudo -n chown -R nginx:nginx "$APP_DIR" || true
+          sudo -n systemctl reload nginx || sudo -n systemctl restart nginx
+
           fi
           sudo chown -R nginx:nginx "$APP_DIR" || true
           sudo systemctl reload nginx || sudo systemctl restart nginx
