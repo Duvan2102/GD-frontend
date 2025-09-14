@@ -30,33 +30,10 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
 
   let headers = req.headers;
 
-  // Log detallado para debugging
-  console.log('🔍 Interceptor HTTP - Analizando petición:', {
-    url: req.url,
-    method: req.method,
-    hasToken: !!token,
-    tokenLength: token?.length || 0,
-    isLocalhost,
-    isApiPath,
-    isSpecificEndpoint,
-    isApi,
-    isSolicitudes,
-    userExists: !!user,
-    userId: user?.idUsuario
-  });
 
   // Agregar token de autenticación si existe, excepto cuando se valida con tempToken
   if (token && isApi && !(isTwoFAValidation && hasTempTokenInBody)) {
     headers = headers.set('Authorization', `Bearer ${token}`);
-    console.log('🔐 Token JWT agregado a la petición:', req.url);
-  } else {
-    console.log('❌ Token JWT NO agregado:', {
-      url: req.url,
-      hasToken: !!token,
-      isApi,
-      isSolicitudes,
-      reason: !token ? 'No hay token' : ((isTwoFAValidation && hasTempTokenInBody) ? 'Validación con tempToken' : 'No es petición de API')
-    });
   }
 
   // Agregar ID de usuario si existe (para compatibilidad con el sistema actual)
@@ -79,7 +56,6 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
     cloned.headers.keys().forEach(key => {
       headersObj[key] = cloned.headers.get(key) || '';
     });
-    console.log('Request headers:', headersObj);
   }
 
   if (environment.enableLogging) {
