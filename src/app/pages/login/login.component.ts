@@ -105,6 +105,15 @@ export class LoginComponent implements OnInit {
     });
   }
 
+  goToForgotPassword(): void {
+    console.log('Navigating to forgot-password...');
+    this.router.navigate(['/forgot-password']).then(success => {
+      console.log('Navigation result:', success);
+    }).catch(error => {
+      console.error('Navigation error:', error);
+    });
+  }
+
   private handleLoginError(error: any): void {
     if (error.error?.code) {
       switch (error.error.code) {
