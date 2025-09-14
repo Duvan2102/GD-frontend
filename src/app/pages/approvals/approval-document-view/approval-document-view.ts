@@ -4,7 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { NgxExtendedPdfViewerModule, PdfLoadedEvent, NgxExtendedPdfViewerService, PagesLoadedEvent } from 'ngx-extended-pdf-viewer';
 import { PdfService } from '../../../services/pdf.service';
 import { ApprovalService } from '../../../services/approval.service';
+import { AuthService } from '../../../services/auth.service';
 import { ConfirmationModal, ConfirmationModalData } from '../confirmation-modal/confirmation-modal';
+import { AuthApprovalModal } from '../../../components/auth-approvals/auth-approval-modal';
 
 export interface ApprovalDocumentViewData {
   id: string | number;
@@ -17,7 +19,7 @@ export interface ApprovalDocumentViewData {
 @Component({
   selector: 'app-approval-document-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgxExtendedPdfViewerModule, ConfirmationModal],
+  imports: [CommonModule, FormsModule, NgxExtendedPdfViewerModule, ConfirmationModal, AuthApprovalModal],
   templateUrl: './approval-document-view.html',
   styleUrls: ['./approval-document-view.css']
 })
@@ -44,6 +46,10 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
   isConfirmationModalVisible = false;
   confirmationModalData: ConfirmationModalData | null = null;
   pendingAction: 'approve' | 'reject' | null = null;
+  
+  // Auth approval modal properties
+  isAuthApprovalModalVisible = false;
+  pendingComment: string = '';
 
   private scrollListener?: (event: Event) => void;
 
@@ -51,7 +57,8 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
     private cdr: ChangeDetectorRef,
     private pdfViewerService: NgxExtendedPdfViewerService,
     private pdfService: PdfService,
-    private approvalService: ApprovalService
+    private approvalService: ApprovalService,
+    private authService: AuthService
   ) {}
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -202,23 +209,71 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
     
     if (event.confirmed && this.documentData && this.pendingAction) {
       const comentario = event.comment?.trim() || '';
+      this.pendingComment = comentario;
       
-      // Registrar metadata de la acción
-      this.recordActionMetadata(this.pendingAction, comentario);
-      
-      if (this.pendingAction === 'approve') {
-        this.approve.emit({ id: this.documentData.id, comentario: comentario });
-      } else if (this.pendingAction === 'reject') {
-        this.reject.emit({ id: this.documentData.id, comentario: comentario });
-      }
+      // Mostrar la modal de validación de identidad
+      this.isAuthApprovalModalVisible = true;
+    } else {
+      this.pendingAction = null;
     }
-    
-    this.pendingAction = null;
   }
 
   onConfirmationModalCancel(): void {
     this.isConfirmationModalVisible = false;
     this.pendingAction = null;
+  }
+
+  onAuthApprovalValidate(event: { token: string, action: 'approve' | 'reject' }): void {
+    this.isAuthApprovalModalVisible = false;
+    
+    if (this.documentData && this.pendingAction) {
+      // Registrar metadata de la acción
+      this.recordActionMetadata(this.pendingAction, this.pendingComment);
+      
+      if (this.pendingAction === 'approve') {
+        this.approve.emit({ id: this.documentData.id, comentario: this.pendingComment });
+      } else if (this.pendingAction === 'reject') {
+        this.reject.emit({ id: this.documentData.id, comentario: this.pendingComment });
+      }
+    }
+    
+    this.pendingAction = null;
+    this.pendingComment = '';
+  }
+
+  onAuthApprovalClose(): void {
+    this.isAuthApprovalModalVisible = false;
+    this.pendingAction = null;
+    this.pendingComment = '';
+  }
+
+  onAuthApprovalCancel(): void {
+    this.isAuthApprovalModalVisible = false;
+    this.pendingAction = null;
+    this.pendingComment = '';
+  }
+
+  onLogoutRequired(): void {
+    this.isAuthApprovalModalVisible = false;
+    this.pendingAction = null;
+    this.pendingComment = '';
+    this.close.emit();
+    
+    this.authService.logout().subscribe({
+      next: () => {
+        alert('Su sesión ha expirado. Será redirigido al login automáticamente.');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      },
+      error: () => {
+        this.authService.logoutSync();
+        alert('Su sesión ha expirado. Será redirigido al login automáticamente.');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      }
+    });
   }
 
   private recordActionMetadata(action: 'approve' | 'reject', comentario?: string): void {

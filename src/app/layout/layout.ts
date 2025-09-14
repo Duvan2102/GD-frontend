@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router } from '@angular/router';
 import { Sidebar} from './sidebar/sidebar';
+import { ProfileModal } from '../components/profile-modal/profile-modal';
 import { AuthService } from '../services/auth.service';
 import { Subscription } from 'rxjs';
 import { UsuarioData } from '../interfaces/common.interfaces';
@@ -11,7 +12,8 @@ import { UsuarioData } from '../interfaces/common.interfaces';
   imports: [
      CommonModule,
     RouterOutlet,
-    Sidebar
+    Sidebar,
+    ProfileModal
   ],
   templateUrl: './layout.html',
   styleUrls: ['./layout.css']
@@ -19,6 +21,7 @@ import { UsuarioData } from '../interfaces/common.interfaces';
 export class Layout implements OnInit, OnDestroy {
   currentUser: UsuarioData | null = null;
   private userSubscription?: Subscription;
+  isProfileModalVisible = false;
 
   constructor(
     private authService: AuthService,
@@ -55,5 +58,25 @@ export class Layout implements OnInit, OnDestroy {
     const names = this.currentUser.nombres.split(' ');
     const surnames = this.currentUser.apellidos.split(' ');
     return (names[0]?.[0] || '') + (surnames[0]?.[0] || '');
+  }
+
+  openProfileModal(): void {
+    this.isProfileModalVisible = true;
+  }
+
+  closeProfileModal(): void {
+    this.isProfileModalVisible = false;
+  }
+
+  onSaveProfile(userData: UsuarioData): void {
+    this.authService.updateCurrentUser(userData).subscribe({
+      next: () => {
+        this.closeProfileModal();
+      },
+      error: (error) => {
+        console.error('Error actualizando usuario:', error);
+        this.closeProfileModal();
+      }
+    });
   }
 }
