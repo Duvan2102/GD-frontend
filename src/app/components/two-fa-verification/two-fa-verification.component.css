@@ -180,7 +180,6 @@
 
 .two-fa-qr-header {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 12px;
@@ -207,7 +206,10 @@
 
 .two-fa-qr-instructions p {
   color: #4a5568;
-  line-height: 1.8;
+  font-size: 14px;
+  margin: 8px 0;
+  padding-left: 16px;
+  position: relative;
 }
 
 .two-fa-qr-instructions p::before {
@@ -226,9 +228,6 @@
   background: white;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 15px;
 }
 
 .two-fa-qr-code {
@@ -325,7 +324,6 @@
   letter-spacing: 2px;
   font-weight: 600;
   box-sizing: border-box;
-  transition: border-color 0.3s ease;
 }
 
 .two-fa-input:focus {
@@ -341,6 +339,7 @@
 
 .two-fa-input.error {
   border-color: #e53e3e;
+  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
 }
 
 /* Button */
