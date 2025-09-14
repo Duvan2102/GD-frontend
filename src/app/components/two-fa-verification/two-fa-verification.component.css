@@ -1,226 +1,148 @@
-.two-fa-container {
+/* --- Estilos Generales --- */
+.auth-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+  background-color: #e9eef2;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.two-fa-card {
+/* --- Estructura de la Tarjeta Principal --- */
+.helisa-card {
   background: white;
   border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  padding: 40px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   width: 100%;
-  max-width: 450px;
-  text-align: center;
+  height: 100vh;
+  overflow: hidden;
 }
 
-.two-fa-header {
-  margin-bottom: 30px;
+/* --- Encabezado de la Tarjeta --- */
+.helisa-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #6c9a9e;
+  padding: 20px 30px;
+  color: white;
 }
 
-.icon-container {
-  margin-bottom: 20px;
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
 
-.security-icon {
-  width: 64px;
-  height: 64px;
-  color: #667eea;
+.helisa-logo {
+  height: 50px;
+  width: auto;
+  filter: brightness(0) invert(1);
 }
 
-.two-fa-header h2 {
-  color: #2d3748;
+.logo-text {
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1.2;
+}
+
+.header-title {
   font-size: 28px;
   font-weight: 600;
-  margin: 0 0 10px 0;
-}
-
-.user-info {
-  color: #4a5568;
-  font-size: 16px;
-  margin: 0 0 15px 0;
-}
-
-.description {
-  color: #718096;
-  font-size: 14px;
-  line-height: 1.5;
   margin: 0;
+  text-align: right;
 }
 
-.verification-options {
+/* --- Contenedor de Contenido (2 columnas) --- */
+.content-wrapper {
   display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin: 15px 0;
+  padding: 40px 30px;
 }
 
-.option-info {
+.left-column, .right-column {
+  flex: 1; 
+  padding: 0 20px;
+}
+
+.right-column {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: #f7fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #4a5568;
-}
-
-.option-icon {
-  width: 16px;
-  height: 16px;
-  color: #667eea;
-}
-
-/* Estilos para el QR */
-.qr-container {
-  background: #f8fafc;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 24px;
-  margin: 20px 0;
-}
-
-.qr-header {
-  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  border-left: 1px solid #e2e8f0;
 }
 
-.qr-icon {
-  width: 24px;
-  height: 24px;
-  color: #667eea;
-}
-
-.qr-header h3 {
-  color: #2d3748;
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.qr-instructions {
-  text-align: left;
-  margin-bottom: 20px;
-}
-
-.qr-instructions p {
+/* --- Columna Izquierda: Instrucciones --- */
+.instructions-list {
+  padding-left: 20px;
+  font-size: 30px;
   color: #4a5568;
-  font-size: 14px;
-  margin: 8px 0;
-  padding-left: 16px;
-  position: relative;
+  line-height: 1.8;
 }
 
-.qr-instructions p::before {
-  content: "•";
-  color: #667eea;
-  font-weight: bold;
-  position: absolute;
-  left: 0;
+.instructions-list li {
+  margin-bottom: 12px;
+}
+
+/* --- Columna Derecha: QR y Formulario --- */
+.qr-container, .verification-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .qr-code-wrapper {
-  display: flex;
-  justify-content: center;
-  margin: 20px 0;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
   border: 1px solid #e2e8f0;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
 }
 
 .qr-code {
-  max-width: 256px;
-  max-height: 256px;
-  width: 100%;
+  max-width: 180px;
   height: auto;
-  border-radius: 4px;
 }
 
-.secret-info {
-  background: #edf2f7;
-  padding: 16px;
-  border-radius: 8px;
-  margin-top: 16px;
-  text-align: left;
+.qr-label {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px 16px;
+    color: #555;
+    background-color: #f9f9f9;
+    font-size: 14px;
+    margin-top: 5px;
+    margin-bottom: 25px;
 }
 
-.secret-info p {
-  margin: 4px 0;
-  font-size: 14px;
-  color: #4a5568;
-}
-
-.secret-info p:first-child {
-  font-family: 'Courier New', monospace;
-  font-weight: 600;
-  color: #2d3748;
-}
-
-.secret-note {
-  font-style: italic;
-  color: #718096 !important;
-}
-
-.qr-actions {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.qr-actions .btn {
-  width: auto;
-  min-width: 200px;
-  padding: 12px 24px;
-}
-
-.verification-form {
-  margin-bottom: 30px;
-}
-
+/* --- Estilos del Formulario --- */
 .form-group {
   margin-bottom: 20px;
-  text-align: left;
-}
-
-.form-label {
-  display: block;
-  color: #2d3748;
-  font-weight: 500;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-.form-input {
   width: 100%;
-  padding: 16px;
-  border: 2px solid #e2e8f0;
+  max-width: 250px;
+}
+
+.code-input {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #cdd4da;
   border-radius: 8px;
-  font-size: 18px;
+  font-size: 24px;
   text-align: center;
-  letter-spacing: 2px;
-  font-weight: 600;
-  transition: all 0.3s ease;
+  font-weight: 500;
+  letter-spacing: 3px;
   box-sizing: border-box;
+  transition: border-color 0.3s ease;
 }
 
-.form-input:focus {
+.code-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #6c9a9e;
 }
 
-.form-input.error {
+.code-input.error {
   border-color: #e53e3e;
-  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
 }
 
 .error-message {
@@ -232,21 +154,15 @@
 
 .main-error {
   text-align: center;
-  background: #fed7d7;
-  color: #c53030;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  font-size: 14px;
+  width: 100%;
+  max-width: 250px;
 }
 
-.form-actions {
-  margin-bottom: 20px;
-}
-
+/* --- Botones --- */
 .btn {
   width: 100%;
-  padding: 16px;
+  max-width: 250px;
+  padding: 14px;
   border: none;
   border-radius: 8px;
   font-size: 16px;
@@ -265,59 +181,17 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #6c9a9e;
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
+  background-color: #5a8387;
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
-.btn-secondary {
-  background: #f7fafc;
-  color: #4a5568;
-  border: 2px solid #e2e8f0;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: #edf2f7;
-  border-color: #cbd5e0;
-}
-
-.btn-link {
-  background: none;
-  color: #667eea;
-  text-decoration: underline;
-  padding: 8px;
-  font-size: 14px;
-}
-
-.btn-link:hover:not(:disabled) {
-  color: #5a67d8;
-}
-
-.alternative-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 30px;
-}
-
-.help-text {
-  background: #f7fafc;
-  padding: 20px;
-  border-radius: 8px;
-  border-left: 4px solid #667eea;
-}
-
-.help-text p {
-  margin: 0;
-  color: #4a5568;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
+/* --- Spinner --- */
 .spinner {
   width: 16px;
   height: 16px;
@@ -332,23 +206,29 @@
   100% { transform: rotate(360deg); }
 }
 
-/* Responsive */
-@media (max-width: 480px) {
-  .two-fa-container {
-    padding: 10px;
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .content-wrapper {
+    flex-direction: column;
+    gap: 30px;
+    padding: 30px;
   }
-
-  .two-fa-card {
-    padding: 30px 20px;
+  .right-column {
+    border-left: none;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 30px;
+    padding-left: 0;
+    padding-right: 0;
   }
-
-  .two-fa-header h2 {
-    font-size: 24px;
-  }
-
-  .form-input {
-    font-size: 16px;
-    padding: 14px;
+  .header-title {
+    font-size: 22px;
   }
 }
 
+@media (max-width: 480px) {
+    .helisa-header {
+        flex-direction: column;
+        gap: 15px;
+        padding: 20px;
+    }
+}
