@@ -415,6 +415,40 @@
   box-shadow: none;
 }
 
+/* Timer de 90 segundos */
+.two-fa-timer {
+  background: #d3d3d3;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Notificación de correo enviado */
+.two-fa-email-notification {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 8px;
+  color: #155724;
+  font-size: 14px;
+  margin: 16px 0;
+}
+
+.two-fa-email-notification .two-fa-icon {
+  width: 16px;
+  height: 16px;
+  color: #28a745;
+  flex-shrink: 0;
+}
+
 /* Alternative Actions */
 .two-fa-alternative-actions {
   display: flex;

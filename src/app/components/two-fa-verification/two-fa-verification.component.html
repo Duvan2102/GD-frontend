@@ -41,7 +41,15 @@
             <li class="two-fa-step" *ngIf="current2FAMethod === 'EMAIL'">2. Busque el correo enviado desde noresponder&#64;helisa.com</li>
             <li class="two-fa-step" *ngIf="current2FAMethod === 'EMAIL'">3. Localice el código de verificación de 6 dígitos en el mensaje</li>
             <li class="two-fa-step" *ngIf="current2FAMethod === 'EMAIL'">4. Ingrese el código en el campo de abajo</li>
-            <li class="two-fa-step" *ngIf="current2FAMethod === 'EMAIL'">5. Haga clic en "Validar con Token" para completar la verificación</li>
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'EMAIL'">5. Haga clic en "Verificar Código" para completar la verificación</li>
+            
+            <!-- Mensaje de correo enviado automáticamente -->
+            <div class="two-fa-email-notification" *ngIf="current2FAMethod === 'EMAIL' && emailSent">
+              <svg class="two-fa-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+              <span>Código enviado automáticamente a su correo corporativo</span>
+        </div>
             
             <!-- Instrucciones para configuración de QR -->
             <li class="two-fa-step" *ngIf="current2FAMethod === 'QR_SETUP'">1. Descargue e instale Google Authenticator en su dispositivo móvil</li>
@@ -53,6 +61,11 @@
         </div>
 
         <div class="two-fa-form">
+          <!-- Timer de 90 segundos -->
+          <div class="two-fa-timer">
+            Tiempo restante: {{ timeRemaining }} segundos
+          </div>
+
           <!-- Mostrar QR si está disponible -->
           <div class="two-fa-qr-container" *ngIf="showQRCode && qrCodeDataUrl">
             <div class="two-fa-qr-code-wrapper">
@@ -108,6 +121,21 @@
 
           <!-- Botones alternativos -->
           <div class="two-fa-alternative-actions">
+            <!-- Botón de reenvío de correo (solo para método EMAIL) -->
+      <button
+              *ngIf="current2FAMethod === 'EMAIL'"
+        type="button"
+              class="two-fa-button two-fa-button-link"
+        (click)="onSendEmailCode()"
+              [disabled]="isLoading || !canResendEmail"
+      >
+              <svg class="two-fa-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+        </svg>
+              <span *ngIf="canResendEmail">Reenviar Código</span>
+              <span *ngIf="!canResendEmail">Reenviar en {{ resendCountdown }}s</span>
+      </button>
+
       <button
         type="button"
               class="two-fa-button two-fa-button-link"
