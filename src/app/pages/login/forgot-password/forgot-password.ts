@@ -1,12 +1,13 @@
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { PasswordResetService, UserInfoResponse } from '../../../services/password-reset.service';
 
 @Component({
   selector: 'app-forgot-password',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, CommonModule],
   templateUrl: './forgot-password.html',
   styleUrl: './forgot-password.css'
 })
@@ -30,14 +31,14 @@ export class ForgotPassword {
     });
     
     this.passwordForm = this.fb.group({
-      newPassword: ['', [Validators.required, Validators.minLength(6)]],
-      confirmPassword: ['', [Validators.required]]
+      nuevaPassword: ['', [Validators.required, Validators.minLength(6)]],
+      confirmarPassword: ['', [Validators.required]]
     }, { validators: this.passwordMatchValidator });
   }
 
   passwordMatchValidator(form: FormGroup) {
-    const password = form.get('newPassword');
-    const confirmPassword = form.get('confirmPassword');
+    const password = form.get('nuevaPassword');
+    const confirmPassword = form.get('confirmarPassword');
     
     if (password && confirmPassword && password.value !== confirmPassword.value) {
       confirmPassword.setErrors({ passwordMismatch: true });
@@ -91,7 +92,7 @@ export class ForgotPassword {
       this.successMessage = '';
 
       try {
-        const newPassword = this.passwordForm.value.newPassword;
+        const newPassword = this.passwordForm.value.nuevaPassword;
         
         await this.passwordResetService.changePassword(this.userInfo.idUsuario, newPassword).toPromise();
         
@@ -114,6 +115,14 @@ export class ForgotPassword {
       }
     } else {
       this.passwordForm.markAllAsTouched();
+    }
+  }
+
+  onSubmit() {
+    if (this.showPasswordForm) {
+      this.onChangePassword();
+    } else {
+      this.onSearchUser();
     }
   }
 
