@@ -206,9 +206,8 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
     this.authService.confirmGoogleAuthenticator(codigo, this.qrSecret).subscribe({
       next: (response) => {
         console.log('Google Auth confirmado:', response.message);
-        // Después de confirmar, intentar validar nuevamente para obtener el token final
-        this.validateAfterGoogleAuthSetup();
-        this.isLoading = false;
+        // Después de confirmar, validar directamente con el código ingresado
+        this.validate2FACodeAfterGoogleAuthSetup(codigo);
       },
       error: (error) => {
         console.error('Error confirmando Google Auth:', error);
@@ -218,23 +217,22 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Validar código después de configurar Google Auth
-  private validateAfterGoogleAuthSetup(): void {
-    // Intentar validar con un código vacío para obtener el token final
-    this.authService.validate2FACode('').subscribe({
+  // Validar código 2FA después de configurar Google Auth
+  private validate2FACodeAfterGoogleAuthSetup(codigo: string): void {
+    this.authService.validate2FACode(codigo).subscribe({
       next: (response) => {
         if (response.success) {
           this.router.navigate(['/']);
         } else {
-          // Si aún no funciona, pedir al usuario que ingrese un código
-          this.errorMessage = 'Google Auth configurado. Ahora ingresa un código de 6 dígitos de tu aplicación.';
-          this.qrScanned = false; // Permitir que ingrese código manualmente
+          // Si no funciona, mostrar mensaje de error específico
+          this.errorMessage = response.message || 'Código de verificación incorrecto. Intenta nuevamente.';
+          this.isLoading = false;
         }
       },
       error: (error) => {
-        console.error('Error validando después de configurar Google Auth:', error);
-        this.errorMessage = 'Google Auth configurado. Ahora ingresa un código de 6 dígitos de tu aplicación.';
-        this.qrScanned = false;
+        console.error('Error validando código después de configurar Google Auth:', error);
+        this.handleError(error);
+        this.isLoading = false;
       }
     });
   }
@@ -316,11 +314,49 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
   }
 
   get shouldShowEmailOption(): boolean {
-    return this.hasEmailBackup && !this.googleAuthPending;
+    // Mostrar opción de email si el método actual es EMAIL o si no hay Google Auth configurado
+    return this.twoFAState?.metodoActual === 'EMAIL' || 
+           (!this.hasGoogleAuth && this.hasEmailBackup && !this.googleAuthPending);
   }
 
   get shouldShowGoogleAuthOption(): boolean {
-    return this.hasGoogleAuth && !this.googleAuthPending;
+    // Mostrar opción de Google Auth si el método actual es GOOGLE_AUTH o si está configurado
+    return this.twoFAState?.metodoActual === 'GOOGLE_AUTH' || 
+           (this.hasGoogleAuth && !this.googleAuthPending);
+  }
+
+  // Getter para determinar el tipo de 2FA activo
+  get current2FAMethod(): 'GOOGLE_AUTH' | 'EMAIL' | 'QR_SETUP' | 'UNKNOWN' {
+    // Si está mostrando QR, es configuración
+    if (this.showQRCode && this.qrCodeDataUrl) {
+      return 'QR_SETUP';
+    }
+    
+    // Si ya escaneó el QR, debe ser Google Auth
+    if (this.qrScanned && this.qrSecret) {
+      return 'GOOGLE_AUTH';
+    }
+    
+    // Si Google Auth está pendiente pero no hay QR visible, es configuración
+    if (this.googleAuthPending && !this.showQRCode) {
+      return 'QR_SETUP';
+    }
+    
+    // Usar el método actual del servidor si está disponible
+    if (this.twoFAState?.metodoActual) {
+      return this.twoFAState.metodoActual;
+    }
+    
+    // Fallback basado en configuración disponible
+    if (this.hasGoogleAuth && !this.googleAuthPending) {
+      return 'GOOGLE_AUTH';
+    }
+    
+    if (this.hasEmailBackup && !this.googleAuthPending) {
+      return 'EMAIL';
+    }
+    
+    return 'UNKNOWN';
   }
 }
 
