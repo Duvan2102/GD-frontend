@@ -1,11 +1,16 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
 
-export interface ChangePasswordRequest {
-  nuevaPassword: string;
+export interface RequestPasswordResetRequest {
+  email: string;
 }
+
+export interface RequestPasswordResetResponse {
+  message: string;
+}
+
 
 export interface UserInfoResponse {
   idUsuario: number;
@@ -49,18 +54,39 @@ export class PasswordResetService {
 
   constructor(private http: HttpClient) {}
 
+
+
   /**
-   * Obtener información del usuario por ID
+   * Solicitar restablecimiento de contraseña por email
+   * IMPORTANTE: Este endpoint genera un token real que debe ser obtenido del email enviado
    */
-  getUserInfo(userId: number): Observable<UserInfoResponse> {
-    return this.http.get<UserInfoResponse>(`${this.API_BASE_URL}/api/usuarios/${userId}`);
+  requestPasswordReset(email: string): Observable<RequestPasswordResetResponse> {
+    const request: RequestPasswordResetRequest = { email: email };
+    return this.http.post<RequestPasswordResetResponse>(`${this.API_BASE_URL}/auth/password/request-reset`, request);
   }
 
   /**
-   * Cambiar contraseña del usuario
+   * Validar token de restablecimiento
+   * REQUIERE: Token real obtenido del email
    */
-  changePassword(userId: number, newPassword: string): Observable<any> {
-    const request: ChangePasswordRequest = { nuevaPassword: newPassword };
-    return this.http.put(`${this.API_BASE_URL}/api/usuarios/${userId}/password`, request);
+  validateToken(token: string): Observable<{valid: boolean}> {
+    return this.http.get<{valid: boolean}>(`${this.API_BASE_URL}/auth/password/validate-token?token=${encodeURIComponent(token)}`);
+  }
+
+  /**
+   * Obtener información del usuario por token
+   * REQUIERE: Token real válido
+   */
+  getUserInfoByToken(token: string): Observable<UserInfoResponse> {
+    return this.http.get<UserInfoResponse>(`${this.API_BASE_URL}/auth/password/user-info?token=${encodeURIComponent(token)}`);
+  }
+
+  /**
+   * Restablecer contraseña con token
+   * REQUIERE: Token real válido
+   */
+  resetPassword(token: string, newPassword: string): Observable<{message: string}> {
+    const request = { token, newPassword };
+    return this.http.post<{message: string}>(`${this.API_BASE_URL}/auth/password/reset`, request);
   }
 }

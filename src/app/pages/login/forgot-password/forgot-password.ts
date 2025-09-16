@@ -2,81 +2,61 @@ import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { PasswordResetService, UserInfoResponse } from '../../../services/password-reset.service';
+import { PasswordResetService, RequestPasswordResetResponse } from '../../../services/password-reset.service';
 
 @Component({
   selector: 'app-forgot-password',
   standalone: true,
   imports: [ReactiveFormsModule, CommonModule],
   templateUrl: './forgot-password.html',
-  styleUrl: './forgot-password.css'
+  styleUrl: '../shared-login-styles.css'
 })
 export class ForgotPassword {
   userForm: FormGroup;
-  passwordForm: FormGroup;
   isLoading = false;
   errorMessage = '';
   successMessage = '';
-  userInfo: UserInfoResponse | null = null;
-  showPasswordForm = false;
+  showSuccessMessage = false;
 
   constructor(
     private fb: FormBuilder,
     private passwordResetService: PasswordResetService,
     private router: Router
   ) {
-    console.log('ForgotPassword component initialized');
     this.userForm = this.fb.group({
-      userId: ['', [Validators.required, Validators.min(1)]]
+      email: ['', [Validators.required, Validators.email]]
     });
-    
-    this.passwordForm = this.fb.group({
-      nuevaPassword: ['', [Validators.required, Validators.minLength(6)]],
-      confirmarPassword: ['', [Validators.required]]
-    }, { validators: this.passwordMatchValidator });
   }
 
-  passwordMatchValidator(form: FormGroup) {
-    const password = form.get('nuevaPassword');
-    const confirmPassword = form.get('confirmarPassword');
-    
-    if (password && confirmPassword && password.value !== confirmPassword.value) {
-      confirmPassword.setErrors({ passwordMismatch: true });
-      return { passwordMismatch: true };
-    }
-    return null;
-  }
-
-  getFieldError(fieldName: string, form: FormGroup): string {
-    const field = form.get(fieldName);
+  getFieldError(fieldName: string): string {
+    const field = this.userForm.get(fieldName);
     if (field && field.errors && field.touched) {
       if (field.errors['required']) return 'Este campo es requerido';
-      if (field.errors['minlength']) return 'La contraseña debe tener al menos 6 caracteres';
-      if (field.errors['min']) return 'El ID debe ser mayor a 0';
-      if (field.errors['passwordMismatch']) return 'Las contraseñas no coinciden';
+      if (field.errors['email']) return 'Por favor ingresa un correo electrónico válido';
     }
     return '';
   }
 
-  async onSearchUser() {
+  async onRequestPasswordReset() {
     if (this.userForm.valid) {
       this.isLoading = true;
       this.errorMessage = '';
       this.successMessage = '';
+      this.showSuccessMessage = false;
 
       try {
-        const userId = this.userForm.value.userId;
-        const userInfo = await this.passwordResetService.getUserInfo(userId).toPromise();
+        const email = this.userForm.value.email;
+        const response = await this.passwordResetService.requestPasswordReset(email).toPromise();
         
-        this.userInfo = userInfo || null;
-        this.showPasswordForm = true;
-        this.successMessage = 'Usuario encontrado. Ahora puede cambiar su contraseña.';
+        // El servidor siempre devuelve 200 con un mensaje genérico por seguridad
+        this.successMessage = response?.message || 'Si el correo electrónico existe en nuestro sistema, recibirá instrucciones para restablecer su contraseña.';
+        this.showSuccessMessage = true;
+        
+        // Limpiar el formulario después del envío exitoso
+        this.userForm.reset();
 
       } catch (error: any) {
-        console.error('Error getting user info:', error);
-        this.errorMessage = error.error?.message || 'Usuario no encontrado';
-        this.userInfo = null;
-        this.showPasswordForm = false;
+        this.errorMessage = error.error?.message || 'Error de conexión. Inténtalo de nuevo.';
       } finally {
         this.isLoading = false;
       }
@@ -85,48 +65,18 @@ export class ForgotPassword {
     }
   }
 
-  async onChangePassword() {
-    if (this.passwordForm.valid && this.userInfo) {
-      this.isLoading = true;
-      this.errorMessage = '';
-      this.successMessage = '';
-
-      try {
-        const newPassword = this.passwordForm.value.nuevaPassword;
-        
-        await this.passwordResetService.changePassword(this.userInfo.idUsuario, newPassword).toPromise();
-        
-        this.successMessage = 'Contraseña cambiada exitosamente.';
-        this.passwordForm.reset();
-        this.userForm.reset();
-        this.userInfo = null;
-        this.showPasswordForm = false;
-        
-        // Redirigir al login después de 3 segundos
-        setTimeout(() => {
-          this.router.navigate(['/login']);
-        }, 3000);
-
-      } catch (error: any) {
-        console.error('Error changing password:', error);
-        this.errorMessage = error.error?.message || 'Error al cambiar la contraseña';
-      } finally {
-        this.isLoading = false;
-      }
-    } else {
-      this.passwordForm.markAllAsTouched();
-    }
-  }
-
   onSubmit() {
-    if (this.showPasswordForm) {
-      this.onChangePassword();
-    } else {
-      this.onSearchUser();
-    }
+    this.onRequestPasswordReset();
   }
 
   goToLogin() {
     this.router.navigate(['/login']);
+  }
+
+  makeAnotherRequest() {
+    this.showSuccessMessage = false;
+    this.successMessage = '';
+    this.errorMessage = '';
+    this.userForm.reset();
   }
 }

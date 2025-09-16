@@ -9,13 +9,12 @@ import { AuthService } from '../../services/auth.service';
   standalone: true,
   imports: [ReactiveFormsModule, CommonModule],
   templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css']
+  styleUrls: ['./shared-login-styles.css']
 })
 export class LoginComponent implements OnInit {
   loginForm: FormGroup;
   errorMessage: string = '';
   isLoading: boolean = false;
-  testUsers: any[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -33,9 +32,6 @@ export class LoginComponent implements OnInit {
     if (this.authService.getCurrentUserValue()) {
       this.router.navigate(['/']);
     }
-
-    // Cargar usuarios de prueba (solo los activos)
-    // Mostrar solo los primeros 5
   }
 
   onSubmit(): void {
@@ -98,20 +94,9 @@ export class LoginComponent implements OnInit {
     return '';
   }
 
-  fillTestUser(user: any): void {
-    this.loginForm.patchValue({
-      usuario: user.usuario,
-      password: '1234' // Contraseña por defecto para usuarios de prueba
-    });
-  }
 
   goToForgotPassword(): void {
-    console.log('Navigating to forgot-password...');
-    this.router.navigate(['/forgot-password']).then(success => {
-      console.log('Navigation result:', success);
-    }).catch(error => {
-      console.error('Navigation error:', error);
-    });
+    this.router.navigate(['/forgot-password']);
   }
 
   private handleLoginError(error: any): void {
