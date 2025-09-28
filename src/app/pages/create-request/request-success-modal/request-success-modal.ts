@@ -456,6 +456,14 @@ export class RequestSuccessModal implements OnChanges {
     return this.data?.estado === 'Aprobada';
   }
 
+  isRejected(): boolean {
+    return this.data?.estado === 'Rechazada';
+  }
+
+  isCancelled(): boolean {
+    return this.data?.estado === 'Cancelada';
+  }
+
   isCancelledOrRejected(): boolean {
     return this.data?.estado === 'Cancelada' || this.data?.estado === 'Rechazada';
   }
@@ -538,7 +546,6 @@ export class RequestSuccessModal implements OnChanges {
       },
       error: (error) => {
         this.isLoadingAttachments = false;
-        console.error('Error al cargar adjuntos:', error);
         alert('Error al cargar los adjuntos. Por favor, inténtelo de nuevo.');
       }
     });
@@ -571,7 +578,6 @@ export class RequestSuccessModal implements OnChanges {
         window.URL.revokeObjectURL(url);
       },
       error: (error) => {
-        console.error('Error al descargar adjunto:', error);
         alert('Error al descargar el adjunto. Por favor, inténtelo de nuevo.');
       }
     });
@@ -661,12 +667,8 @@ export class RequestSuccessModal implements OnChanges {
   }
 
   getCancellationInfo(): { fecha: Date, comentario: string } | null {
-    console.log('getCancellationInfo - Estado:', this.data?.estado);
-    console.log('getCancellationInfo - Historial:', this.data?.historialGestiones);
-    console.log('getCancellationInfo - Data completa:', this.data);
 
     if (this.data?.estado !== 'Cancelada') {
-      console.log('getCancellationInfo - No está cancelada');
       return null;
     }
 
@@ -678,7 +680,6 @@ export class RequestSuccessModal implements OnChanges {
         (gestion as any).accion === 'CANCELACION'
       );
 
-      console.log('getCancellationInfo - Cancelación en historialGestiones:', cancelacion);
 
       if (cancelacion) {
         return {
@@ -691,7 +692,6 @@ export class RequestSuccessModal implements OnChanges {
     // Buscar en otros campos posibles del historial
     const historialRaw = (this.data as any)?.historial || (this.data as any)?.historialAcciones || (this.data as any)?.gestiones;
     if (Array.isArray(historialRaw)) {
-      console.log('getCancellationInfo - Historial raw:', historialRaw);
 
       const cancelacion = historialRaw.find((item: any) =>
         item.accion === 'CANCELAR' ||
@@ -700,7 +700,6 @@ export class RequestSuccessModal implements OnChanges {
         item.tipo === 'CANCELACION'
       );
 
-      console.log('getCancellationInfo - Cancelación en historial raw:', cancelacion);
 
       if (cancelacion) {
         return {
@@ -711,21 +710,18 @@ export class RequestSuccessModal implements OnChanges {
     }
 
     // Fallback: Si no hay historial pero está cancelada, mostrar información básica
-    console.log('getCancellationInfo - No se encontró información de cancelación en historial');
 
     // Buscar información de cancelación en otros campos de la solicitud
     const fechaCancelacion = (this.data as any)?.fechaCancelacion || (this.data as any)?.fechaActualizacion || this.data?.fechaCreacion;
     const comentarioCancelacion = (this.data as any)?.comentarioCancelacion || (this.data as any)?.motivoCancelacion;
 
     if (fechaCancelacion) {
-      console.log('getCancellationInfo - Usando información de fallback:', { fechaCancelacion, comentarioCancelacion });
       return {
         fecha: new Date(fechaCancelacion),
         comentario: comentarioCancelacion || 'Solicitud cancelada'
       };
     }
 
-    console.log('getCancellationInfo - No se encontró información de cancelación');
     return null;
   }
 

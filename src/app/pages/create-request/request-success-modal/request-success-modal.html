@@ -26,8 +26,8 @@
               {{ data.detallesAdicionales || 'No se proporcionaron detalles adicionales para esta solicitud.' }}
             </p>
 
-            <!-- Botones y documentos - solo se muestran si NO está cancelada o rechazada -->
-            <div *ngIf="!isCancelledOrRejected()">
+            <!-- Botones y documentos - se muestran para todos los estados -->
+            <div>
               <button
                 *ngIf="!hideManageButton"
                 id="btn-manage-request"
@@ -45,6 +45,24 @@
                 type="button"
                 (click)="onViewApprovedDocument()">
                 <i class="bi bi-file-earmark-pdf"></i> Visualizar Documento Aprobado
+              </button>
+
+              <button
+                *ngIf="hideManageButton && isRejected()"
+                id="btn-view-rejected-document"
+                class="btn-cancel"
+                type="button"
+                (click)="onViewApprovedDocument()">
+                <i class="bi bi-file-earmark-pdf"></i> Visualizar Documento Rechazado
+              </button>
+
+              <button
+                *ngIf="hideManageButton && isCancelled()"
+                id="btn-view-cancelled-document"
+                class="btn-cancel"
+                type="button"
+                (click)="onViewApprovedDocument()">
+                <i class="bi bi-file-earmark-pdf"></i> Visualizar Documento Cancelado
               </button>
 
               <button
