@@ -1,152 +1,156 @@
+<!-- Two-FA Verification - Estructura idéntica a auth-approval -->
 <div class="two-fa-container">
-  <div class="two-fa-card">
+  <div class="two-fa-dialog">
+    <div class="two-fa-content">
+      
+      <!-- Header -->
     <div class="two-fa-header">
-      <div class="icon-container">
-        <svg class="security-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-          <circle cx="12" cy="16" r="1"></circle>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        <div class="two-fa-brand">
+          <div class="two-fa-logo">
+            <div class="two-fa-logo-svg">
+              <svg width="50" height="50" viewBox="0 0 436 431" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M150.405 424.891C75.0294 398.975 21.4828 338.592 4.55619 260.423C-1.05265 234.521 -0.415334 191.484 5.96858 165.047C25.0285 86.1151 83.2018 25.1895 160.026 3.70098C177.78 -1.26487 183.665 -0.392257 180.931 6.80042C180.197 8.72888 174.301 11.6043 167.828 13.1902C105.717 28.4069 48.7646 79.1092 25.56 139.845C4.5471 194.843 7.01828 255.674 32.3815 307.765C58.6321 361.678 109.244 403.564 165.316 417.781C178.189 421.045 181.617 422.885 181.617 426.529C181.617 432.954 172.457 432.473 150.405 424.891ZM258.295 428.688C255.589 424.269 259.249 421.876 277.071 416.412C346.543 395.113 399.206 339.585 419.231 266.519C426.032 241.706 425.462 187.992 418.125 162.102C398.048 91.2633 345.612 36.9139 277.071 15.9001C258.694 10.2662 254.765 7.43249 259.168 2.98825C262.496 -0.370228 284.936 5.64263 307.338 15.8951C385.522 51.6779 434.809 128.501 435.028 214.928C435.109 247.033 431.182 269.409 420.673 296.729C398.215 355.106 348.702 403.593 290.758 423.95C269.338 431.475 260.767 432.726 258.295 428.688ZM98.8539 283.724V232.127H137.801H176.749V283.724V335.321H137.801H98.8539V283.724ZM169.446 283.724V239.498H137.801H106.157V283.724V327.95H137.801H169.446V283.724ZM116.502 315.051C117.144 313.106 122.276 311.98 130.499 311.98C138.721 311.98 143.853 313.106 144.495 315.051C145.234 317.287 141.426 318.122 130.499 318.122C119.572 318.122 115.764 317.287 116.502 315.051ZM155.206 315.788C155.741 314.166 156.974 312.923 157.944 313.024C160.855 313.328 160.291 316.698 157.153 317.754C155.547 318.294 154.67 317.41 155.206 315.788ZM114.721 300.995C113.857 299.585 114.681 297.839 116.551 297.114C122.312 294.883 159.705 297.087 160.334 299.695C161.152 303.089 116.777 304.354 114.721 300.995ZM116.47 283.205C117.217 280.946 123.561 280.038 138.613 280.038C167.635 280.038 167.268 284.755 138.176 285.662C120.458 286.215 115.656 285.672 116.47 283.205ZM115.148 269.868C113.203 267.905 115.402 264.068 118.471 264.068C119.731 264.068 120.762 265.726 120.762 267.753C120.762 271.553 117.89 272.635 115.148 269.868ZM132.228 269.908C127.799 265.438 131.702 263.891 145.712 264.565C154.269 264.976 160.672 266.371 160.346 267.753C159.673 270.602 134.803 272.508 132.228 269.908ZM115.893 250.554C115.893 247.26 119.245 246.79 138.41 247.391C151.331 247.796 160.926 249.144 160.926 250.554C160.926 251.964 151.331 253.312 138.41 253.718C119.245 254.319 115.893 253.848 115.893 250.554ZM273.306 333.683C272.413 332.782 271.683 330.018 271.683 327.541C271.683 322.22 270.767 322.037 264.355 326.079C260.097 328.763 258.347 327.931 249.527 319.029C240.744 310.163 239.866 308.295 242.315 303.677C244.753 299.079 244.327 298.122 238.919 296.047C233.242 293.868 232.736 292.462 232.736 278.871C232.736 266.154 233.365 264.068 237.198 264.068C243.61 264.068 245.105 261.662 242.152 256.093C239.964 251.966 241.167 249.579 250.038 240.456C256.987 233.309 261.32 230.512 262.93 232.137C266.822 236.065 271.015 234.972 272.388 229.67C273.486 225.434 275.708 224.756 288.494 224.756C296.653 224.756 303.344 225.585 303.365 226.598C303.478 232.177 307.766 234.989 312.368 232.503C316.426 230.311 318.766 231.569 327.676 240.733C336.826 250.143 337.767 252.069 334.914 255.539C332.152 258.898 332.186 259.881 335.129 261.76C337.051 262.988 340.045 264.01 341.783 264.03C344.109 264.058 344.751 268.114 344.217 279.424C343.559 293.375 342.974 294.855 337.829 295.59C334.06 296.129 332.635 297.567 333.569 299.89C334.341 301.81 335.543 304.791 336.241 306.516C336.939 308.241 333.137 313.962 327.793 319.229C319.007 327.889 317.491 328.536 311.949 325.987C306.408 323.439 305.677 323.75 304.311 329.245C302.924 334.823 301.658 335.321 288.864 335.321C281.2 335.321 274.198 334.584 273.306 333.683ZM299.981 319.251C304.817 313.984 306.513 313.441 310.835 315.776C315.076 318.067 316.95 317.603 321.72 313.08C326.291 308.745 326.97 306.651 325.007 302.948C321.625 296.57 324.541 288.638 330.268 288.638C334.022 288.638 334.972 286.9 334.972 280.038C334.972 275.309 333.955 271.439 332.712 271.439C327.439 271.439 322.578 263.318 323.983 256.858C325.876 248.159 318.622 241.07 310.049 243.242C304.138 244.739 296.025 239.629 296.025 234.408C296.025 230.089 281.349 231.903 279.695 236.426C277.41 242.679 273.716 244.575 266.708 243.095C259.225 241.514 248.731 251.016 252.023 256.393C255.017 261.282 252.419 268.353 247.116 269.753C241.24 271.304 240.25 288.638 246.038 288.638C251.394 288.638 255.313 297.527 252.389 303.041C248.963 309.503 259.976 320.374 265.37 315.855C269.726 312.207 278.986 316.314 278.986 321.894C278.986 328.157 293.479 326.333 299.981 319.251ZM275.334 308.576C244.099 294.061 254.901 246.869 289.459 246.869C299.115 246.869 312.883 255.425 317.253 264.142C325.527 280.646 317.557 302.506 300.797 309.275C288.66 314.177 287.308 314.14 275.334 308.576ZM299.444 300.583C305.116 297.974 313.064 285.339 313.064 278.931C313.064 272.623 305.228 261.458 298.24 257.811C288.405 252.678 278.325 255.088 270.532 264.437C263.517 272.851 262.769 280.824 268.032 291.095C274.145 303.029 286.206 306.671 299.444 300.583ZM281.18 292.68C268.415 286.292 274.274 264.068 288.722 264.068C299.869 264.068 307.452 278.287 301.415 287.87C297.982 293.32 287.458 295.821 281.18 292.68ZM295.217 282.305C296.028 280.173 294.898 276.619 292.707 274.407C289.017 270.683 288.428 270.683 284.738 274.407C279.761 279.431 282.046 286.181 288.722 286.181C291.484 286.181 294.407 284.437 295.217 282.305ZM189.035 287.529L180.893 279.05L190.383 269.716L199.874 260.382L200.636 268.368C201.371 276.061 201.794 276.353 212.199 276.353C219.994 276.353 222.999 277.341 222.999 279.904C222.999 282.397 219.554 283.678 211.436 284.204C201.018 284.878 199.949 285.5 200.635 290.481C201.699 298.202 198.502 297.389 189.035 287.529ZM135.367 184.516C135.367 143 135.681 142.062 150.596 138.935C156.964 137.6 158.345 136.234 157.731 131.878C156.656 124.257 159.911 125.145 169.446 135.075L177.704 143.674L169.481 152.237C160.814 161.264 158.492 161.354 158.492 152.666C158.492 149.207 156.797 147.141 153.624 146.731C142.619 145.311 141.499 148.754 140.664 186.578C140.23 206.284 138.866 222.299 137.622 222.299C136.336 222.299 135.367 206.06 135.367 184.516ZM174.314 201.686C174.314 185.608 178.878 178.979 193.772 173.418C199.584 171.248 204.707 168.359 205.156 166.997C205.912 164.703 199.17 156.609 190.251 149.106C184.876 144.583 185.189 118.028 190.749 106.903C196.383 95.6303 208.461 88.8055 222.4 89.0182C242.409 89.3235 255.116 103.595 256.621 127.451C257.601 142.983 257.525 143.203 247.607 153.519C242.105 159.241 237.604 165.189 237.604 166.735C237.604 168.282 243.169 171.543 249.97 173.981C263.976 179.002 269.249 187.492 269.249 205.021V214.928H221.782H174.314V201.686ZM261.946 199.135C261.946 192.964 260.232 189.353 255.532 185.622C252.005 182.821 248.313 180.529 247.329 180.529C246.345 180.529 244.159 185.505 242.472 191.586C239.078 203.822 238.109 204.303 227.746 198.894C221.269 195.513 219.821 195.533 212.982 199.103C204.361 203.603 202.831 202.596 198.762 189.743C195.479 179.373 194.627 178.982 187.027 184.354C182.992 187.207 181.617 190.641 181.617 197.868V207.557H221.782H261.946V199.135ZM213.976 191.274C214.815 190.427 213.809 186.431 211.74 182.393C207.273 173.672 202.417 176.445 204.871 186.317C206.394 192.44 210.569 194.713 213.976 191.274ZM237.755 186.272C241.277 176.921 236.745 173.362 231.535 181.387C227.552 187.523 228.202 192.814 232.939 192.814C234.232 192.814 236.399 189.87 237.755 186.272ZM227.121 171.586C226.437 170.896 223.007 170.691 219.498 171.131C213.326 171.904 213.248 172.116 217.1 177.632L221.082 183.334L224.723 178.087C226.725 175.202 227.804 172.276 227.121 171.586ZM232.641 157.953C235.973 154.343 237.604 149.244 237.604 142.437C237.604 133.408 236.739 131.889 229.693 128.543C222.917 125.326 220.647 125.262 213.87 128.095C206.455 131.196 205.959 132.164 205.959 143.542C205.959 153.3 207.02 156.431 211.369 159.505C218.925 164.847 226.808 164.272 232.641 157.953ZM198.657 139.989C198.657 136.61 197.561 133.846 196.222 133.846C193.503 133.846 192.886 141.944 195.411 144.493C198.094 147.202 198.657 146.421 198.657 139.989ZM249.775 139.989C249.775 138.121 248.68 135.91 247.341 135.075C245.955 134.21 244.907 136.326 244.907 139.989C244.907 143.651 245.955 145.767 247.341 144.903C248.68 144.068 249.775 141.856 249.775 139.989ZM216.619 118.296C221.723 114.92 222.683 114.924 226.063 118.336C228.132 120.424 234.425 122.982 240.048 124.02L250.271 125.907L248.763 118.295C246.758 108.18 236.188 97.4064 226.46 95.5644C211.751 92.7791 193.788 106.8 193.788 121.067C193.788 125.394 194.777 125.732 202.363 124.006C207.079 122.932 213.494 120.363 216.619 118.296ZM284.331 206.825C275.134 197.247 274.603 194.689 282.028 195.731C287.394 196.484 287.505 196 287.505 171.93V147.36L275.786 146.604C261.054 145.655 261.394 139.891 276.164 140.199C292.844 140.547 295.738 145.183 296.549 172.848C297.22 195.731 297.42 196.481 302.719 195.915C305.89 195.576 308.196 196.676 308.196 198.526C308.196 201.504 296.026 214.928 293.327 214.928C292.658 214.928 288.611 211.282 284.331 206.825Z" fill="#868686"/>
         </svg>
       </div>
-      <h2>Verificación de Seguridad</h2>
-      <p class="user-info">Usuario: <strong>{{ currentUser }}</strong></p>
+          </div>
+          <div class="two-fa-brand-text">
+            <div class="two-fa-brand-name">HELISA</div>
+            <div class="two-fa-brand-subtitle">Gestor Documental</div>
+          </div>
+        </div>
+        <h1 class="two-fa-title">Verificación de Seguridad</h1>
+      </div>
 
-      <!-- Mostrar QR si está disponible (Google Auth pendiente) -->
-      <div class="qr-container" *ngIf="showQRCode && qrCodeDataUrl">
-        <div class="qr-header">
-          <svg class="qr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="5" height="5"></rect>
-            <rect x="3" y="16" width="5" height="5"></rect>
-            <rect x="16" y="3" width="5" height="5"></rect>
-            <rect x="16" y="16" width="5" height="5"></rect>
-            <rect x="8" y="8" width="8" height="8"></rect>
+      <!-- Body -->
+      <div class="two-fa-body">
+        <div class="two-fa-instructions">
+          <h2 class="two-fa-instructions-title" *ngIf="current2FAMethod === 'QR_SETUP'">Configura Google Authenticator escaneando el código QR</h2>
+          <h2 class="two-fa-instructions-title" *ngIf="current2FAMethod === 'GOOGLE_AUTH'">Verificación con Google Authenticator</h2>
+          <h2 class="two-fa-instructions-title" *ngIf="current2FAMethod === 'EMAIL'">Verificación con Código por Correo</h2>
+          
+          <ol class="two-fa-steps">
+            <!-- Instrucciones para Google Authenticator -->
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'GOOGLE_AUTH'">1. Abra la aplicación Google Authenticator en su dispositivo móvil</li>
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'GOOGLE_AUTH'">2. Busque la cuenta asociada a su usuario corporativo</li>
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'GOOGLE_AUTH'">3. Ingrese el código de 6 dígitos que aparece en la aplicación</li>
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'GOOGLE_AUTH'">4. Haga clic en "Validar con Google" para completar la verificación</li>
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'GOOGLE_AUTH'">5. El código se actualiza automáticamente cada 30 segundos</li>
+            
+            <!-- Instrucciones para Token por Correo -->
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'EMAIL'">1. Revise su correo electrónico corporativo</li>
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'EMAIL'">2. Busque el correo enviado desde noresponder&#64;helisa.com</li>
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'EMAIL'">3. Localice el código de verificación de 6 dígitos en el mensaje</li>
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'EMAIL'">4. Ingrese el código en el campo de abajo</li>
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'EMAIL'">5. Haga clic en "Verificar Código" para completar la verificación</li>
+            
+            <!-- Mensaje de correo enviado automáticamente -->
+            <div class="two-fa-email-notification" *ngIf="current2FAMethod === 'EMAIL' && emailSent">
+              <svg class="two-fa-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
-          <h3>Configurar Google Authenticator</h3>
+              <span>Código enviado automáticamente a su correo corporativo</span>
         </div>
-        <div class="qr-instructions">
-          <p>1. Abre Google Authenticator en tu dispositivo</p>
-          <p>2. Escanea el código QR que aparece abajo</p>
-          <p>3. Una vez escaneado, haz clic en "Ya escaneé el código"</p>
+            
+            <!-- Instrucciones para configuración de QR -->
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'QR_SETUP'">1. Descargue e instale Google Authenticator en su dispositivo móvil</li>
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'QR_SETUP'">2. Abra la aplicación y seleccione "Escanear código QR"</li>
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'QR_SETUP'">3. Escanee el código QR que aparece en la pantalla</li>
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'QR_SETUP'">4. Una vez escaneado, haga clic en "Ya escaneé el código"</li>
+            <li class="two-fa-step" *ngIf="current2FAMethod === 'QR_SETUP'">5. Ingrese el código de 6 dígitos que aparece en la aplicación</li>
+          </ol>
         </div>
-        <div class="qr-code-wrapper">
-          <img [src]="qrCodeDataUrl" alt="Código QR para Google Authenticator" class="qr-code">
+
+        <div class="two-fa-form">
+          <!-- Timer de 90 segundos -->
+          <div class="two-fa-timer">
+            Tiempo restante: {{ timeRemaining }} segundos
+          </div>
+
+          <!-- Mostrar QR si está disponible -->
+          <div class="two-fa-qr-container" *ngIf="showQRCode && qrCodeDataUrl">
+            <div class="two-fa-qr-code-wrapper">
+              <img [src]="qrCodeDataUrl" alt="Código QR para Google Authenticator" class="two-fa-qr-code">
         </div>
-        <div class="secret-info">
+            <div class="two-fa-secret-info">
           <p><strong>Secret:</strong> {{ qrSecret }}</p>
-          <p class="secret-note">Guarda este código por si necesitas configurar manualmente</p>
+              <p class="two-fa-secret-note">Guarda este código por si necesitas configurar manualmente</p>
         </div>
-        <div class="qr-actions">
+            <div class="two-fa-qr-actions">
           <button
             type="button"
-            class="btn btn-primary"
+                class="two-fa-button"
             (click)="onQRScanned()"
             [disabled]="isLoading"
           >
-            <span *ngIf="isLoading" class="spinner"></span>
+                <span *ngIf="isLoading" class="two-fa-spinner"></span>
             {{ isLoading ? 'Procesando...' : 'Ya escaneé el código' }}
           </button>
         </div>
       </div>
 
-      <!-- Mostrar método actual si no hay QR -->
-      <div class="verification-options" *ngIf="!showQRCode && twoFAState">
-        <div class="option-info" *ngIf="shouldShowGoogleAuthOption">
-          <svg class="option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="5" height="5"></rect>
-            <rect x="3" y="16" width="5" height="5"></rect>
-            <rect x="16" y="3" width="5" height="5"></rect>
-            <rect x="16" y="16" width="5" height="5"></rect>
-            <rect x="8" y="8" width="8" height="8"></rect>
-          </svg>
-          <span>Google Authenticator</span>
-        </div>
 
-        <div class="option-info" *ngIf="shouldShowEmailOption">
-          <svg class="option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-            <polyline points="22,6 12,13 2,6"></polyline>
-          </svg>
-          <span>Código por Email</span>
-        </div>
-      </div>
-
-      <p class="description" *ngIf="!showQRCode">
-        Ingresa el código de 6 dígitos de tu método de autenticación
-      </p>
-    </div>
-
-    <!-- Mostrar formulario solo si no hay QR o si ya se escaneó el QR -->
-    <form [formGroup]="verificationForm" (ngSubmit)="onSubmit()" class="verification-form" *ngIf="!showQRCode || qrScanned">
-      <div class="form-group">
-        <label for="codigo" class="form-label">Código de Verificación</label>
+          <!-- Formulario de verificación -->
+          <form [formGroup]="verificationForm" (ngSubmit)="onSubmit()" class="two-fa-verification-form" *ngIf="!showQRCode || qrScanned">
+            <!-- Input Group -->
+            <div class="two-fa-input-group">
         <input
           type="text"
-          id="codigo"
+                class="two-fa-input" 
           formControlName="codigo"
-          class="form-input"
-          placeholder="000000"
+                placeholder="Ingrese el código de verificación"
           maxlength="6"
           (keyup)="onKeyUp($event)"
           (keypress)="onKeyPress($event)"
-          [class.error]="getFieldError('codigo')"
-        />
-        <div class="error-message" *ngIf="getFieldError('codigo')">
-          {{ getFieldError('codigo') }}
-        </div>
+                [class.error]="getFieldError('codigo')">
       </div>
 
-      <div class="error-message main-error" *ngIf="errorMessage">
+            <!-- Error Message -->
+            <div class="two-fa-error" *ngIf="errorMessage">
         {{ errorMessage }}
       </div>
 
-      <div class="form-actions">
+            <!-- Action Button -->
         <button
           type="submit"
-          class="btn btn-primary"
-          [disabled]="!verificationForm.valid || isLoading"
-        >
-          <span *ngIf="isLoading" class="spinner"></span>
-          {{ isLoading ? 'Verificando...' : 'Verificar Código' }}
+              class="two-fa-button"
+              [disabled]="!verificationForm.valid || isLoading">
+              <span *ngIf="!isLoading">Verificar Código</span>
+              <span *ngIf="isLoading">Verificando...</span>
         </button>
-      </div>
     </form>
 
-    <div class="alternative-actions">
-      <!-- Mostrar botón de email solo si usa email y no hay QR -->
+          <!-- Botones alternativos -->
+          <div class="two-fa-alternative-actions">
+            <!-- Botón de reenvío de correo (solo para método EMAIL) -->
       <button
+              *ngIf="current2FAMethod === 'EMAIL'"
         type="button"
-        class="btn btn-secondary"
+              class="two-fa-button two-fa-button-link"
         (click)="onSendEmailCode()"
-        [disabled]="isLoading"
-        *ngIf="shouldShowEmailOption && !showQRCode"
+              [disabled]="isLoading || !canResendEmail"
       >
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-          <polyline points="22,6 12,13 2,6"></polyline>
+              <svg class="two-fa-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
         </svg>
-        Enviar Código por Email
+              <span *ngIf="canResendEmail">Reenviar Código</span>
+              <span *ngIf="!canResendEmail">Reenviar en {{ resendCountdown }}s</span>
       </button>
 
-
       <button
         type="button"
-        class="btn btn-link"
+              class="two-fa-button two-fa-button-link"
         (click)="onBackToLogin()"
         [disabled]="isLoading"
       >
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 24px; height: 24px;" stroke-width="2">
+              <svg class="two-fa-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M19 12H5M12 19l-7-7 7-7"></path>
         </svg>
         Volver al Login
       </button>
     </div>
 
-    <div class="help-text">
-      <p>
-        <strong>¿No tienes acceso a tu aplicación de autenticación?</strong><br>
-        Puedes solicitar que te enviemos un código por email o contactar al administrador.
-      </p>
+  </div>
+</div>
     </div>
   </div>
 </div>
-

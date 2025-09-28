@@ -12,7 +12,7 @@ import { UserService } from './user.service';
   providedIn: 'root'
 })
 export class ApprovalService {
-  private approvalsSubject = new BehaviorSubject<Approval[]>([]);
+  public approvalsSubject = new BehaviorSubject<Approval[]>([]);
   approvals$: Observable<Approval[]> = this.approvalsSubject.asObservable();
 
   private readonly baseUrl = (environment.apiUrl.endsWith('/')
@@ -281,8 +281,6 @@ export class ApprovalService {
   }
 
   private mapearHistorialGestiones(gestiones: any[], users: Usuario[], destinatarios?: any[]): any[] {
-    console.log('mapearHistorialGestiones - Input historial:', gestiones);
-    console.log('mapearHistorialGestiones - Input destinatarios:', destinatarios);
     
     const findUserById = (id?: number): Usuario | undefined => {
       if (!id) return undefined;
@@ -314,18 +312,10 @@ export class ApprovalService {
       });
       
       allGestiones.push(...gestionesHistorial);
-      console.log('mapearHistorialGestiones - Gestiones del historial:', gestionesHistorial);
     }
 
     // 2. Mapear gestiones de destinatarios con decisiones (evitando duplicados de cancelado/rechazado)
     if (Array.isArray(destinatarios) && destinatarios.length > 0) {
-      console.log('mapearHistorialGestiones - Filtrando destinatarios:', destinatarios.map(d => ({
-        usuarioId: d.usuarioId,
-        decision: d.decision,
-        fechaDecision: d.fechaDecision,
-        comentario: d.comentario,
-        cumpleFiltros: d.decision && d.decision !== 'PENDIENTE' && d.fechaDecision !== null && d.comentario !== null
-      })));
       
       const gestionesDestinatarios = destinatarios
         .filter(dest => 
@@ -352,7 +342,6 @@ export class ApprovalService {
             });
             
             if (yaExisteEnHistorial) {
-              console.log(`Gestion de destinatario ${dest.usuarioId} (${dest.decision}) ya existe en historial, omitiendo`);
               return null;
             }
           } else {
@@ -366,7 +355,6 @@ export class ApprovalService {
             });
             
             if (yaExisteEnHistorial) {
-              console.log(`Gestion de destinatario ${dest.usuarioId} (${dest.decision}) ya existe en historial, omitiendo`);
               return null;
             }
           }
@@ -390,13 +378,10 @@ export class ApprovalService {
         .filter(gestion => gestion !== null); // Filtrar nulos
       
       allGestiones.push(...gestionesDestinatarios);
-      console.log('mapearHistorialGestiones - Gestiones de destinatarios:', gestionesDestinatarios);
     }
 
     // Ordenar por fecha (más reciente primero)
     const result = allGestiones.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-    console.log('mapearHistorialGestiones - Total gestiones combinadas:', result.length);
-    console.log('mapearHistorialGestiones - Output:', result);
     return result;
   }
 
@@ -422,6 +407,7 @@ export class ApprovalService {
   }
   
   mapToSuccessData(item: any, users: Usuario[]): SuccessModalData {
+    
     const findUserById = (id?: number): Usuario | undefined => {
       if (!id) return undefined;
       
@@ -532,16 +518,20 @@ export class ApprovalService {
       estado: estado as any,
       approverStates: destinatarios.map(d => ({ usuarioId: (d as any).usuarioId, estado: (d as any).estado || 'Pendiente' })),
       // Agregar información del documento para la vista
-      documentoUrl: item?.documentoUrl || item?.pdfUrl || item?.urlDocumento || item?.url,
-      documentoFileName: item?.documentoFileName || item?.pdfFileName || item?.nombreArchivo || item?.fileName,
+      documentoUrl: item?.documentoUrl || item?.pdfUrl || item?.urlDocumento || item?.url || item?.documentUrl || item?.urlDocumentoOriginal,
+      documentoFileName: item?.documentoFileName || item?.pdfFileName || item?.nombreArchivo || item?.fileName || item?.pdfOriginalName || item?.nombreDocumentoOriginal,
       historialGestiones: this.mapearHistorialGestiones(item?.historial || [], users, destinatarios),
       // Campos adicionales de la API
       destinatariosTotal: item?.destinatariosTotal || destinatarios.length,
       destinatariosAprobados: item?.destinatariosAprobados || 0,
-      pdfOriginalName: item?.pdfOriginalName,
+      pdfOriginalName: item?.pdfOriginalName || item?.documentoFileName || item?.pdfFileName,
       pdfSizeBytes: item?.pdfSizeBytes,
       adjuntos: item?.adjuntos || [],
-      ordenFirma: Boolean(item?.ordenFirma)
+      ordenFirma: Boolean(item?.ordenFirma),
+      // Campos adicionales para documentos aprobados
+      documentoAprobado: item?.documentoAprobado || item?.documentoAprobacion,
+      urlDocumentoAprobado: item?.urlDocumentoAprobado || item?.documentoAprobadoUrl,
+      nombreDocumentoAprobado: item?.nombreDocumentoAprobado || item?.documentoAprobadoFileName
     };
     
     return result;
@@ -814,10 +804,12 @@ export class ApprovalService {
   getApprovalDocument(approvalId: string | number, userId: number): Observable<{ url: string, fileName: string }> {
     const headers = this.headersForUser(userId);
     return this.http.get<any>(`${this.baseUrl}/solicitudes/${approvalId}/documento`, { headers }).pipe(
-      map(response => ({
-        url: response.url || response.documentoUrl || response.pdfUrl,
-        fileName: response.fileName || response.documentoFileName || response.nombreArchivo || `documento_${approvalId}.pdf`
-      })),
+      map(response => {
+        return {
+          url: response.url || response.documentoUrl || response.pdfUrl || response.documentUrl,
+          fileName: response.fileName || response.documentoFileName || response.nombreArchivo || response.pdfFileName || `documento_${approvalId}.pdf`
+        };
+      }),
       catchError(error => {
         throw error;
       })
@@ -1038,9 +1030,7 @@ export class ApprovalService {
         );
       }),
       catchError(error => {
-        console.error('Error obteniendo solicitudes por área:', error);
         // Fallback al método original si el endpoint no existe
-        console.log('Fallback a getHistorico por área no disponible');
         return this.getHistorico(usuarioId, users, page, size);
       })
     );

@@ -12,6 +12,8 @@ import { TwoFAVerificationComponent } from './components/two-fa-verification/two
 import { GoogleAuthSetupComponent } from './components/google-auth-setup/google-auth-setup.component';
 import { TwoFAManagementComponent } from './components/two-fa-management/two-fa-management.component';
 import { TwoFAStateComponent } from './components/two-fa-state/two-fa-state.component';
+import { ForgotPassword } from './pages/login/forgot-password/forgot-password';
+import { ResetPassword } from './pages/login/reset-password/reset-password';
 import { AuthGuard } from './guards/auth.guard';
 import { LoginGuard } from './guards/login.guard';
 import { TwoFAGuard } from './guards/two-fa.guard';
@@ -21,6 +23,14 @@ export const routes: Routes = [
     path: 'login',
     component: LoginComponent,
     canActivate: [LoginGuard]
+  },
+  {
+    path: 'forgot-password',
+    component: ForgotPassword
+  },
+  {
+    path: 'reset-password',
+    component: ResetPassword
   },
   {
     path: 'two-fa-state',

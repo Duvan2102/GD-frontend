@@ -110,13 +110,29 @@ export class Approvals implements OnInit, OnDestroy {
   subscribeToApprovals(): void {
     if (!this.currentUser) return;
     const uid = this.currentUser.idUsuario;
-    this.approvalService.getApprovalsForApprover(uid, this.allUsers).subscribe(list => {
-      this.pendingApprovals = list || [];
-      this.refreshApprovalsSource();
+    
+    // Obtener aprobaciones pendientes
+    this.approvalService.getApprovalsForApprover(uid, this.allUsers).subscribe({
+      next: (list) => {
+        this.pendingApprovals = list || [];
+        this.refreshApprovalsSource();
+      },
+      error: (error) => {
+        this.pendingApprovals = [];
+        this.refreshApprovalsSource();
+      }
     });
-    this.approvalService.getHistorico(uid, this.allUsers).subscribe(list => {
-      this.managedApprovals = (list || []).filter(a => ['APROBADO','RECHAZADO','CANCELADA'].includes(a.status));
-      this.refreshApprovalsSource();
+    
+    // Obtener historial de aprobaciones gestionadas
+    this.approvalService.getHistorico(uid, this.allUsers).subscribe({
+      next: (list) => {
+        this.managedApprovals = (list || []).filter(a => ['APROBADO','RECHAZADO','CANCELADA'].includes(a.status));
+        this.refreshApprovalsSource();
+      },
+      error: (error) => {
+        this.managedApprovals = [];
+        this.refreshApprovalsSource();
+      }
     });
   }
 
@@ -170,58 +186,81 @@ export class Approvals implements OnInit, OnDestroy {
   handleViewApprovedDocument(data: SuccessModalData): void {
 
     const documentFile = data?.documentoAprobacion ||
+                        (data as any)?.documentoAprobado ||
                         (data?.documentosAnexos as any)?.[0] ||
                         (data?.anexos as any)?.[0] ||
                         (data?.adjuntos as any)?.[0] ||
                         (data as any)?.documento ||
                         (data as any)?.archivo ||
-                        (data as any)?.file;
+                        (data as any)?.file ||
+                        (data as any)?.pdfPrincipal;
 
     const documentUrl = data?.documentoUrl ||
+                       (data as any)?.urlDocumentoAprobado ||
+                       (data as any)?.documentoAprobadoUrl ||
                        (data as any)?.url ||
-                       (data as any)?.documentUrl;
+                       (data as any)?.documentUrl ||
+                       (data as any)?.pdfUrl ||
+                       (data as any)?.urlDocumentoOriginal;
 
-
-      if (!documentFile && !documentUrl && data?.pdfOriginalName && this.currentUser?.idUsuario) {
+    // Si no hay documento directo, intentar obtenerlo del servidor
+    if (!documentFile && !documentUrl && this.currentUser?.idUsuario) {
       this.isLoadingDetails = true;
 
-      this.approvalService.getDocumentPdf(data.id!, this.currentUser.idUsuario).subscribe({
-        next: (pdfBlob: Blob) => {
-          const pdfUrl = URL.createObjectURL(pdfBlob);
-          this.documentViewData = {
-            id: data.id!,
-            file: undefined,
-            url: pdfUrl,
-            title: data.nombreSolicitud,
-            fileName: data.pdfOriginalName,
-            metadata: {
-              pdfOriginalName: data.pdfOriginalName,
-              pdfSizeBytes: data.pdfSizeBytes,
-              isPdfMetadata: false,
-              isPdfFromService: true
-            }
-          };
-          this.isDetailModalVisible = false;
-          this.isDocumentViewVisible = true;
-          this.isLoadingDetails = false;
+      // Verificar si tenemos información del documento en los datos
+      if (data.pdfOriginalName || data.documentoFileName) {
+        // Mostrar directamente la información del documento sin intentar obtenerlo del servidor
+        this.documentViewData = {
+          id: data.id!,
+          file: undefined,
+          url: undefined,
+          title: data.nombreSolicitud,
+          fileName: data.pdfOriginalName || data.documentoFileName || this.getDocumentTitle(data.estado),
+          metadata: {
+            pdfOriginalName: data.pdfOriginalName || data.documentoFileName,
+            pdfSizeBytes: data.pdfSizeBytes,
+            isPdfMetadata: true,
+            error: 'Documento no disponible en el servidor, pero se tiene información del archivo: ' + (data.pdfOriginalName || data.documentoFileName)
+          }
+        };
+        this.isDetailModalVisible = false;
+        this.isDocumentViewVisible = true;
+        this.isLoadingDetails = false;
+        return;
+      }
+
+      // Para todas las solicitudes, usar la misma lógica que funciona para aprobados
+      // Estrategia 1: Intentar obtener documento aprobado (funciona para aprobados)
+      this.approvalService.getApprovalDocument(data.id!, this.currentUser.idUsuario).subscribe({
+        next: (response: any) => {
+          if (response && (response.url || response.documentUrl)) {
+            const documentUrl = response.url || response.documentUrl;
+            const fileName = response.fileName || response.pdfFileName || data.pdfOriginalName || data.documentoFileName;
+            
+            this.documentViewData = {
+              id: data.id!,
+              file: undefined,
+              url: documentUrl,
+              title: data.nombreSolicitud,
+              fileName: fileName || this.getDocumentTitle(data.estado),
+              metadata: {
+                pdfOriginalName: fileName,
+                pdfSizeBytes: data.pdfSizeBytes,
+                isPdfMetadata: true,
+                source: 'documento_aprobado'
+              }
+            };
+            this.isDetailModalVisible = false;
+            this.isDocumentViewVisible = true;
+            this.isLoadingDetails = false;
+          } else {
+            // Si no hay URL, intentar PDF original
+            this.tryGetOriginalPdf(data);
+          }
         },
         error: (error) => {
-          this.isLoadingDetails = false;
-          this.documentViewData = {
-            id: data.id!,
-            file: undefined,
-            url: undefined,
-            title: data.nombreSolicitud,
-            fileName: data.pdfOriginalName,
-            metadata: {
-              pdfOriginalName: data.pdfOriginalName,
-              pdfSizeBytes: data.pdfSizeBytes,
-              isPdfMetadata: true,
-              error: 'No se pudo cargar el PDF'
-            }
-          };
-          this.isDetailModalVisible = false;
-          this.isDocumentViewVisible = true;
+          // Si falla, intentar PDF original
+          this.tryGetOriginalPdf(data);
         }
       });
     } else if (data && (documentFile || documentUrl)) {
@@ -230,16 +269,276 @@ export class Approvals implements OnInit, OnDestroy {
         file: documentFile,
         url: documentUrl,
         title: data.nombreSolicitud,
-        fileName: data.documentoFileName || documentFile?.name || 'Documento Aprobado'
+        fileName: data.documentoFileName || documentFile?.name || this.getDocumentTitle(data.estado)
       };
       this.isDetailModalVisible = false;
       this.isDocumentViewVisible = true;
+    } else {
+      alert(`No se encontró el documento ${this.getDocumentTitle(data.estado).toLowerCase()} para visualizar.`);
     }
+  }
+
+  private tryGetApprovalDocument(data: SuccessModalData): void {
+    // Primero intentar obtener el documento aprobado específico
+    this.approvalService.getApprovalDocument(data.id!, this.currentUser!.idUsuario).subscribe({
+      next: (docInfo: { url: string, fileName: string }) => {
+        this.documentViewData = {
+          id: data.id!,
+          file: undefined,
+          url: docInfo.url,
+          title: data.nombreSolicitud,
+          fileName: docInfo.fileName || data.pdfOriginalName || this.getDocumentTitle(data.estado),
+          metadata: {
+            pdfOriginalName: docInfo.fileName || data.pdfOriginalName,
+            pdfSizeBytes: data.pdfSizeBytes,
+            isPdfMetadata: false,
+            isPdfFromService: true
+          }
+        };
+        this.isDetailModalVisible = false;
+        this.isDocumentViewVisible = true;
+        this.isLoadingDetails = false;
+      },
+      error: (error) => {
+        // Si falla, intentar obtener el PDF original
+        this.approvalService.getDocumentPdf(data.id!, this.currentUser!.idUsuario).subscribe({
+          next: (pdfBlob: Blob) => {
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            this.documentViewData = {
+              id: data.id!,
+              file: undefined,
+              url: pdfUrl,
+              title: data.nombreSolicitud,
+              fileName: data.pdfOriginalName || this.getDocumentTitle(data.estado),
+              metadata: {
+                pdfOriginalName: data.pdfOriginalName,
+                pdfSizeBytes: data.pdfSizeBytes,
+                isPdfMetadata: false,
+                isPdfFromService: true
+              }
+            };
+            this.isDetailModalVisible = false;
+            this.isDocumentViewVisible = true;
+            this.isLoadingDetails = false;
+          },
+          error: (pdfError) => {
+            this.isLoadingDetails = false;
+            
+            // Si tenemos información del documento, mostrarla aunque no se pueda cargar
+            if (data.pdfOriginalName || data.documentoFileName) {
+              this.documentViewData = {
+                id: data.id!,
+                file: undefined,
+                url: undefined,
+                title: data.nombreSolicitud,
+                fileName: data.pdfOriginalName || data.documentoFileName || this.getDocumentTitle(data.estado),
+                metadata: {
+                  pdfOriginalName: data.pdfOriginalName || data.documentoFileName,
+                  pdfSizeBytes: data.pdfSizeBytes,
+                  isPdfMetadata: true,
+                  error: `No se pudo cargar el ${this.getDocumentTitle(data.estado).toLowerCase()} desde el servidor, pero se tiene información del archivo: ${data.pdfOriginalName || data.documentoFileName}`
+                }
+              };
+              this.isDetailModalVisible = false;
+              this.isDocumentViewVisible = true;
+            } else {
+              // Como último recurso, intentar obtener adjuntos
+              this.tryGetAttachments(data);
+            }
+          }
+        });
+      }
+    });
+  }
+
+  private tryGetDocumentWithFallback(data: SuccessModalData): void {
+    // Estrategia 1: Intentar obtener documento aprobado
+    this.approvalService.getApprovalDocument(data.id!, this.currentUser!.idUsuario).subscribe({
+      next: (response: any) => {
+        if (response && (response.url || response.documentUrl)) {
+          const documentUrl = response.url || response.documentUrl;
+          const fileName = response.fileName || response.pdfFileName || data.pdfOriginalName || data.documentoFileName;
+          
+          this.documentViewData = {
+            id: data.id!,
+            file: undefined,
+            url: documentUrl,
+            title: data.nombreSolicitud,
+            fileName: fileName || this.getDocumentTitle(data.estado),
+            metadata: {
+              pdfOriginalName: fileName,
+              pdfSizeBytes: response.pdfSizeBytes || data.pdfSizeBytes,
+              isPdfMetadata: false,
+              isPdfFromService: true
+            }
+          };
+          this.isDetailModalVisible = false;
+          this.isDocumentViewVisible = true;
+          this.isLoadingDetails = false;
+          return;
+        }
+        // Si no hay URL, intentar siguiente estrategia
+        this.tryGetOriginalPdf(data);
+      },
+      error: (error) => {
+        this.tryGetOriginalPdf(data);
+      }
+    });
+  }
+
+  private tryGetOriginalPdf(data: SuccessModalData): void {
+    this.approvalService.getDocumentPdf(data.id!, this.currentUser!.idUsuario).subscribe({
+      next: (pdfBlob: Blob) => {
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        this.documentViewData = {
+          id: data.id!,
+          file: undefined,
+          url: pdfUrl,
+          title: data.nombreSolicitud,
+          fileName: data.pdfOriginalName || data.documentoFileName || this.getDocumentTitle(data.estado),
+          metadata: {
+            pdfOriginalName: data.pdfOriginalName || data.documentoFileName,
+            pdfSizeBytes: data.pdfSizeBytes,
+            isPdfMetadata: false,
+            isPdfFromService: true
+          }
+        };
+        this.isDetailModalVisible = false;
+        this.isDocumentViewVisible = true;
+        this.isLoadingDetails = false;
+      },
+      error: (pdfError) => {
+        this.tryGetAttachments(data);
+      }
+    });
+  }
+
+
+  private tryGetAttachments(data: SuccessModalData): void {
+    this.approvalService.getAttachments(data.id!, this.currentUser!.idUsuario).subscribe({
+      next: (attachments) => {
+        if (attachments && attachments.length > 0) {
+          // Usar el primer adjunto como documento
+          const attachment = attachments[0];
+          this.documentViewData = {
+            id: data.id!,
+            file: undefined,
+            url: undefined,
+            title: data.nombreSolicitud,
+            fileName: attachment.nombre || data.pdfOriginalName || this.getDocumentTitle(data.estado),
+            metadata: {
+              pdfOriginalName: attachment.nombre || data.pdfOriginalName,
+              pdfSizeBytes: attachment.tamaño || data.pdfSizeBytes,
+              isPdfMetadata: true,
+              error: 'Documento obtenido de adjuntos - puede requerir descarga manual'
+            }
+          };
+        } else {
+          // No hay adjuntos, intentar construir URL directa
+          this.tryConstructDirectUrl(data);
+        }
+        this.isDetailModalVisible = false;
+        this.isDocumentViewVisible = true;
+        this.isLoadingDetails = false;
+      },
+      error: (attachmentError) => {
+        this.tryConstructDirectUrl(data);
+      }
+    });
+  }
+
+  private tryConstructDirectUrl(data: SuccessModalData): void {
+    // Intentar diferentes patrones de URL basándose en la estructura de la API
+    const baseUrl = 'http://200.7.99.74:8080/api';
+    const possibleUrls = [
+      `${baseUrl}/solicitudes/${data.id}/documento`,
+      `${baseUrl}/solicitudes/${data.id}/pdf`,
+      `${baseUrl}/documentos/${data.id}`,
+      `${baseUrl}/solicitudes/${data.id}/archivo`
+    ];
+
+    let attempts = 0;
+    const maxAttempts = possibleUrls.length;
+
+    const tryNextUrl = () => {
+      if (attempts >= maxAttempts) {
+        this.showDocumentError(data, 'No se pudo obtener el documento del servidor, pero se tiene información del archivo');
+        return;
+      }
+
+      const url = possibleUrls[attempts];
+      
+      // Crear una imagen para probar si la URL es válida
+      const img = new Image();
+      img.onload = () => {
+        this.documentViewData = {
+          id: data.id!,
+          file: undefined,
+          url: url,
+          title: data.nombreSolicitud,
+          fileName: data.pdfOriginalName || data.documentoFileName || this.getDocumentTitle(data.estado),
+          metadata: {
+            pdfOriginalName: data.pdfOriginalName || data.documentoFileName,
+            pdfSizeBytes: data.pdfSizeBytes,
+            isPdfMetadata: false,
+            isPdfFromService: true
+          }
+        };
+        this.isDetailModalVisible = false;
+        this.isDocumentViewVisible = true;
+        this.isLoadingDetails = false;
+      };
+      
+      img.onerror = () => {
+        attempts++;
+        tryNextUrl();
+      };
+      
+      img.src = url;
+    };
+
+    tryNextUrl();
+  }
+
+  private showDocumentError(data: SuccessModalData, errorMessage: string): void {
+    this.isLoadingDetails = false;
+    this.documentViewData = {
+      id: data.id!,
+      file: undefined,
+      url: undefined,
+      title: data.nombreSolicitud,
+      fileName: data.pdfOriginalName || data.documentoFileName || this.getDocumentTitle(data.estado),
+      metadata: {
+        pdfOriginalName: data.pdfOriginalName || data.documentoFileName,
+        pdfSizeBytes: data.pdfSizeBytes,
+        isPdfMetadata: true,
+        error: errorMessage
+      }
+    };
+    this.isDetailModalVisible = false;
+    this.isDocumentViewVisible = true;
   }
 
   closeDocumentView(): void {
     this.isDocumentViewVisible = false;
     this.documentViewData = null;
+  }
+
+  private getDocumentTitle(estado?: string): string {
+    switch (estado) {
+      case 'Aprobada':
+        return 'Documento Aprobado';
+      case 'Rechazada':
+        return 'Documento Rechazado';
+      case 'Cancelada':
+        return 'Documento Cancelado';
+      case 'Pendiente':
+        return 'Documento de Solicitud';
+      case 'Enviada':
+        return 'Documento de Solicitud';
+      default:
+        return 'Documento';
+    }
   }
 
   handleOpenDocumentToApprove(data: SuccessModalData) {
@@ -346,13 +645,28 @@ export class Approvals implements OnInit, OnDestroy {
   }
 
   private updateRequestStatus(id: string | number, approvalStatus: 'APROBADO' | 'RECHAZADO', fullDataStatus: 'Aprobada' | 'Rechazada') {
-    this.approvalService.getApprovalDetails(id, this.allUsers).subscribe(request => {
-      if (request) {
-        request.status = approvalStatus;
-        if (request.fullData) {
+    // Obtener los detalles más actualizados del servidor
+    this.approvalService.getApprovalDetails(id, this.allUsers, this.currentUser?.idUsuario).subscribe({
+      next: (request) => {
+        if (request) {
+          request.status = approvalStatus;
+          if (request.fullData) {
             request.fullData.estado = fullDataStatus;
+          }
+          this.approvalService.updateApproval(request);
         }
-        this.approvalService.updateApproval(request);
+      },
+      error: (error) => {
+        // Fallback: actualizar localmente si falla la consulta al servidor
+        const currentApprovals = this.approvalService.approvalsSubject.getValue();
+        const approval = currentApprovals.find(a => a.id.toString() === id.toString());
+        if (approval) {
+          approval.status = approvalStatus;
+          if (approval.fullData) {
+            approval.fullData.estado = fullDataStatus;
+          }
+          this.approvalService.updateApproval(approval);
+        }
       }
     });
   }
