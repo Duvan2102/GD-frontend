@@ -42,11 +42,9 @@ export class Users implements OnInit, OnDestroy {
   isUserFormVisible = false;
   isPasswordModalVisible = false;
   isChangePasswordModalVisible = false;
-  isChange2FAMethodModalVisible = false;
   currentUser: Usuario | null = null;
   currentAction = '';
   mensajePasswordModal: string = '';
-  selected2FAMethod: 'GOOGLE_AUTH' | 'EMAIL' = 'GOOGLE_AUTH';
 
   isLoading = false;
   errorMessage = '';
@@ -130,13 +128,13 @@ export class Users implements OnInit, OnDestroy {
   filtrarUsuarios() {
     let filtrados = this.usuarios.filter(u => {
       if (this.activos) {
-        // Verificar múltiples formas de saber si está activo
+        // Verificar múltiples formas de saber si está activo o pendiente
         const estadoDescripcion = typeof u.estado === 'object'
           ? (u.estado.descripcion || '').toString().trim().toUpperCase()
           : String(u.estado || '').trim().toUpperCase();
 
         // Usar tanto la propiedad activo como el estado.descripcion para filtrar
-        return estadoDescripcion === 'ACTIVO' || u.activo === true;
+        return estadoDescripcion === 'ACTIVO' || estadoDescripcion === 'PENDIENTE' || u.activo === true;
       } else {
         return true;
       }
@@ -152,13 +150,6 @@ export class Users implements OnInit, OnDestroy {
       );
     }
 
-    // Debug para ver qué usuarios se están filtrando
-    console.log('Usuarios filtrados:', filtrados.map(u => ({
-      nombre: u.nombres,
-      estado: u.estado,
-      activo: u.activo
-    })));
-
     this.usuariosFiltradosLength = filtrados.length;
     const start = (this.paginaActual - 1) * this.itemsPerPage;
     this.usuariosFiltrados = filtrados.slice(start, start + this.itemsPerPage);
@@ -172,7 +163,7 @@ export class Users implements OnInit, OnDestroy {
   }
 
   onToggleActivos(checked: boolean) {
-    this.activos = checked;
+    this.activos = !checked;
     this.paginaActual = 1;
     this.filtrarUsuarios();
   }
@@ -219,12 +210,7 @@ export class Users implements OnInit, OnDestroy {
         this.isPasswordModalVisible = true;
         break;
 
-      case 'cambiarMetodo2FA':
-        this.isChange2FAMethodModalVisible = true;
-        break;
-
       default:
-        console.log('Acción no reconocida:', tipo);
     }
   }
 
@@ -266,7 +252,6 @@ export class Users implements OnInit, OnDestroy {
           .pipe(takeUntil(this.destroy$))
           .subscribe({
             next: (response: any) => {
-              console.log('QR eliminado exitosamente:', response);
               this.mostrarModalSuccess('Código QR eliminado con éxito', 'Aceptar');
               this.cargarUsuarios();
               this.isPasswordModalVisible = false;
@@ -282,15 +267,11 @@ export class Users implements OnInit, OnDestroy {
           });
       }
     } else {
-      // Para otras acciones que requieren contraseña
       this.confirmAction(password);
     }
   }
 
-  handlePasswordValidationError(error: string): void {
-    // El error ya se muestra en el modal, no necesitamos hacer nada adicional aquí
-    console.log('Error de validación de contraseña:', error);
-  }
+  handlePasswordValidationError(error: string): void {}
 
   confirmAction(password: string): void {
     if (!password.trim()) {
@@ -338,7 +319,6 @@ export class Users implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response: any) => {
-          console.log('Usuario desactivado exitosamente:', response);
           this.mostrarModalSuccess('Usuario inactivado con éxito', 'Aceptar');
           this.cargarUsuarios();
         },
@@ -356,7 +336,6 @@ export class Users implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response: any) => {
-          console.log('Usuario activado exitosamente:', response);
           this.mostrarModalSuccess('Usuario activado con éxito', 'Aceptar');
           this.cargarUsuarios();
         },
@@ -375,7 +354,6 @@ export class Users implements OnInit, OnDestroy {
 
 
       default:
-        console.log('Acción no reconocida en validación:', this.currentAction);
     }
 
     if (this.currentAction !== 'cambiarContraseña') {
@@ -452,7 +430,6 @@ onAceptarConfirmacion() {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response: any) => {
-            console.log('Contraseña cambiada exitosamente:', response);
             this.mostrarModalSuccess('Contraseña cambiada con éxito', 'Aceptar');
             this.cargarUsuarios();
           },
@@ -464,45 +441,4 @@ onAceptarConfirmacion() {
     }
   }
 
-  // Métodos para el modal de cambio de método 2FA
-  closeChange2FAMethodModal(): void {
-    this.isChange2FAMethodModalVisible = false;
-    this.currentUser = null;
-    this.selected2FAMethod = 'GOOGLE_AUTH';
-  }
-
-  on2FAMethodChange(): void {
-    if (!this.currentUser || !this.currentUser.idUsuario) {
-      alert('Usuario no válido');
-      return;
-    }
-
-    this.authService.change2FAMethod(this.currentUser.idUsuario, this.selected2FAMethod)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response: any) => {
-          console.log('Método 2FA cambiado exitosamente:', response);
-
-          if (response.success) {
-            const metodoTexto = this.selected2FAMethod === 'GOOGLE_AUTH' ? 'Google Authenticator' : 'Correo electrónico';
-            let mensaje = response.message;
-
-            // Si hay QR generado, mostrar información adicional
-            if (response.qrCodeUrl) {
-              mensaje += `\n\nSe ha generado un nuevo código QR que el usuario deberá escanear en su próximo login.`;
-            }
-
-            this.mostrarModalSuccess(mensaje, 'Aceptar');
-            this.closeChange2FAMethodModal();
-            this.cargarUsuarios();
-          } else {
-            alert('Error al cambiar el método de 2FA: ' + (response.message || 'Error desconocido'));
-          }
-        },
-        error: (error: any) => {
-          console.error('Error cambiando método 2FA:', error);
-          alert('Error al cambiar el método de 2FA: ' + (error.error?.message || error.message || 'Error desconocido'));
-        }
-      });
-  }
 }

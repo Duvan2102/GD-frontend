@@ -28,7 +28,6 @@ export class LoginComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Si ya está autenticado, redirigir al inicio
     if (this.authService.getCurrentUserValue()) {
       this.router.navigate(['/']);
     }
@@ -44,22 +43,8 @@ export class LoginComponent implements OnInit {
       // Usar el método de login con 2FA OBLIGATORIO (actualizado)
       this.authService.loginWith2FA(usuario, password).subscribe({
         next: (response) => {
-          console.log('Login response:', response);
-          console.log('Response details:', {
-            success: response.success,
-            requires2FA: response.requires2FA,
-            dobleAutenticacion: response.dobleAutenticacion,
-            tempToken: response.tempToken
-          });
-
           if (response.success && response.requires2FA) {
-            // Siempre requiere 2FA - verificar estado para determinar el flujo
-            console.log('2FA required, navigating to state check...');
-            this.router.navigate(['/two-fa-state']).then(navigated => {
-              console.log('Navigation to two-fa-state result:', navigated);
-            });
-          } else {
-            console.log('Unexpected response state:', response);
+            this.router.navigate(['/two-fa-state']);
           }
           this.isLoading = false;
         },

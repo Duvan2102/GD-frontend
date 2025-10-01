@@ -116,6 +116,15 @@
 .user-form-modal {
   border-radius: 8px;
   overflow: hidden;
+  max-width: 620px;
+  width: 95vw;
+  background: #f8f9fa;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  z-index: 1055;
+  border: 2px solid #ddd;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 .user-form-modal .modal-header {
@@ -214,7 +223,7 @@
 }
 
 .dropdown-content {
-  padding: 0.5rem 0 1rem 0; /* Padding inferior agregado */
+  padding: 0.5rem 0 1rem 0;
 }
 
 .dropdown-item {
@@ -490,6 +499,11 @@
   border-radius: 4px;
   margin: 0.2rem 0;
   padding: 0.1rem 0;
+}
+
+.custom-backdrop {
+  backdrop-filter: blur(3px);
+  background-color: rgba(128, 128, 128, 0.6);
 }
 
 * {

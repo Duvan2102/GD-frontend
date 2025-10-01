@@ -64,16 +64,13 @@ export interface SuccessModalData {
   destinatarios: DestinatarioData[];
   documentoAprobacion?: File;
   anexos?: File[];
-  // Campos adicionales para documentos
   documentoUrl?: string;
   documentoFileName?: string;
-  // Campos del modal
   creador: Usuario | null;
   fechaCreacion?: Date;
   estado?: EstadoSolicitud;
   approverStates?: AprobadorState[];
   historialGestiones?: GestionHistorial[];
-  // Campos adicionales de la API
   destinatariosTotal?: number;
   destinatariosAprobados?: number;
   pdfOriginalName?: string;
@@ -96,8 +93,8 @@ export class RequestSuccessModal implements OnChanges {
   @Input() usuariosDisponibles: Usuario[] = [];
   @Input() isApprovalFlow = false;
   @Input() hideManageButton = false;
-  @Input() hideViewDocumentButton = false; // Nuevo input para ocultar el botón de visualizar documento
-  @Input() currentUser: UsuarioData | null = null; // Usuario actual para las llamadas al servicio
+  @Input() hideViewDocumentButton = false;
+  @Input() currentUser: UsuarioData | null = null;
 
   @Output() close = new EventEmitter<void>();
   @Output() cancelRequest = new EventEmitter<{ solicitudId: string | number, comentario?: string }>();
@@ -132,7 +129,6 @@ export class RequestSuccessModal implements OnChanges {
 
     // Mapear destinatarios y asignar orden secuencial
     const mappedApprovers = this.data.destinatarios.map((dest: DestinatarioData, index: number) => {
-      // Usar la misma lógica de búsqueda que ApprovalService
       const findUserById = (id?: number): any => {
         if (!id) return undefined;
 
@@ -169,9 +165,9 @@ export class RequestSuccessModal implements OnChanges {
         nombresApellidos: usuario ? `${usuario.nombres} ${usuario.apellidos}` : (dest.nombre || 'Usuario no encontrado'),
         correo: usuario?.correoEmpresarial || 'correo@ejemplo.com',
         area: this.extractAreaString(usuario),
-        fecha: dest.fechaDecision ? new Date(dest.fechaDecision) : null, // Solo fecha de decisión real, no fecha de creación
+        fecha: dest.fechaDecision ? new Date(dest.fechaDecision) : null,
         estado: estadoAprobador,
-        orden: index + 1 // Siempre asignar orden secuencial basado en el índice
+        orden: index + 1
       };
     });
 
@@ -194,7 +190,6 @@ export class RequestSuccessModal implements OnChanges {
 
       // Si es objeto, buscar propiedades comunes
       if (typeof field === 'object') {
-        // Buscar propiedades comunes en objetos de cargo/rol
         const possibleKeys = ['nombre', 'name', 'descripcion', 'description', 'titulo', 'title', 'valor', 'value'];
 
         for (const key of possibleKeys) {
@@ -231,7 +226,6 @@ export class RequestSuccessModal implements OnChanges {
 
       // Permitir cargos y roles válidos (solo letras y espacios)
       if (/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(fieldValue) && fieldValue.length < 50) {
-        // Solo rechazar si parece ser un nombre personal (muy corto o muy común)
         const personalNames = ['juan', 'carlos', 'maria', 'ana', 'luis', 'pedro', 'jose', 'antonio'];
         const lowerValue = fieldValue.toLowerCase();
 
@@ -239,7 +233,7 @@ export class RequestSuccessModal implements OnChanges {
         const jobKeywords = ['analista', 'desarrollador', 'administrador', 'gerente', 'director', 'coordinador', 'supervisor', 'asistente', 'especialista', 'consultor', 'ingeniero', 'arquitecto', 'diseñador', 'programador', 'soporte', 'ventas', 'marketing', 'recursos', 'humanos', 'finanzas', 'contabilidad', 'operaciones', 'logistica', 'calidad', 'seguridad', 'sistemas', 'tecnologia', 'informatica'];
 
         if (jobKeywords.some(keyword => lowerValue.includes(keyword))) {
-          return true; // Es un cargo/rol válido
+          return true;
         }
 
         // Si es muy corto y parece nombre personal, rechazarlo
@@ -324,7 +318,6 @@ export class RequestSuccessModal implements OnChanges {
         const fieldValue = user[fieldName];
         const extractedValue = extractFieldValue(fieldValue, fieldName);
         if (extractedValue && extractedValue.length > 0) {
-          // Para campos de respaldo, ser más permisivo
           if (!extractedValue.toLowerCase().includes('null') && !extractedValue.toLowerCase().includes('undefined')) {
             area = extractedValue;
             break;
@@ -411,7 +404,7 @@ export class RequestSuccessModal implements OnChanges {
     this.isConfirmationModalVisible = false;
 
     if (event.confirmed && this.data?.id) {
-      const comentario = event.comment?.trim() || ''; // Ensure it's a string
+      const comentario = event.comment?.trim() || '';
       this.cancelRequest.emit({
         solicitudId: this.data.id,
         comentario: comentario
@@ -447,8 +440,6 @@ export class RequestSuccessModal implements OnChanges {
   }
 
   getOrderNumber(orden?: number, index?: number): number {
-    // Siempre usar el índice + 1 para orden secuencial
-    // El índice viene del *ngFor y garantiza secuencia 1, 2, 3, 4...
     return (index || 0) + 1;
   }
 
@@ -469,7 +460,6 @@ export class RequestSuccessModal implements OnChanges {
   }
 
   hasDocument(): boolean {
-    // Verificar si hay algún documento disponible (archivo, URL, o metadatos PDF)
     return !!(this.data?.documentoAprobacion ||
               this.data?.documentoUrl ||
               this.data?.pdfOriginalName ||
@@ -482,28 +472,23 @@ export class RequestSuccessModal implements OnChanges {
   }
 
   hasMainDocument(): boolean {
-    // El recuadro rojo es específicamente para adjuntos/anexos
-    // No debe mostrar documento principal (ese va en el botón "VISUALIZAR DOCUMENTO")
     return !!(this.data?.adjuntos && this.data.adjuntos.length > 0) ||
            !!this.data?.documentosAnexos ||
            !!(this.data?.anexos && this.data.anexos.length > 0);
   }
 
   hasOnlyAnexos(): boolean {
-    // Solo mostrar anexos si NO hay documento principal
     return !this.hasMainDocument() &&
            !!(this.data?.anexos && this.data.anexos.length > 0);
   }
 
   hasAttachments(): boolean {
-    // Verificar si hay adjuntos disponibles para mostrar en el recuadro rojo
     return !!(this.data?.adjuntos && this.data.adjuntos.length > 0) ||
            !!this.data?.documentosAnexos ||
            !!(this.data?.anexos && this.data.anexos.length > 0);
   }
 
   getMainDocumentName(): string {
-    // Para el recuadro rojo, siempre mostrar información de adjuntos/anexos
     if (this.data?.adjuntos && this.data.adjuntos.length > 0) {
       return `Adjunto: ${this.data.adjuntos[0].originalName || 'Documento adjunto'}`;
     }
@@ -517,7 +502,6 @@ export class RequestSuccessModal implements OnChanges {
   }
 
   viewMainDocument(): void {
-    // El recuadro rojo siempre maneja adjuntos, no documento principal
     this.handleAttachmentsDownload();
   }
 
@@ -552,7 +536,6 @@ export class RequestSuccessModal implements OnChanges {
   }
 
   private findMainAttachment(attachments: any[]): any {
-    // Buscar el adjunto principal (puede ser el primero o uno con nombre específico)
     return attachments.find(att =>
       att.originalName?.toLowerCase().includes('principal') ||
       att.originalName?.toLowerCase().includes('documento') ||
@@ -567,7 +550,6 @@ export class RequestSuccessModal implements OnChanges {
 
     this.approvalService.downloadAttachment(this.data.id, attachment.id, this.currentUser.idUsuario).subscribe({
       next: (blob) => {
-        // Crear URL del blob y descargar
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -606,7 +588,6 @@ export class RequestSuccessModal implements OnChanges {
   }
 
   hasHistorialGestiones(): boolean {
-    // Solo mostrar si hay gestiones válidas (ya filtradas por el servicio)
     return !!(this.data?.historialGestiones && this.data.historialGestiones.length > 0);
   }
 
@@ -709,9 +690,6 @@ export class RequestSuccessModal implements OnChanges {
       }
     }
 
-    // Fallback: Si no hay historial pero está cancelada, mostrar información básica
-
-    // Buscar información de cancelación en otros campos de la solicitud
     const fechaCancelacion = (this.data as any)?.fechaCancelacion || (this.data as any)?.fechaActualizacion || this.data?.fechaCreacion;
     const comentarioCancelacion = (this.data as any)?.comentarioCancelacion || (this.data as any)?.motivoCancelacion;
 
@@ -726,12 +704,7 @@ export class RequestSuccessModal implements OnChanges {
   }
 
   getRejectionInfo(): { fecha: Date, comentario: string } | null {
-    console.log('getRejectionInfo - Estado:', this.data?.estado);
-    console.log('getRejectionInfo - Historial:', this.data?.historialGestiones);
-    console.log('getRejectionInfo - Data completa:', this.data);
-
     if (this.data?.estado !== 'Rechazada') {
-      console.log('getRejectionInfo - No está rechazada');
       return null;
     }
 
@@ -742,8 +715,6 @@ export class RequestSuccessModal implements OnChanges {
         (gestion as any).accion === 'RECHAZAR' ||
         (gestion as any).accion === 'RECHAZO'
       );
-
-      console.log('getRejectionInfo - Rechazo en historialGestiones:', rechazo);
 
       if (rechazo) {
         return {
@@ -756,16 +727,12 @@ export class RequestSuccessModal implements OnChanges {
     // Buscar en otros campos posibles del historial
     const historialRaw = (this.data as any)?.historial || (this.data as any)?.historialAcciones || (this.data as any)?.gestiones;
     if (Array.isArray(historialRaw)) {
-      console.log('getRejectionInfo - Historial raw:', historialRaw);
-
       const rechazo = historialRaw.find((item: any) =>
         item.accion === 'RECHAZAR' ||
         item.accion === 'RECHAZO' ||
         item.tipo === 'RECHAZAR' ||
         item.tipo === 'RECHAZO'
       );
-
-      console.log('getRejectionInfo - Rechazo en historial raw:', rechazo);
 
       if (rechazo) {
         return {
@@ -776,21 +743,18 @@ export class RequestSuccessModal implements OnChanges {
     }
 
     // Fallback: Si no hay historial pero está rechazada, mostrar información básica
-    console.log('getRejectionInfo - No se encontró información de rechazo en historial');
 
     // Buscar información de rechazo en otros campos de la solicitud
     const fechaRechazo = (this.data as any)?.fechaRechazo || (this.data as any)?.fechaActualizacion || this.data?.fechaCreacion;
     const comentarioRechazo = (this.data as any)?.comentarioRechazo || (this.data as any)?.motivoRechazo;
 
     if (fechaRechazo) {
-      console.log('getRejectionInfo - Usando información de fallback:', { fechaRechazo, comentarioRechazo });
       return {
         fecha: new Date(fechaRechazo),
         comentario: comentarioRechazo || 'Solicitud rechazada'
       };
     }
 
-    console.log('getRejectionInfo - No se encontró información de rechazo');
     return null;
   }
 
@@ -802,7 +766,7 @@ export class RequestSuccessModal implements OnChanges {
         comentario: comentario,
         usuario: approver.nombresApellidos,
         fecha: approver.fecha || new Date(),
-        tipo: 'ENVIO' // Using ENVIO as fallback since COMENTARIO is not in the original type
+        tipo: 'ENVIO'
       };
       this.isCommentModalVisible = true;
     }
@@ -813,7 +777,6 @@ export class RequestSuccessModal implements OnChanges {
       try {
         const url = URL.createObjectURL(doc);
         window.open(url, '_blank');
-        // Limpiar la URL después de un tiempo para liberar memoria
         setTimeout(() => URL.revokeObjectURL(url), 10000);
       } catch (error) {
         alert('Error al abrir el documento. Por favor, inténtalo de nuevo.');

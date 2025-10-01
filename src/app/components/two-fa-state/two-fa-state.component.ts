@@ -28,7 +28,6 @@ export class TwoFAStateComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Verificar si realmente se requiere 2FA
     if (!this.authService.isTwoFARequired()) {
       this.router.navigate(['/login']);
       return;
@@ -46,7 +45,6 @@ export class TwoFAStateComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(state => {
         this.twoFAState = state;
-        console.log('Estado 2FA actualizado:', state);
       });
 
     // Verificar estado de 2FA
@@ -64,7 +62,6 @@ export class TwoFAStateComponent implements OnInit, OnDestroy {
 
     this.authService.check2FAStatus().subscribe({
       next: (response) => {
-        console.log('Estado 2FA:', response);
         this.isLoading = false;
 
         // Determinar qué acción tomar basado en el estado
@@ -84,24 +81,18 @@ export class TwoFAStateComponent implements OnInit, OnDestroy {
       return;
     }
 
-    console.log('Determinando acción con estado:', this.twoFAState);
-
     // Nuevo flujo basado en la documentación actualizada
     if (this.twoFAState.googleAuthPending) {
       // Google Auth está pendiente de configuración
-      console.log('Google Auth pendiente, navegando a verificación para obtener QR');
       this.router.navigate(['/two-fa-verification']);
     } else if (this.twoFAState.hasGoogleAuth) {
       // Usuario tiene Google Auth configurado y confirmado
-      console.log('Usuario tiene Google Auth configurado, navegando a verificación');
       this.router.navigate(['/two-fa-verification']);
     } else if (this.twoFAState.hasEmailBackup && !this.twoFAState.hasGoogleAuth) {
       // Usuario tiene solo email configurado
-      console.log('Usuario tiene solo email configurado, navegando a verificación');
       this.router.navigate(['/two-fa-verification']);
     } else {
       // Estado inesperado
-      console.log('Estado inesperado:', this.twoFAState);
       this.errorMessage = 'Estado de configuración 2FA no reconocido';
     }
   }

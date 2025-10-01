@@ -27,8 +27,6 @@ export class ResetPassword {
     private router: Router,
     private route: ActivatedRoute
   ) {
-    console.log('ResetPassword component initialized');
-    
     this.resetForm = this.fb.group({
       newPassword: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', [Validators.required]]
@@ -79,7 +77,6 @@ export class ResetPassword {
       this.tokenValid = response?.valid || false;
 
       if (this.tokenValid) {
-        // Obtener información del usuario
         await this.getUserInfo();
       } else {
         this.errorMessage = 'Token inválido o expirado';
@@ -97,7 +94,6 @@ export class ResetPassword {
     try {
       const response = await this.passwordResetService.getUserInfoByToken(this.token).toPromise();
       this.userInfo = response;
-      console.log('User info:', this.userInfo);
     } catch (error: any) {
       console.error('Error getting user info:', error);
       this.errorMessage = 'Error obteniendo información del usuario';
@@ -105,10 +101,6 @@ export class ResetPassword {
   }
 
   async onResetPassword() {
-    console.log('onResetPassword called');
-    console.log('Form valid:', this.resetForm.valid);
-    console.log('Token valid:', this.tokenValid);
-    
     if (this.resetForm.valid && this.tokenValid) {
       this.isLoading = true;
       this.errorMessage = '';
@@ -117,11 +109,9 @@ export class ResetPassword {
 
       try {
         const newPassword = this.resetForm.value.newPassword;
-        console.log('Resetting password for token:', this.token);
-        
+
         const response = await this.passwordResetService.resetPassword(this.token, newPassword).toPromise();
-        console.log('Reset response:', response);
-        
+
         this.successMessage = response?.message || 'Contraseña restablecida exitosamente';
         this.showSuccessMessage = true;
         
@@ -136,13 +126,11 @@ export class ResetPassword {
         this.isLoading = false;
       }
     } else {
-      console.log('Form is invalid or token is invalid, marking as touched');
       this.resetForm.markAllAsTouched();
     }
   }
 
   onSubmit() {
-    console.log('onSubmit called');
     this.onResetPassword();
   }
 

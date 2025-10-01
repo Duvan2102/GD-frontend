@@ -31,27 +31,20 @@ export class AuthService {
   }
 
   private initializeAuth(): void {
-    console.log('🔐 AuthService: Inicializando autenticación...');
     const token = localStorage.getItem(this.tokenKey);
-    console.log('🔐 Token encontrado:', !!token);
 
     if (token) {
-      console.log('🔐 Token existe, cargando usuario...');
       // En un caso real, aquí se validaría el token con el backend
       // Por ahora, solo verificamos que existe
       this.loadUserFromToken();
-    } else {
-      console.log('🔐 No hay token, usuario no autenticado');
     }
   }
 
   private loadUserFromToken(): void {
     // Validar el token con el backend y recuperar la información del usuario
-    console.log('🔐 AuthService: Cargando usuario desde token...');
 
     // Si ya hay un usuario cargado, no hacer nada
     if (this.currentUser) {
-      console.log('🔐 Usuario ya cargado:', this.currentUser);
       return;
     }
 
@@ -61,9 +54,6 @@ export class AuthService {
         if (user) {
           this.currentUser = user;
           this.currentUserSubject.next(user);
-          console.log('🔐 Usuario cargado exitosamente desde token:', user);
-        } else {
-          console.log('🔐 No se pudo cargar usuario desde token');
         }
       },
       error: (error) => {
@@ -83,7 +73,6 @@ export class AuthService {
   private validateTokenAndLoadUser(): Observable<UsuarioData | null> {
     const token = this.getToken();
     if (!token) {
-      console.log('No token found, returning null');
       return of(null);
     }
 
@@ -92,21 +81,14 @@ export class AuthService {
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser);
-        console.log('User data recovered from localStorage:', userData);
-
-        // Validar que el token no esté expirado (verificación básica)
-        // En un caso real, aquí se decodificaría el JWT para verificar la expiración
-        // Por ahora, asumimos que si hay token y datos de usuario, la sesión es válida
         return of(userData);
       } catch (error) {
         console.error('Error parsing stored user data:', error);
-        // Si hay error al parsear, limpiar datos corruptos
         this.clearAuthData();
         return of(null);
       }
     }
 
-    console.log('No stored user data found');
     return of(null);
   }
 
@@ -130,7 +112,7 @@ export class AuthService {
       },
       rol: mockUser.rol?.descripcion || '',
       estado: mockUser.estado?.descripcion || '',
-      tipologias: [] // Se cargarían desde el backend
+      tipologias: []
     };
   }
 
@@ -170,17 +152,11 @@ export class AuthService {
       password: password
     };
 
-    console.log('Sending login request to:', `${this.apiUrl}/auth/login`);
-    console.log('Login request data:', loginRequest);
-
     return this.http.post<AuthResponse>(`${this.apiUrl}/auth/login`, loginRequest)
       .pipe(
         map((response: AuthResponse) => {
-          console.log('Login response received:', response);
-
           // Guardar el token
           localStorage.setItem(this.tokenKey, response.token);
-          console.log('Token saved to localStorage');
 
           // Actualizar el usuario actual
           this.currentUser = response.usuario;
@@ -188,8 +164,6 @@ export class AuthService {
 
           // Guardar la información del usuario en localStorage para persistencia
           localStorage.setItem('current_user_data', JSON.stringify(this.currentUser));
-
-          console.log('Current user updated:', this.currentUser);
 
           return true;
         }),
@@ -199,8 +173,6 @@ export class AuthService {
         })
       );
   }
-
-
 
   // Método de logout
   logout(): Observable<boolean> {
@@ -218,7 +190,6 @@ export class AuthService {
         }),
         catchError((error: any) => {
           console.error('Error en logout:', error);
-          // Aunque falle el logout en el backend, limpiar datos locales
           this.clearAuthData();
           return throwError(() => error);
         })
@@ -250,21 +221,9 @@ export class AuthService {
     const hasStoredUser = this.hasStoredUserData();
     const isActive = this.currentUser?.estado === 'Activo' || this.currentUser?.estado === 'ACTIVO' || this.currentUser?.estado === 'activo';
 
-    console.log('🔍 AuthService: Verificando autenticación:', {
-      hasUser,
-      hasToken,
-      hasStoredUser,
-      isActive,
-      estado: this.currentUser?.estado,
-      currentUser: this.currentUser
-    });
-
-    // Si hay token y datos de usuario almacenados, considerar autenticado
-    // incluso si el usuario aún no se ha cargado completamente
     const result = hasToken && (hasUser || hasStoredUser) && (isActive || !this.currentUser?.estado);
-    console.log('🔍 Resultado de autenticación:', result);
 
-    return result; // Si no hay estado, asumir activo
+    return result;
   }
 
   // Obtener el token actual
@@ -289,7 +248,6 @@ export class AuthService {
     }).pipe(
       catchError((error: any) => {
         console.error('Error validando contraseña:', error);
-        // Si hay error de autenticación, devolver respuesta de contraseña incorrecta
         if (error.status === 401) {
           return of({
             valid: false,
@@ -348,10 +306,6 @@ export class AuthService {
     return this.http.post<TwoFARequiredResponse>(`${this.apiUrl}/auth/login`, loginRequest)
       .pipe(
         map((response: TwoFARequiredResponse) => {
-          console.log('Login response received:', response);
-
-          // El backend SIEMPRE devuelve tempToken y dobleAutenticacion: true
-          // Guardar el token temporal y configurar estado de 2FA
           this.setTempToken(response.tempToken);
           this.twoFARequiredSubject.next(true);
           this.twoFAUserSubject.next(response.usuario);
@@ -381,7 +335,6 @@ export class AuthService {
 
     return this.http.get<TwoFAStatusResponse>(`${this.apiUrl}/auth/2fa-status/${currentUser}`).pipe(
       map((response: TwoFAStatusResponse) => {
-        // Actualizar estado interno con el nuevo campo googleAuthPending
         const state: TwoFAState = {
           hasGoogleAuth: response.hasGoogleAuth,
           hasEmailBackup: response.hasEmailBackup,
@@ -448,28 +401,17 @@ export class AuthService {
       }
     }).pipe(
         map((response: any) => {
-          console.log('🔐 ===== RESPUESTA VALIDACIÓN 2FA =====');
-          console.log('🔐 Response completa:', JSON.stringify(response, null, 2));
-          console.log('🔐 Tiene token:', !!response.token);
-          console.log('🔐 Tiene usuario:', !!response.usuario);
-          console.log('🔐 Tiene QR:', !!response.qrCodeUrl);
-          
           // Si la respuesta contiene token y usuario, el código fue válido
           if (response.token && response.usuario) {
-            console.log('🔐 ✅ Código 2FA válido - Guardando datos de sesión');
-            
             // Guardar el token final
             localStorage.setItem(this.tokenKey, response.token);
-            console.log('🔐 Token final guardado en localStorage');
 
             // Actualizar el usuario actual
             this.currentUser = response.usuario;
             this.currentUserSubject.next(this.currentUser);
-            console.log('🔐 Usuario actual actualizado:', this.currentUser);
 
             // Guardar la información del usuario en localStorage para persistencia
             localStorage.setItem('current_user_data', JSON.stringify(this.currentUser));
-            console.log('🔐 Datos de usuario guardados en localStorage');
 
             // Persistir el método 2FA usado en localStorage
             const current2FAState = this.twoFAStateSubject.value;
@@ -480,24 +422,16 @@ export class AuthService {
                 metodoActual: current2FAState.metodoActual,
                 timestamp: Date.now()
               }));
-              console.log('🔐 Método 2FA persistido:', current2FAState);
             }
 
-            // IMPORTANTE: NO limpiar tempToken para poder usarlo en aprobaciones
-            console.log('🔐 ⚠️ MANTENIENDO tempToken para aprobaciones:', tempToken);
-
-            // Limpiar estado de 2FA requerido pero mantener el estado del método usado
             this.twoFARequiredSubject.next(false);
             this.twoFAUserSubject.next('');
-            // NO limpiar twoFAStateSubject para mantener el método 2FA usado durante el login
-            // NO limpiar tempToken para poder usarlo en aprobaciones
 
             return { success: true };
           }
 
           // Si la respuesta contiene QR, significa que Google Auth está pendiente
           if (response.qrCodeUrl && response.secret) {
-            console.log('🔐 ⚠️ Google Auth pendiente - mostrando QR');
             return {
               success: false,
               qrCodeUrl: response.qrCodeUrl,
@@ -507,7 +441,6 @@ export class AuthService {
           }
 
           // Si no es ninguno de los casos anteriores, asumir error
-          console.log('🔐 ❌ Respuesta inesperada del servidor');
           return { success: false, message: 'Respuesta inesperada del servidor' };
         }),
         catchError((error: any) => {
@@ -612,7 +545,6 @@ export class AuthService {
       }
     }).pipe(
       map((response: UnlinkGoogleAuthResponse) => {
-        // Actualizar estado después de desvincular
         this.check2FAStatus().subscribe();
         return response;
       }),
@@ -630,8 +562,6 @@ export class AuthService {
     this.twoFARequiredSubject.next(false);
     this.twoFAUserSubject.next('');
     this.twoFAStateSubject.next(null);
-    // NO limpiar tempToken para poder usarlo en aprobaciones
-    // this.clearTempToken();
   }
 
   // Limpiar tempToken solo cuando sea necesario (ej: logout)

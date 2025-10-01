@@ -34,7 +34,7 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
   // Propiedades para timer de 90 segundos
   timeRemaining: number = 90;
   private timerInterval?: number;
-  private readonly TIMER_DURATION = 90; // segundos
+  private readonly TIMER_DURATION = 90;
   
   private destroy$ = new Subject<void>();
 
@@ -49,7 +49,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Verificar si realmente se requiere 2FA
     if (!this.authService.isTwoFARequired()) {
       this.router.navigate(['/login']);
       return;
@@ -71,7 +70,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
       .subscribe(state => {
         if (state) {
           this.twoFAState = state;
-          console.log('Estado 2FA en verificación:', state);
 
           // Si Google Auth está pendiente, intentar validar para obtener QR
           if (state.googleAuthPending) {
@@ -116,7 +114,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
           if (response.success) {
             this.router.navigate(['/']);
           } else if (response.qrCodeUrl && response.secret) {
-            // Google Auth pendiente - mostrar QR
             this.showQRCode = true;
             this.qrScanned = false;
             this.qrSecret = response.secret;
@@ -145,7 +142,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
 
     this.authService.sendEmailCode().subscribe({
       next: (response) => {
-        console.log('Código enviado por email automáticamente:', response.message);
         this.emailSent = true;
         this.errorMessage = '';
         this.startResendTimer();
@@ -165,7 +161,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
 
     this.authService.sendEmailCode().subscribe({
       next: (response) => {
-        console.log('Código enviado por email:', response.message);
         this.emailSent = true;
         this.errorMessage = '';
         this.startResendTimer();
@@ -221,7 +216,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
 
   // Nuevo método para intentar validación y obtener QR automáticamente
   private attemptValidationForQR(): void {
-    // Intentar validar con un código vacío para obtener el QR
     this.authService.validate2FACode('').subscribe({
       next: (response) => {
         if (response.qrCodeUrl && response.secret) {
@@ -229,14 +223,9 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
           this.qrSecret = response.secret;
           this.generateQRCode(response.qrCodeUrl);
           this.errorMessage = response.message || 'Configura Google Authenticator escaneando el código QR';
-        } else {
-          // Si no hay QR, continuar con el flujo normal
-          console.log('No se obtuvo QR, continuando con flujo normal');
         }
       },
       error: (error) => {
-        console.log('No se pudo obtener QR automáticamente:', error);
-        // No mostrar error, simplemente continuar con el flujo normal
       }
     });
   }
@@ -268,8 +257,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
 
     this.authService.confirmGoogleAuthenticator(codigo, this.qrSecret).subscribe({
       next: (response) => {
-        console.log('Google Auth confirmado:', response.message);
-        // Después de confirmar, validar directamente con el código ingresado
         this.validate2FACodeAfterGoogleAuthSetup(codigo);
       },
       error: (error) => {
@@ -287,7 +274,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
         if (response.success) {
           this.router.navigate(['/']);
         } else {
-          // Si no funciona, mostrar mensaje de error específico
           this.errorMessage = response.message || 'Código de verificación incorrecto. Intenta nuevamente.';
           this.isLoading = false;
         }
@@ -347,7 +333,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
     const value = input.value;
 
     if (value.length === 6) {
-      // Si se completan 6 dígitos, intentar validar automáticamente
       if (this.verificationForm.valid) {
         this.onSubmit();
       }
@@ -377,20 +362,17 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
   }
 
   get shouldShowEmailOption(): boolean {
-    // Mostrar opción de email si el método actual es EMAIL o si no hay Google Auth configurado
     return this.twoFAState?.metodoActual === 'EMAIL' || 
            (!this.hasGoogleAuth && this.hasEmailBackup && !this.googleAuthPending);
   }
 
   get shouldShowGoogleAuthOption(): boolean {
-    // Mostrar opción de Google Auth si el método actual es GOOGLE_AUTH o si está configurado
     return this.twoFAState?.metodoActual === 'GOOGLE_AUTH' || 
            (this.hasGoogleAuth && !this.googleAuthPending);
   }
 
   // Getter para determinar el tipo de 2FA activo
   get current2FAMethod(): 'GOOGLE_AUTH' | 'EMAIL' | 'QR_SETUP' | 'UNKNOWN' {
-    // Si está mostrando QR, es configuración
     if (this.showQRCode && this.qrCodeDataUrl) {
       return 'QR_SETUP';
     }
@@ -443,9 +425,7 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
   }
 
   private onTimerExpired(): void {
-    // Cuando el timer expira, redirigir al login
     this.authService.clear2FAState();
     this.router.navigate(['/login']);
   }
 }
-

@@ -61,12 +61,12 @@ export class PageMain implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadUserData();
 
-    // Actualizar estadísticas cada 30 segundos
+    // Actualizar estadísticas cada 5 minutos para optimizar rendimiento
     const updateInterval = setInterval(() => {
       if (this.currentUser) {
         this.loadApprovalStats();
       }
-    }, 30000);
+    }, 300000);
 
     // Limpiar el interval cuando el componente se destruya
     this.subscriptions.push({
@@ -134,7 +134,6 @@ export class PageMain implements OnInit, OnDestroy {
       )
       .subscribe(stats => {
         this.receivedStats = stats;
-        console.log('Estadísticas recibidas (todas):', stats);
       });
 
     // Enviadas: creadas por el usuario (incluye todos los estados devueltos por el backend)
@@ -148,7 +147,6 @@ export class PageMain implements OnInit, OnDestroy {
       )
       .subscribe(stats => {
         this.sentStats = stats;
-        console.log('Estadísticas enviadas:', stats);
       });
 
     this.subscriptions.push(receivedSub, sentSub);
@@ -249,9 +247,6 @@ export class PageMain implements OnInit, OnDestroy {
     };
   }
 
-  /**
-   * Verifica si el usuario actual aprobó o rechazó esta solicitud
-   */
   private didUserApproveOrReject(approval: any): boolean {
     if (!this.currentUser?.idUsuario) {
       return false;
@@ -289,4 +284,3 @@ export class PageMain implements OnInit, OnDestroy {
     return false;
   }
 }
-

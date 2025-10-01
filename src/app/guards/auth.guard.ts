@@ -13,19 +13,10 @@ export class AuthGuard implements CanActivate {
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot): boolean | UrlTree {
 
-    console.log('🛡️ AuthGuard: Verificando autenticación...');
-    console.log('🛡️ Ruta solicitada:', state.url);
-    console.log('🛡️ Usuario actual:', this.authService.getCurrentUserValue());
-    console.log('🛡️ Está autenticado:', this.authService.isAuthenticated());
-    console.log('🛡️ Token existe:', !!this.authService.getToken());
-
     // Verificar si el usuario está autenticado
     if (!this.authService.isAuthenticated()) {
-      console.log('🛡️ Usuario no autenticado, redirigiendo al login');
       return this.router.createUrlTree(['/login']);
     }
-
-    console.log('🛡️ Usuario autenticado, permitiendo acceso');
 
     const requiredPermission = route.data['permission'] as keyof AuthService;
 

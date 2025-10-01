@@ -1,7 +1,8 @@
 <div class="modal fade show custom-backdrop"
      tabindex="-1"
      *ngIf="visible"
-     style="display: block;">
+     style="display: block;"
+     (click)="aceptar.emit()">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content modal-content-custom">
       <div class="modal-body text-center">
