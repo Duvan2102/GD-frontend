@@ -45,7 +45,7 @@
                 <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 4rem;"></i>
               </div>
               <div class="document-details">
-                <h4>{{ documentData?.fileName || 'Documento PDF' }}</h4>
+                <h4>{{ documentData?.fileName || documentData?.title || 'Documento PDF' }}</h4>
                 <p class="document-meta">
                   <strong>Tamaño:</strong> {{ formatFileSize(documentData?.metadata?.pdfSizeBytes) }}
                 </p>
@@ -62,13 +62,14 @@
           </div>
 
           <div *ngIf="pdfSrc && !isLoading && !error" class="document-viewer">
-            <ngx-extended-pdf-viewer
+            <ngx-extended-pdf-viewer #pdfViewer
               [src]="pdfSrc"
               height="100%"
               [textLayer]="true"
-              [(page)]="currentPage"
               [zoom]="zoom + '%'"
               (pagesLoaded)="onPagesLoaded($event)"
+              (afterLoadComplete)="onAfterLoadComplete($event)"
+              (pageChange)="onPageChange($event)"
               [showToolbar]="false">
             </ngx-extended-pdf-viewer>
           </div>

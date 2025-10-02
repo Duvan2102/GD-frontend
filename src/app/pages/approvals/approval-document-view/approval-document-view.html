@@ -34,14 +34,13 @@
           </div>
 
           <div *ngIf="pdfSrc && !isLoading && !error" class="document-viewer pdf-viewer-container">
-            <ngx-extended-pdf-viewer
+            <ngx-extended-pdf-viewer #pdfViewer
               [src]="pdfSrc"
               height="100%"
               [showToolbar]="false"
-              [(page)]="currentPage"
               [zoom]="zoom + '%'"
               (pagesLoaded)="onPagesLoaded($event)"
-              (pdfLoaded)="onPdfLoaded($event)"
+              (pageChange)="onPageChange($event)"
               [language]="'es'">
             </ngx-extended-pdf-viewer>
           </div>

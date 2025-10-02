@@ -841,7 +841,16 @@ export class ApprovalService {
     return this.http.post<any>(`${this.baseUrl}/solicitudes`, form, { headers: this.headersForUser(payload.idSolicitante) }).pipe(
       map(item => this.mapServerToApproval(item)),
       tap(appr => this.addApproval(appr)),
-      catchError(() => of(null))
+      catchError((error) => {
+        if (error.status === 413) {
+          alert('Error: Los archivos son demasiado grandes. El tamaño total no debe exceder 50MB. Por favor, reduce el tamaño de los archivos e intenta nuevamente.');
+        } else if (error.status === 0) {
+          alert('Error de conexión. Por favor, verifica tu conexión a internet e intenta nuevamente.');
+        } else {
+          alert('Error al crear la solicitud. Por favor, intenta nuevamente.');
+        }
+        return of(null);
+      })
     );
   }
 
