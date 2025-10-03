@@ -8,13 +8,14 @@
       </div>
 
       <form (ngSubmit)="onSubmit()">
-        <div class="modal-body text-center">
-          <div class="mb-3">
+        <div class="modal-body">
+          <!-- Nombre del Cargo -->
+          <div class="form-section">
             <label for="positionDescripcion" class="form-label">Nombre del Cargo</label>
             <input
               type="text"
               id="positionDescripcion"
-              class="form-control text-center"
+              class="form-control"
               [(ngModel)]="position.descripcion"
               name="positionDescripcion"
               placeholder="Escribe el nombre del cargo"
@@ -22,57 +23,89 @@
               autocomplete="off"
             />
           </div>
-          
-          <div class="mb-3">
-            <label for="positionArea" class="form-label">Área</label>
-            <select
-              id="positionArea"
-              class="form-select text-center"
-              [(ngModel)]="position.area.idArea"
-              name="positionArea"
-              required
-            >
-              <option value="0" disabled>Selecciona un área</option>
-              <option *ngFor="let area of areas" [value]="area.idArea">
-                {{ area.descripcion }}
-              </option>
-            </select>
-          </div>
-          
-          <div *ngIf="getSelectedAreaInfo()" class="area-info text-muted small mt-2 mb-4">
-            <strong>Departamento:</strong> {{ getSelectedAreaInfo()?.departamento?.descripcion }}
-          </div>
 
-          <hr class="my-4">
-
-          <h6 class="mb-2 text-start">Roles Especiales</h6>
-          <p class="text-muted small mb-3 text-start">Asigna los roles que otorgan acceso a vistas restringidas.</p>
-
-          <div class="text-start">
-            <ng-container *ngIf="position.permisos">
-              <div class="form-check form-switch mb-2">
-                <input class="form-check-input" type="checkbox" id="rolAdministrador" name="rolAdministrador" [(ngModel)]="position.permisos.esAdministrador">
-                <label class="form-check-label ms-2" for="rolAdministrador">
-                  <i class="bi bi-shield-lock-fill me-1"></i> Rol Administrador (acceso a Usuarios y Administración)
-                </label>
+          <!-- Selector de Área con Jerarquía -->
+          <div class="form-section">
+            <label class="form-label">Área del Cargo</label>
+            
+            <!-- Vista de Árbol Compacta -->
+            <div class="tree-compact">
+              <!-- Departamento -->
+              <div class="tree-level">
+                <div class="level-header" (click)="toggleDepartmentDropdown()">
+                  <div class="level-content">
+                    <i class="bi bi-building"></i>
+                    <span class="level-label">Departamento</span>
+                    <span class="level-value" *ngIf="selectedDepartment">{{ selectedDepartment.descripcion }}</span>
+                    <span class="level-placeholder" *ngIf="!selectedDepartment">Seleccionar</span>
+                  </div>
+                  <i class="bi" [class.bi-chevron-down]="!showDepartmentDropdown" [class.bi-chevron-up]="showDepartmentDropdown"></i>
+                </div>
+                
+                <div *ngIf="showDepartmentDropdown" class="level-dropdown">
+                  <div *ngIf="departmentsWithExpanded.length === 0" class="no-data">
+                    <i class="bi bi-info-circle"></i>
+                    No hay departamentos disponibles
+                  </div>
+                  <div *ngFor="let department of departmentsWithExpanded" class="level-item" (click)="selectDepartment(department)">
+                    <i class="bi bi-building"></i>
+                    <span>{{ department.descripcion }}</span>
+                  </div>
+                </div>
               </div>
 
-              <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="rolAuditor" name="rolAuditor" [(ngModel)]="position.permisos.esAuditor">
-                <label class="form-check-label ms-2" for="rolAuditor">
-                  <i class="bi bi-journal-check me-1"></i> Rol Auditor (acceso a Reportes y Auditorías)
-                </label>
+              <!-- Área -->
+              <div class="tree-level" *ngIf="selectedDepartment">
+                <div class="level-header" (click)="toggleAreaDropdown()">
+                  <div class="level-content">
+                    <i class="bi bi-diagram-3"></i>
+                    <span class="level-label">Área</span>
+                    <span class="level-value" *ngIf="selectedArea">{{ selectedArea.descripcion }}</span>
+                    <span class="level-placeholder" *ngIf="!selectedArea">Seleccionar</span>
+                  </div>
+                  <i class="bi" [class.bi-chevron-down]="!showAreaDropdown" [class.bi-chevron-up]="showAreaDropdown"></i>
+                </div>
+                
+                <div *ngIf="showAreaDropdown" class="level-dropdown">
+                  <div *ngIf="getAreasByDepartment(selectedDepartment.idDepartamento!).length === 0" class="no-data">
+                    <i class="bi bi-info-circle"></i>
+                    No hay áreas disponibles
+                  </div>
+                  <div *ngFor="let area of getAreasByDepartment(selectedDepartment.idDepartamento!)" class="level-item" (click)="selectArea(area)">
+                    <i class="bi bi-diagram-3"></i>
+                    <span>{{ area.descripcion }}</span>
+                  </div>
+                </div>
               </div>
-            </ng-container>
+            </div>
+
+            <!-- Resumen de Selección -->
+            <div *ngIf="selectedArea" class="selection-summary">
+              <div class="summary-header">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Área seleccionada</span>
+              </div>
+              <div class="summary-path">
+                <span class="path-item">
+                  <i class="bi bi-building"></i>
+                  {{ selectedDepartment?.descripcion }}
+                </span>
+                <i class="bi bi-chevron-right"></i>
+                <span class="path-item">
+                  <i class="bi bi-diagram-3"></i>
+                  {{ selectedArea.descripcion }}
+                </span>
+              </div>
+            </div>
           </div>
-          </div>
+        </div>
 
         <div class="modal-footer justify-content-center">
           <button type="button" class="btn btn-secondary" (click)="onCancel()">Cancelar</button>
           <button
             type="submit"
             class="btn btn-primary"
-            [disabled]="!position.descripcion.trim() || !position.area.idArea"
+            [disabled]="!position.descripcion.trim() || !selectedArea"
           >
             {{ mode === 'update' ? 'Actualizar' : 'Crear' }}
           </button>

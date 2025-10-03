@@ -186,10 +186,20 @@ export class CreateRequest implements OnInit, OnDestroy {
 
     // Si hay documento principal, usarlo
     if (mainDocumentFile || mainDocumentUrl) {
+      // Si tenemos un File object, crear una URL temporal para mejor compatibilidad
+      let documentUrl = mainDocumentUrl;
+      if (mainDocumentFile && !mainDocumentUrl) {
+        try {
+          documentUrl = URL.createObjectURL(mainDocumentFile);
+        } catch (error) {
+          console.error('Error creating object URL:', error);
+        }
+      }
+
       this.documentViewData = {
         id: data.id!,
         file: mainDocumentFile,
-        url: mainDocumentUrl,
+        url: documentUrl,
         title: data.nombreSolicitud,
         fileName: data.documentoFileName || data.pdfOriginalName || mainDocumentFile?.name || 'Documento Principal'
       };
@@ -260,6 +270,7 @@ export class CreateRequest implements OnInit, OnDestroy {
 
   closeDocumentView(): void {
     this.isDocumentViewVisible = false;
+    // Reset document data to ensure fresh load on next open
     this.documentViewData = null;
   }
 

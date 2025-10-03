@@ -8,13 +8,14 @@
       </div>
 
       <form (ngSubmit)="onSubmit()">
-        <div class="modal-body text-center">
-          <div class="mb-3">
+        <div class="modal-body">
+          <!-- Nombre de la Tipología -->
+          <div class="form-section">
             <label for="descripcion" class="form-label">Nombre de la Tipología</label>
             <input
               type="text"
               id="descripcion"
-              class="form-control text-center"
+              class="form-control"
               [(ngModel)]="descripcion"
               name="descripcion"
               placeholder="Escribe el nombre de la tipología"
@@ -22,35 +23,108 @@
             />
           </div>
 
-          <div class="mb-3">
-            <label for="department" class="form-label">Departamento</label>
-            <select
-              id="department"
-              class="form-select text-center"
-              [(ngModel)]="selectedDepartment"
-              (ngModelChange)="onDepartmentSelect($event)"
-              name="department"
-              required
-            >
-              <option [ngValue]="undefined" disabled>Selecciona un departamento</option>
-              <option *ngFor="let dep of departments" [ngValue]="dep">{{ dep.descripcion }}</option>
-            </select>
-          </div>
+          <!-- Selector de Receptor -->
+          <div class="form-section">
+            <label class="form-label">Cargo Destinatario Final</label>
+            
+            <!-- Vista de Árbol Compacta -->
+            <div class="tree-compact">
+                <!-- Departamento -->
+                <div class="tree-level">
+                  <div class="level-header" (click)="toggleDepartmentDropdown()">
+                    <div class="level-content">
+                      <i class="bi bi-building"></i>
+                      <span class="level-label">Departamento</span>
+                      <span class="level-value" *ngIf="selectedDepartment">{{ selectedDepartment.descripcion }}</span>
+                      <span class="level-placeholder" *ngIf="!selectedDepartment">Seleccionar</span>
+                    </div>
+                    <i class="bi" [class.bi-chevron-down]="!showDepartmentDropdown" [class.bi-chevron-up]="showDepartmentDropdown"></i>
+                  </div>
+                  
+                  <div *ngIf="showDepartmentDropdown" class="level-dropdown">
+                    <div *ngIf="departmentsWithExpanded.length === 0" class="no-data">
+                      <i class="bi bi-info-circle"></i>
+                      No hay departamentos disponibles
+                    </div>
+                    <div *ngFor="let department of departmentsWithExpanded" class="level-item" (click)="selectDepartment(department)">
+                      <i class="bi bi-building"></i>
+                      <span>{{ department.descripcion }}</span>
+                    </div>
+                  </div>
+                </div>
 
-          <div *ngIf="selectedDepartment" class="mb-3">
-            <label for="area" class="form-label">Área</label>
-            <select id="area" class="form-select text-center" [(ngModel)]="selectedArea" (ngModelChange)="onAreaSelect($event)" name="area">
-              <option [ngValue]="undefined">Selecciona un área</option>
-              <option *ngFor="let area of filteredAreas" [ngValue]="area">{{ area.descripcion }}</option>
-            </select>
-          </div>
+              <!-- Área -->
+              <div class="tree-level" *ngIf="selectedDepartment">
+                <div class="level-header" (click)="toggleAreaDropdown()">
+                  <div class="level-content">
+                    <i class="bi bi-diagram-3"></i>
+                    <span class="level-label">Área</span>
+                    <span class="level-value" *ngIf="selectedArea">{{ selectedArea.descripcion }}</span>
+                    <span class="level-placeholder" *ngIf="!selectedArea">Seleccionar</span>
+                  </div>
+                  <i class="bi" [class.bi-chevron-down]="!showAreaDropdown" [class.bi-chevron-up]="showAreaDropdown"></i>
+                </div>
+                
+                <div *ngIf="showAreaDropdown" class="level-dropdown">
+                  <div *ngIf="getAreasByDepartment(selectedDepartment.idDepartamento!).length === 0" class="no-data">
+                    <i class="bi bi-info-circle"></i>
+                    No hay áreas disponibles
+                  </div>
+                  <div *ngFor="let area of getAreasByDepartment(selectedDepartment.idDepartamento!)" class="level-item" (click)="selectArea(area)">
+                    <i class="bi bi-diagram-3"></i>
+                    <span>{{ area.descripcion }}</span>
+                  </div>
+                </div>
+              </div>
 
-          <div *ngIf="selectedArea" class="mb-3">
-            <label for="cargo" class="form-label">Cargo</label>
-            <select id="cargo" class="form-select text-center" [(ngModel)]="selectedPosition" name="cargo">
-              <option [ngValue]="undefined">Selecciona un cargo</option>
-              <option *ngFor="let pos of filteredPositions" [ngValue]="pos">{{ pos.descripcion }}</option>
-            </select>
+              <!-- Cargo -->
+              <div class="tree-level" *ngIf="selectedArea">
+                <div class="level-header" (click)="togglePositionDropdown()">
+                  <div class="level-content">
+                    <i class="bi bi-person-badge"></i>
+                    <span class="level-label">Cargo</span>
+                    <span class="level-value" *ngIf="selectedPosition">{{ selectedPosition.descripcion }}</span>
+                    <span class="level-placeholder" *ngIf="!selectedPosition">Seleccionar</span>
+                  </div>
+                  <i class="bi" [class.bi-chevron-down]="!showPositionDropdown" [class.bi-chevron-up]="showPositionDropdown"></i>
+                </div>
+                
+                <div *ngIf="showPositionDropdown" class="level-dropdown">
+                  <div *ngIf="getPositionsByArea(selectedArea.idArea!).length === 0" class="no-data">
+                    <i class="bi bi-info-circle"></i>
+                    No hay cargos disponibles
+                  </div>
+                  <div *ngFor="let position of getPositionsByArea(selectedArea.idArea!)" class="level-item" (click)="selectPosition(position)">
+                    <i class="bi bi-person-badge"></i>
+                    <span>{{ position.descripcion }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resumen de Selección -->
+            <div *ngIf="selectedPosition" class="selection-summary">
+              <div class="summary-header">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Selección completada</span>
+              </div>
+              <div class="summary-path">
+                <span class="path-item">
+                  <i class="bi bi-building"></i>
+                  {{ selectedDepartment?.descripcion }}
+                </span>
+                <i class="bi bi-chevron-right"></i>
+                <span class="path-item">
+                  <i class="bi bi-diagram-3"></i>
+                  {{ selectedArea?.descripcion }}
+                </span>
+                <i class="bi bi-chevron-right"></i>
+                <span class="path-item">
+                  <i class="bi bi-person-badge"></i>
+                  {{ selectedPosition.descripcion }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
