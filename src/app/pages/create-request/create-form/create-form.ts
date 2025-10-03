@@ -299,6 +299,13 @@ export class CreateForm implements OnInit, OnChanges {
   onDocumentoAprobacionChange(event: any): void {
     const file = event.target.files[0];
     if (file && file.type === 'application/pdf') {
+      // Validar tamaño del archivo (máximo 25MB)
+      const maxSize = 25 * 1024 * 1024; // 25MB en bytes
+      if (file.size > maxSize) {
+        alert('El archivo es demasiado grande. El tamaño máximo permitido es 25MB.');
+        event.target.value = '';
+        return;
+      }
       this.documentoAprobacion = file;
     } else {
       alert('Formato de archivo no válido. Solo se permite formato PDF');
@@ -308,8 +315,15 @@ export class CreateForm implements OnInit, OnChanges {
 
   onAnexosChange(event: any): void {
     const files = event.target.files;
+    const maxSize = 25 * 1024 * 1024; // 25MB en bytes
+    
     for (let file of files) {
       if (this.isValidFileType(file)) {
+        // Validar tamaño del archivo
+        if (file.size > maxSize) {
+          alert(`El archivo "${file.name}" es demasiado grande. El tamaño máximo permitido es 25MB.`);
+          continue;
+        }
         this.anexos.push(file);
       } else {
         alert('Uno o más archivos tienen un formato no válido. Solo se permiten PDF y Word.');
@@ -322,8 +336,23 @@ export class CreateForm implements OnInit, OnChanges {
     return allowedTypes.includes(file.type);
   }
 
-  removeAnexo(index: number): void { this.anexos.splice(index, 1); }
-  removeDocumentoAprobacion(): void { this.documentoAprobacion = null; }
+  removeAnexo(index: number): void { 
+    this.anexos.splice(index, 1); 
+    // Reset the file input to allow re-selection of the same file
+    const fileInput = document.getElementById('anexos') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  }
+  
+  removeDocumentoAprobacion(): void { 
+    this.documentoAprobacion = null; 
+    // Reset the file input to allow re-selection of the same file
+    const fileInput = document.getElementById('documentoAprobacion') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  }
 
   agregarDestinatario(): void {
     const nuevoOrden = this.destinatarios.length + 1;
@@ -409,6 +438,23 @@ export class CreateForm implements OnInit, OnChanges {
       return;
     }
 
+    // Validar tamaño total de archivos
+    const maxTotalSize = 50 * 1024 * 1024; // 50MB total
+    let totalSize = 0;
+    
+    if (this.documentoAprobacion) {
+      totalSize += this.documentoAprobacion.size;
+    }
+    
+    if (this.anexos && this.anexos.length > 0) {
+      totalSize += this.anexos.reduce((sum, file) => sum + file.size, 0);
+    }
+    
+    if (totalSize > maxTotalSize) {
+      alert(`El tamaño total de los archivos (${Math.round(totalSize / 1024 / 1024)}MB) excede el límite permitido de 50MB.`);
+      return;
+    }
+
     const solicitudData: SolicitudData = {
       nombreSolicitud: this.nombreSolicitud,
       detallesAdicionales: this.detallesAdicionales,
@@ -442,6 +488,12 @@ export class CreateForm implements OnInit, OnChanges {
     this.anexos = [];
     this.destinatarios = [this.recipientService.createNewRecipient(1)];
     this.showDocumentView = false;
+    
+    // Reset file inputs to allow re-selection
+    const documentoInput = document.getElementById('documentoAprobacion') as HTMLInputElement;
+    const anexosInput = document.getElementById('anexos') as HTMLInputElement;
+    if (documentoInput) documentoInput.value = '';
+    if (anexosInput) anexosInput.value = '';
   }
 
 

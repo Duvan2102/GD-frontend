@@ -1,6 +1,6 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NgxExtendedPdfViewerModule, NgxExtendedPdfViewerService } from 'ngx-extended-pdf-viewer';
+import { NgxExtendedPdfViewerModule, NgxExtendedPdfViewerService, NgxExtendedPdfViewerComponent } from 'ngx-extended-pdf-viewer';
 import { PdfService } from '../../../services/pdf.service';
 
 export interface DocumentViewData {
@@ -31,12 +31,15 @@ export class DocumentView implements OnChanges {
   @Output() deleteRequest = new EventEmitter<string | number>();
   @Output() discard = new EventEmitter<void>();
 
+  @ViewChild('pdfViewer') pdfViewer?: NgxExtendedPdfViewerComponent;
+
   pdfSrc: string | ArrayBuffer | null = null;
   isLoading = true;
   error = '';
   currentPage = 1;
   totalPages = 1;
   zoom = 100;
+  private isPdfReady = false;
 
   constructor(
     private pdfViewerService: NgxExtendedPdfViewerService,
@@ -45,11 +48,25 @@ export class DocumentView implements OnChanges {
   ) {}
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['isVisible'] && this.isVisible) {
-      this.loadDocument();
+    // Solo cargar el documento si el modal se está mostrando y hay datos
+    if (changes['isVisible'] && this.isVisible && this.documentData) {
+      // Wait for DOM to be ready and modal to be fully rendered
+      setTimeout(() => {
+        this.loadDocument();
+      }, 300);
     }
-    if (changes['documentData'] && this.documentData) {
-      this.loadDocument();
+    
+    // Si cambian los datos del documento y el modal está visible, recargar
+    if (changes['documentData'] && this.documentData && this.isVisible) {
+      // Wait for DOM to be ready and modal to be fully rendered
+      setTimeout(() => {
+        this.loadDocument();
+      }, 300);
+    }
+    
+    // Si el modal se oculta, limpiar el estado
+    if (changes['isVisible'] && !this.isVisible) {
+      this.onClose();
     }
   }
 
@@ -57,14 +74,52 @@ export class DocumentView implements OnChanges {
     this.totalPages = event.pagesCount;
   }
 
+  public onAfterLoadComplete(event: any): void {
+    this.isPdfReady = true;
+    this.totalPages = event.pagesCount || this.totalPages;
+    this.syncViewerPage();
+  }
+
+  public onPageChange(page: number): void {
+    this.currentPage = page;
+  }
+
+  private syncViewerPage(): void {
+    if (this.isPdfReady && this.pdfViewer) {
+      // Asegurar que la página esté dentro del rango válido
+      const validPage = Math.max(1, Math.min(this.currentPage, this.totalPages));
+      if (validPage !== this.currentPage) {
+        this.currentPage = validPage;
+      }
+      this.pdfViewer.page = this.currentPage;
+    }
+  }
+
+  private goToPage(page: number): void {
+    this.currentPage = page;
+    this.syncViewerPage();
+  }
+
   async loadDocument() {
+    // Force reset of all state
     this.isLoading = true;
     this.error = '';
     this.pdfSrc = null;
+    this.currentPage = 1;
+    this.totalPages = 1;
+    this.zoom = 100;
+    this.isPdfReady = false;
+
+    // Force change detection to update UI
+    this.cdr.detectChanges();
+
+    // Wait for the modal to be fully rendered and DOM ready
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     if (!this.documentData) {
       this.isLoading = false;
       this.error = 'No se proporcionaron datos del documento.';
+      this.cdr.detectChanges();
       return;
     }
 
@@ -72,16 +127,31 @@ export class DocumentView implements OnChanges {
     if (this.documentData.metadata?.error) {
       this.isLoading = false;
       this.error = this.documentData.metadata.error;
+      this.cdr.detectChanges();
       return;
     }
 
     try {
-      if (this.documentData.file) {
-        this.pdfSrc = await this.pdfService.fileToArrayBuffer(this.documentData.file);
-      } else if (this.documentData.url) {
+      if (this.documentData.url) {
+        // Priorizar URL si está disponible (mejor para visualización inmediata)
         this.pdfSrc = this.documentData.url;
+      } else if (this.documentData.file) {
+        // Si no hay URL, convertir File a ArrayBuffer o crear URL temporal
+        // Para mejor compatibilidad, crear URL temporal del File
+        try {
+          this.pdfSrc = URL.createObjectURL(this.documentData.file);
+        } catch (urlError) {
+          console.warn('Error creating object URL, falling back to ArrayBuffer:', urlError);
+          this.pdfSrc = await this.pdfService.fileToArrayBuffer(this.documentData.file);
+        }
       } else {
         this.error = 'No hay un archivo o URL para mostrar.';
+      }
+      
+      // Wait for PDF viewer container to be ready before final render
+      if (this.pdfSrc) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        this.cdr.detectChanges();
       }
     } catch (e) {
       console.error('Error al cargar el documento:', e);
@@ -92,13 +162,34 @@ export class DocumentView implements OnChanges {
     }
   }
 
-  onPreviousPage() { if (this.currentPage > 1) this.currentPage--; }
-  onNextPage() { if (this.currentPage < this.totalPages) this.currentPage++; }
+  onPreviousPage() { if (this.currentPage > 1) this.goToPage(this.currentPage - 1); }
+  onNextPage() { if (this.currentPage < this.totalPages) this.goToPage(this.currentPage + 1); }
   onZoomIn() { this.zoom += 25; }
   onZoomOut() { if (this.zoom > 25) this.zoom -= 25; }
   onZoomReset() { this.zoom = 100; }
 
-  onClose() { this.close.emit(); }
+  onClose() { 
+    // Clean up object URLs to prevent memory leaks
+    if (this.documentData?.url && this.documentData.url.startsWith('blob:')) {
+      URL.revokeObjectURL(this.documentData.url);
+    }
+    
+    // Clean up pdfSrc if it's a blob URL
+    if (this.pdfSrc && typeof this.pdfSrc === 'string' && this.pdfSrc.startsWith('blob:')) {
+      URL.revokeObjectURL(this.pdfSrc);
+    }
+    
+    // Reset document state when closing
+    this.pdfSrc = null;
+    this.isLoading = true;
+    this.error = '';
+    this.currentPage = 1;
+    this.totalPages = 1;
+    this.zoom = 100;
+    this.isPdfReady = false;
+    this.cdr.detectChanges();
+    this.close.emit(); 
+  }
   onEdit() { this.edit.emit(); }
   onSend() { this.send.emit(); }
 

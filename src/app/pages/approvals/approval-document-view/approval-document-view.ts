@@ -1,7 +1,7 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectorRef, OnDestroy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectorRef, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { NgxExtendedPdfViewerModule, PdfLoadedEvent, NgxExtendedPdfViewerService, PagesLoadedEvent } from 'ngx-extended-pdf-viewer';
+import { NgxExtendedPdfViewerModule, PdfLoadedEvent, NgxExtendedPdfViewerService, PagesLoadedEvent, NgxExtendedPdfViewerComponent } from 'ngx-extended-pdf-viewer';
 import { PdfService } from '../../../services/pdf.service';
 import { ApprovalService } from '../../../services/approval.service';
 import { AuthService } from '../../../services/auth.service';
@@ -33,6 +33,8 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
   @Output() print = new EventEmitter<ApprovalDocumentViewData>();
   @Output() back = new EventEmitter<void>();
 
+  @ViewChild('pdfViewer') pdfViewer?: NgxExtendedPdfViewerComponent;
+
   pdfSrc: string | ArrayBuffer | null = null;
   isLoading = true;
   error = '';
@@ -41,6 +43,7 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
   totalPages = 1;
   zoom = 100;
   comentario: string = '';
+  private isPdfReady = false;
 
   // Confirmation modal properties
   isConfirmationModalVisible = false;
@@ -78,6 +81,9 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
     this.isLoading = true;
     this.error = '';
     this.pdfSrc = null;
+    this.isPdfReady = false;
+    this.isScrolledToEnd = false;
+    this.removeScrollListener();
 
     if (!this.documentData) {
       this.isLoading = false;
@@ -101,16 +107,32 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
     }
   }
 
-  onPdfLoaded(event: PdfLoadedEvent): void {
+  onAfterLoadComplete(event: PdfLoadedEvent): void {
+    this.isPdfReady = true;
+    this.syncViewerPage();
     setTimeout(() => {
       this.setupScrollListener();
-    }, 1000);
+    }, 300);
   }
-  
+
   onPagesLoaded(event: PagesLoadedEvent): void {
     this.totalPages = event.pagesCount;
   }
 
+  public onPageChange(page: number): void {
+    this.currentPage = page;
+  }
+
+  private syncViewerPage(): void {
+    if (this.isPdfReady && this.pdfViewer) {
+      this.pdfViewer.page = this.currentPage;
+    }
+  }
+
+  private goToPage(page: number): void {
+    this.currentPage = page;
+    this.syncViewerPage();
+  }
 
   private setupScrollListener(): void {
     this.removeScrollListener();
@@ -163,6 +185,8 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
   }
 
   onClose() { 
+    this.removeScrollListener();
+    this.isPdfReady = false;
     this.close.emit(); 
   }
 
@@ -304,8 +328,8 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
     this.pdfViewerService.print();
   }
 
-  onPreviousPage() { if (this.currentPage > 1) this.currentPage--; }
-  onNextPage() { if (this.currentPage < this.totalPages) this.currentPage++; }
+  onPreviousPage() { if (this.currentPage > 1) this.goToPage(this.currentPage - 1); }
+  onNextPage() { if (this.currentPage < this.totalPages) this.goToPage(this.currentPage + 1); }
   onZoomIn() { this.zoom += 25; }
   onZoomOut() { if (this.zoom > 25) this.zoom -= 25; }
   onZoomReset() { this.zoom = 100; }
