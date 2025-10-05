@@ -11,9 +11,9 @@ import { ConfirmModal } from '../../users/confirm-modal/confirm-modal';
 export interface SolicitudData {
   nombreSolicitud: string;
   detallesAdicionales: string;
-  prioridad: 'NORMAL' | 'IMPORTANTE';
+  prioridad?: boolean;  // true = prioritaria, false/null = normal
   tipologia: string;
-  enviarRecordatorio: 'NUNCA' | 'SEMANALMENTE' | 'CADA_3_DIAS' | 'TODOS_LOS_DIAS';
+  enviarRecordatorio?: number;  // días entre recordatorios (0 = sin recordatorios)
   documentosAnexos: boolean;
   establecerOrden: boolean;
   destinatarios: Array<{ usuarioId: string; noUsuarioId?: number; orden?: number }>;
@@ -41,11 +41,32 @@ export class CreateForm implements OnInit, OnChanges {
 
   nombreSolicitud: string = '';
   detallesAdicionales: string = '';
-  prioridad: 'NORMAL' | 'IMPORTANTE' = 'NORMAL';
+  prioridad: boolean = false;  // false = normal, true = prioritaria
   tipologia: string = '';
-  enviarRecordatorio: 'NUNCA' | 'SEMANALMENTE' | 'CADA_3_DIAS' | 'TODOS_LOS_DIAS' = 'NUNCA';
+  enviarRecordatorio: number = 0;  // 0 = sin recordatorios, >0 = días entre recordatorios
   documentosAnexos: boolean = false;
   establecerOrden: boolean = false;
+
+  // Opciones dinámicas según prioridad
+  get recordatorioOpciones() {
+    if (this.prioridad) {
+      // Prioritaria: obligatorio, opciones 1-4 días
+      return [
+        { value: 1, label: 'Cada día' },
+        { value: 2, label: 'Cada 2 días' },
+        { value: 3, label: 'Cada 3 días' },
+        { value: 4, label: 'Cada 4 días' }
+      ];
+    } else {
+      // Normal: opcional, opciones 0, 5, 6, 7 días
+      return [
+        { value: 0, label: 'Sin recordatorios' },
+        { value: 5, label: 'Cada 5 días' },
+        { value: 6, label: 'Cada 6 días' },
+        { value: 7, label: 'Cada semana' }
+      ];
+    }
+  }
   documentoAprobacion: File | null = null;
   anexos: File[] = [];
   destinatarios: Destinatario[] = [{ orden: 1, usuario: null, searchTerm: '' }];
@@ -281,14 +302,27 @@ export class CreateForm implements OnInit, OnChanges {
   }
 
   private addNewUserFieldAfterSelection(selectedIndex: number): void {
-    // Solo agregar un nuevo campo si este es el último campo y no está vacío
+    // Si el usuario seleccionó un campo que no es el último, enfocar el siguiente campo existente
+    if (selectedIndex < this.destinatarios.length - 1) {
+      setTimeout(() => {
+        const inputs = document.querySelectorAll('input[placeholder*="Escriba aquí los nombres"]');
+        const nextInput = inputs[selectedIndex + 1] as HTMLInputElement;
+        if (nextInput) {
+          nextInput.focus();
+        }
+      }, 100);
+      return;
+    }
+
+    // Si es el último campo y tiene un usuario seleccionado, agregar nuevo campo
     if (selectedIndex === this.destinatarios.length - 1 && this.destinatarios[selectedIndex].usuario) {
       const nuevoOrden = this.destinatarios.length + 1;
       this.destinatarios.push(this.recipientService.createNewRecipient(nuevoOrden));
 
       // Enfocar el nuevo campo después de un pequeño delay
       setTimeout(() => {
-        const newInput = document.querySelector(`input[placeholder*="Escriba aquí los nombres"]:last-of-type`) as HTMLInputElement;
+        const inputs = document.querySelectorAll('input[placeholder*="Escriba aquí los nombres"]');
+        const newInput = inputs[inputs.length - 1] as HTMLInputElement;
         if (newInput) {
           newInput.focus();
         }
@@ -382,6 +416,17 @@ export class CreateForm implements OnInit, OnChanges {
     this.reordenarDestinatarios();
   }
 
+  onPrioridadChange(): void {
+    // Cuando cambia la prioridad, ajustar el recordatorio según las reglas
+    if (this.prioridad) {
+      // Cambia a prioritaria: default 4 días (obligatorio)
+      this.enviarRecordatorio = 4;
+    } else {
+      // Cambia a normal: default sin recordatorios
+      this.enviarRecordatorio = 0;
+    }
+  }
+
   onPreviewClick(): void {
     if (!this.documentoAprobacion) {
       alert('Debe cargar un documento de aprobación para previsualizar.');
@@ -432,6 +477,12 @@ export class CreateForm implements OnInit, OnChanges {
     // Resolver destinatarios
     this.recipientService.resolveTypedRecipients(this.destinatarios, this.allUsers);
 
+    // Validar recordatorio para solicitudes prioritarias
+    if (this.prioridad && this.enviarRecordatorio === 0) {
+      alert('Las solicitudes prioritarias requieren un recordatorio obligatorio. Por favor seleccione la frecuencia (1-4 días).');
+      return;
+    }
+
     // Validar formulario
     if (!this.isFormValid()) {
       alert('Por favor completa todos los campos obligatorios, incluyendo al menos un destinatario válido.');
@@ -473,15 +524,22 @@ export class CreateForm implements OnInit, OnChanges {
   }
 
   isFormValid(): boolean {
-    return !!(this.nombreSolicitud.trim() && this.tipologia && this.recipientService.hasValidRecipients(this.destinatarios));
+    const basicValid = !!(this.nombreSolicitud.trim() && this.tipologia && this.recipientService.hasValidRecipients(this.destinatarios));
+    
+    // Si es prioritaria, el recordatorio debe ser mayor a 0
+    if (this.prioridad && this.enviarRecordatorio === 0) {
+      return false;
+    }
+    
+    return basicValid;
   }
 
   resetForm(): void {
     this.nombreSolicitud = '';
     this.detallesAdicionales = '';
-    this.prioridad = 'NORMAL';
+    this.prioridad = false;
     this.tipologia = '';
-    this.enviarRecordatorio = 'NUNCA';
+    this.enviarRecordatorio = 0;
     this.documentosAnexos = false;
     this.establecerOrden = false;
     this.documentoAprobacion = null;
