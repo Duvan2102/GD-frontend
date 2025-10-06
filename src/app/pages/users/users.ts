@@ -249,26 +249,13 @@ export class Users implements OnInit, OnDestroy {
   }
 
   handlePasswordValidation(password: string): void {
-    console.log('DEBUG: handlePasswordValidation called', {
-      currentAction: this.currentAction,
-      password: password ? '***' : 'empty',
-      currentUser: this.currentUser
-    });
-    
-    // RECUPERAR DEL SERVICIO SI ES NULL
     if (!this.currentUser) {
       const pending = this.userStateService.getPendingOperation();
       this.currentUser = pending.user;
       this.currentAction = pending.action as any;
-      console.log('DEBUG: Recuperado del servicio en handlePasswordValidation', {
-        currentUser: this.currentUser,
-        currentAction: this.currentAction
-      });
     }
     
-    // VERIFICAR QUE EXISTE
     if (!this.currentUser) {
-      console.error('DEBUG: currentUser es null incluso después de recuperar del servicio');
       alert('Error: No se encontró la información del usuario. Por favor, intente de nuevo.');
       this.isPasswordModalVisible = false;
       this.userStateService.clearPendingOperation();
@@ -287,7 +274,6 @@ export class Users implements OnInit, OnDestroy {
               this.userStateService.clearPendingOperation();
             },
             error: (error: any) => {
-              console.error('Error eliminando QR:', error);
               if (error.error?.code === 'PASSWORD_INCORRECT') {
                 alert('Contraseña incorrecta. Intente nuevamente.');
               } else {
@@ -309,20 +295,13 @@ export class Users implements OnInit, OnDestroy {
       return alert('La contraseña no puede estar vacía');
     }
 
-    // RECUPERAR DEL SERVICIO SI ES NULL
     if (!this.currentUser) {
       const pending = this.userStateService.getPendingOperation();
       this.currentUser = pending.user;
       this.currentAction = pending.action as any;
-      console.log('DEBUG: Recuperado del servicio en confirmAction', {
-        currentUser: this.currentUser,
-        currentAction: this.currentAction
-      });
     }
 
-    // VERIFICAR QUE EXISTE
     if (!this.currentUser) {
-      console.error('DEBUG: currentUser es null en confirmAction');
       alert('Error: No se encontró la información del usuario. Por favor, intente de nuevo.');
       this.isPasswordModalVisible = false;
       this.userStateService.clearPendingOperation();
@@ -342,7 +321,6 @@ export class Users implements OnInit, OnDestroy {
                 this.userStateService.clearPendingOperation();
               },
               error: (error: any) => {
-                console.error('Error creando usuario:', error);
                 alert('Error al crear el usuario: ' + (error.message || 'Error desconocido'));
                 this.isPasswordModalVisible = false;
                 this.userStateService.clearPendingOperation();
@@ -363,7 +341,6 @@ export class Users implements OnInit, OnDestroy {
                 this.userStateService.clearPendingOperation();
               },
               error: (error: any) => {
-                console.error('Error actualizando usuario:', error);
                 alert('Error al actualizar el usuario: ' + (error.message || 'Error desconocido'));
                 this.isPasswordModalVisible = false;
                 this.userStateService.clearPendingOperation();
@@ -373,20 +350,17 @@ export class Users implements OnInit, OnDestroy {
         break;
 
       case 'inactivar':
-        console.log('DEBUG: Iniciando desactivación de usuario', this.currentUser);
         if (this.currentUser) {
           this.userService.desactivarUsuario(this.currentUser, password)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
               next: (response: any) => {
-                console.log('DEBUG: Usuario desactivado exitosamente', response);
                 this.mostrarModalSuccess('Usuario inactivado con éxito', 'Aceptar');
                 this.cargarUsuarios();
                 this.isPasswordModalVisible = false;
                 this.userStateService.clearPendingOperation();
               },
               error: (error: any) => {
-                console.error('DEBUG: Error desactivando usuario:', error);
                 alert('Error al inactivar el usuario: ' + (error.message || 'Error desconocido'));
                 this.isPasswordModalVisible = false;
                 this.userStateService.clearPendingOperation();
@@ -396,20 +370,17 @@ export class Users implements OnInit, OnDestroy {
         break;
 
       case 'activar':
-        console.log('DEBUG: Iniciando activación de usuario', this.currentUser);
         if (this.currentUser) {
           this.userService.activarUsuario(this.currentUser, password)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
               next: (response: any) => {
-                console.log('DEBUG: Usuario activado exitosamente', response);
                 this.mostrarModalSuccess('Usuario activado con éxito', 'Aceptar');
                 this.cargarUsuarios();
                 this.isPasswordModalVisible = false;
                 this.userStateService.clearPendingOperation();
               },
               error: (error: any) => {
-                console.error('DEBUG: Error activando usuario:', error);
                 alert('Error al activar el usuario: ' + (error.message || 'Error desconocido'));
                 this.isPasswordModalVisible = false;
                 this.userStateService.clearPendingOperation();
@@ -444,12 +415,8 @@ export class Users implements OnInit, OnDestroy {
 }
 
   abrirConfirmModal(tipo: 'inactivar' | 'activar' | 'eliminarQR', usuario: Usuario) {
-    console.log('DEBUG: abrirConfirmModal called', { tipo, usuario });
-    
     this.confirmModalAction = tipo;
     this.currentUser = usuario;
-    
-    // GUARDAR EN EL SERVICIO
     this.userStateService.setPendingOperation(usuario, tipo);
     
     switch(tipo) {
@@ -468,22 +435,12 @@ export class Users implements OnInit, OnDestroy {
   }
 
   onAceptarConfirmacion() {
-    console.log('DEBUG: onAceptarConfirmacion called', {
-      confirmModalAction: this.confirmModalAction,
-      currentUser: this.currentUser
-    });
-    
     this.confirmModalVisible = false;
     
-    // RECUPERAR DEL SERVICIO SI ES NULL
     if (!this.currentUser) {
       const pending = this.userStateService.getPendingOperation();
       this.currentUser = pending.user;
       this.confirmModalAction = pending.action as any;
-      console.log('DEBUG: Recuperado del servicio', {
-        currentUser: this.currentUser,
-        confirmModalAction: this.confirmModalAction
-      });
     }
     
     switch(this.confirmModalAction) {
@@ -505,12 +462,6 @@ export class Users implements OnInit, OnDestroy {
         this.isPasswordModalVisible = true;
         break;
     }
-    
-    console.log('DEBUG: Después de onAceptarConfirmacion', {
-      currentAction: this.currentAction,
-      currentUser: this.currentUser,
-      isPasswordModalVisible: this.isPasswordModalVisible
-    });
   }
 
   onCancelarConfirmacion() {
