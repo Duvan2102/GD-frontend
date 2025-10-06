@@ -46,6 +46,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   isDropdownOpen = false;
   selectedCargoInfo: Position | null = null;
   originalDobleAutenticacion: string = '';
+  isDataLoaded = false;
 
   isPasswordModalVisible = false;
   confirmModalVisible = false;
@@ -80,11 +81,11 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['isVisible'] && this.isVisible) {
+    if (changes['isVisible'] && this.isVisible && this.isDataLoaded) {
       this.resetMessages();
       this.loadFormData();
     }
-    if (changes['user'] && this.user) {
+    if (changes['user'] && this.user && this.isDataLoaded) {
       this.loadFormData();
     }
   }
@@ -164,7 +165,16 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       }
 
       let perfilActivo = 'funcionarios';
-      if (this.user.perfiles) {
+      if (this.user.rol && this.user.rol.descripcion) {
+        const rolDesc = this.user.rol.descripcion.toUpperCase();
+        if (rolDesc === 'ADMINISTRADOR' || rolDesc === 'ADMIN') {
+          perfilActivo = 'administrador';
+        } else if (rolDesc === 'AUDITOR' || rolDesc === 'FUNCIONARIO CREADOR') {
+          perfilActivo = 'funcionarioCreador';
+        } else {
+          perfilActivo = 'funcionarios';
+        }
+      } else if (this.user.perfiles) {
         if (this.user.perfiles.administrador) {
           perfilActivo = 'administrador';
         } else if (this.user.perfiles.funcionarioCreador) {
@@ -244,6 +254,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
         this.buildHierarchicalStructureComplete();
         this.isLoading = false;
+        this.isDataLoaded = true;
 
         if (this.isEditMode && this.user) {
           this.loadFormData();
@@ -253,6 +264,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         console.error('Error cargando datos jerárquicos:', error);
         this.isLoading = false;
         this.loadFallbackData();
+        this.isDataLoaded = true;
       }
     });
   }
@@ -334,6 +346,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     ];
 
     this.buildHierarchicalStructureComplete();
+    this.isDataLoaded = true;
     if (this.isEditMode && this.user) {
       this.loadFormData();
     }
@@ -549,16 +562,31 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         error: (error) => {
           this.isLoading = false;
           console.error('Error en operación:', error);
+          console.error('Error body completo:', error.error);
+          console.error('Error status:', error.status);
+          console.error('Error message:', error.message);
 
-          if (error && typeof error === 'object') {
-            this.errorMessage = error.message || 'Error al procesar la solicitud';
-            if (error.details && Array.isArray(error.details) && error.details.length > 0) {
-              this.errorMessage += ':\n• ' + error.details.join('\n• ');
-            }
+          // Extraer el mensaje específico del servidor
+          if (error.error && error.error.mensaje) {
+            this.errorMessage = error.error.mensaje;
+          } else if (error.error && typeof error.error === 'string') {
+            this.errorMessage = error.error;
+          } else if (error.message) {
+            this.errorMessage = error.message;
           } else {
-            this.errorMessage = typeof error === 'string' ? error : 'Error inesperado al procesar la solicitud';
+            this.errorMessage = 'Error inesperado al procesar la solicitud';
           }
+          
+          // Agregar detalles si existen
+          if (error.error && error.error.details && Array.isArray(error.error.details)) {
+            this.errorMessage += ':\n• ' + error.error.details.join('\n• ');
+          }
+          
           this.pendingUserData = null;
+          
+          // Cerrar modales de confirmación
+          this.confirmModalVisible = false;
+          this.isPasswordModalVisible = false;
         }
       });
   }
@@ -608,13 +636,17 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  // CAMBIO: Nuevo método helper para convertir perfil
-  private convertirPerfilSeleccionado(perfilSeleccionado: string): any {
-    return {
-      administrador: perfilSeleccionado === 'administrador',
-      funcionarioCreador: perfilSeleccionado === 'funcionarioCreador',
-      funcionarios: perfilSeleccionado === 'funcionarios'
-    };
+  // Método helper para convertir perfil a rol
+  private convertirPerfilARol(perfilSeleccionado: string): any {
+    switch (perfilSeleccionado) {
+      case 'administrador':
+        return { idRol: 1, descripcion: 'ADMINISTRADOR' };
+      case 'funcionarioCreador':
+        return { idRol: 3, descripcion: 'AUDITOR' };
+      case 'funcionarios':
+      default:
+        return { idRol: 2, descripcion: 'FUNCIONARIO' };
+    }
   }
 
   onSave(): void {
@@ -636,25 +668,31 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
     const formValue = this.userForm.getRawValue();
 
+    // CRÍTICO: Asegurar que cargo tiene la estructura correcta
+    const cargoFinal = this.selectedCargoInfo
+      ? { idCargo: this.selectedCargoInfo.idCargo }
+      : { idCargo: parseInt(formValue.cargo, 10) };
+
+    console.log('DEBUG: Cargo final para pendingUserData:', cargoFinal);
+
     this.pendingUserData = {
       ...formValue,
-      noUsuario: this.isEditMode ? (this.user?.idUsuario || this.user?.noUsuario) : undefined,
       idUsuario: this.isEditMode ? (this.user?.idUsuario || this.user?.noUsuario) : undefined,
-
-      id: this.isEditMode ? (this.user?.idUsuario || this.user?.noUsuario) : undefined,
-
-      cargo: formValue.cargo,
+      cargo: cargoFinal,  // Estructura garantizada: { idCargo: number }
       correoEmpresarial: formValue.correoEmpresarial || '',
       correoPersonal: formValue.correoPersonal || '',
-      celular: formValue.celular || '',
-      telefono: formValue.telefono || '',
+      telefono1: formValue.celular || '',
+      telefono2: formValue.telefono || '',
       direccion: formValue.direccion || '',
       dobleAutenticacion: formValue.dobleAutenticacion === 'Google Authenticator',
-      estado: this.isEditMode ? (this.user?.estado || 'Activo') : 'Activo',
+      estado: this.isEditMode
+        ? (this.user?.estado || { idEstado: 5, descripcion: 'ACTIVO' })
+        : { idEstado: 5, descripcion: 'ACTIVO' },
       activo: this.isEditMode ? (this.user?.activo !== false) : true,
-
-      perfiles: this.convertirPerfilSeleccionado(formValue.perfil)
+      rol: this.convertirPerfilARol(formValue.perfil)
     };
+
+    console.log('DEBUG: pendingUserData completo:', JSON.stringify(this.pendingUserData, null, 2));
 
     if (wasDisabled) {
       identificacionControl?.disable();

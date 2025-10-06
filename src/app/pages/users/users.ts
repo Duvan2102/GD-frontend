@@ -11,6 +11,7 @@ import { ConfirmModal } from './confirm-modal/confirm-modal';
 import { ChangePassword } from './change-password/change-password';
 import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
+import { UserStateService } from '../../services/user-state.service';
 import { Usuario } from '../../interfaces/common.interfaces';
 
 @Component({
@@ -60,7 +61,8 @@ export class Users implements OnInit, OnDestroy {
 
   constructor(
     private userService: UserService,
-    private authService: AuthService
+    private authService: AuthService,
+    private userStateService: UserStateService
   ) {}
 
   ngOnInit(): void {
@@ -70,6 +72,7 @@ export class Users implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.userStateService.clearPendingOperation(); // Limpiar al destruir
   }
 
   cargarUsuarios(): void {
@@ -246,6 +249,32 @@ export class Users implements OnInit, OnDestroy {
   }
 
   handlePasswordValidation(password: string): void {
+    console.log('DEBUG: handlePasswordValidation called', {
+      currentAction: this.currentAction,
+      password: password ? '***' : 'empty',
+      currentUser: this.currentUser
+    });
+    
+    // RECUPERAR DEL SERVICIO SI ES NULL
+    if (!this.currentUser) {
+      const pending = this.userStateService.getPendingOperation();
+      this.currentUser = pending.user;
+      this.currentAction = pending.action as any;
+      console.log('DEBUG: Recuperado del servicio en handlePasswordValidation', {
+        currentUser: this.currentUser,
+        currentAction: this.currentAction
+      });
+    }
+    
+    // VERIFICAR QUE EXISTE
+    if (!this.currentUser) {
+      console.error('DEBUG: currentUser es null incluso después de recuperar del servicio');
+      alert('Error: No se encontró la información del usuario. Por favor, intente de nuevo.');
+      this.isPasswordModalVisible = false;
+      this.userStateService.clearPendingOperation();
+      return;
+    }
+
     if (this.currentAction === 'eliminarQR') {
       if (this.currentUser && this.currentUser.usuario) {
         this.authService.removeUserQR(this.currentUser.usuario, password)
@@ -255,6 +284,7 @@ export class Users implements OnInit, OnDestroy {
               this.mostrarModalSuccess('Código QR eliminado con éxito', 'Aceptar');
               this.cargarUsuarios();
               this.isPasswordModalVisible = false;
+              this.userStateService.clearPendingOperation();
             },
             error: (error: any) => {
               console.error('Error eliminando QR:', error);
@@ -263,6 +293,7 @@ export class Users implements OnInit, OnDestroy {
               } else {
                 alert('Error al eliminar el código QR: ' + (error.error?.message || error.message || 'Error desconocido'));
               }
+              this.userStateService.clearPendingOperation();
             }
           });
       }
@@ -278,6 +309,26 @@ export class Users implements OnInit, OnDestroy {
       return alert('La contraseña no puede estar vacía');
     }
 
+    // RECUPERAR DEL SERVICIO SI ES NULL
+    if (!this.currentUser) {
+      const pending = this.userStateService.getPendingOperation();
+      this.currentUser = pending.user;
+      this.currentAction = pending.action as any;
+      console.log('DEBUG: Recuperado del servicio en confirmAction', {
+        currentUser: this.currentUser,
+        currentAction: this.currentAction
+      });
+    }
+
+    // VERIFICAR QUE EXISTE
+    if (!this.currentUser) {
+      console.error('DEBUG: currentUser es null en confirmAction');
+      alert('Error: No se encontró la información del usuario. Por favor, intente de nuevo.');
+      this.isPasswordModalVisible = false;
+      this.userStateService.clearPendingOperation();
+      return;
+    }
+
     switch (this.currentAction) {
       case 'crear':
         if (this.currentUser) {
@@ -287,10 +338,14 @@ export class Users implements OnInit, OnDestroy {
               next: (response: any) => {
                 this.mostrarModalSuccess('Usuario creado con éxito', 'Aceptar');
                 this.cargarUsuarios();
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
               },
               error: (error: any) => {
                 console.error('Error creando usuario:', error);
                 alert('Error al crear el usuario: ' + (error.message || 'Error desconocido'));
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
               }
             });
         }
@@ -304,60 +359,73 @@ export class Users implements OnInit, OnDestroy {
               next: (response: any) => {
                 this.mostrarModalSuccess('Usuario editado con éxito', 'Aceptar');
                 this.cargarUsuarios();
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
               },
               error: (error: any) => {
                 console.error('Error actualizando usuario:', error);
                 alert('Error al actualizar el usuario: ' + (error.message || 'Error desconocido'));
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
               }
             });
         }
         break;
 
       case 'inactivar':
-      if (this.currentUser && this.currentUser.idUsuario) {
-      this.userService.desactivarUsuario(this.currentUser.idUsuario)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response: any) => {
-          this.mostrarModalSuccess('Usuario inactivado con éxito', 'Aceptar');
-          this.cargarUsuarios();
-        },
-        error: (error: any) => {
-          console.error('Error desactivando usuario:', error);
-          alert('Error al inactivar el usuario: ' + (error.message || 'Error desconocido'));
+        console.log('DEBUG: Iniciando desactivación de usuario', this.currentUser);
+        if (this.currentUser) {
+          this.userService.desactivarUsuario(this.currentUser, password)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (response: any) => {
+                console.log('DEBUG: Usuario desactivado exitosamente', response);
+                this.mostrarModalSuccess('Usuario inactivado con éxito', 'Aceptar');
+                this.cargarUsuarios();
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
+              },
+              error: (error: any) => {
+                console.error('DEBUG: Error desactivando usuario:', error);
+                alert('Error al inactivar el usuario: ' + (error.message || 'Error desconocido'));
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
+              }
+            });
         }
-      });
-      }
-      break;
+        break;
 
       case 'activar':
-      if (this.currentUser && this.currentUser.idUsuario) {
-      this.userService.activarUsuario(this.currentUser.idUsuario)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response: any) => {
-          this.mostrarModalSuccess('Usuario activado con éxito', 'Aceptar');
-          this.cargarUsuarios();
-        },
-        error: (error: any) => {
-          console.error('Error activando usuario:', error);
-          alert('Error al activar el usuario: ' + (error.message || 'Error desconocido'));
+        console.log('DEBUG: Iniciando activación de usuario', this.currentUser);
+        if (this.currentUser) {
+          this.userService.activarUsuario(this.currentUser, password)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (response: any) => {
+                console.log('DEBUG: Usuario activado exitosamente', response);
+                this.mostrarModalSuccess('Usuario activado con éxito', 'Aceptar');
+                this.cargarUsuarios();
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
+              },
+              error: (error: any) => {
+                console.error('DEBUG: Error activando usuario:', error);
+                alert('Error al activar el usuario: ' + (error.message || 'Error desconocido'));
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
+              }
+            });
         }
-      });
-      }
-      break;
+        break;
 
       case 'cambiarContraseña':
         this.isPasswordModalVisible = false;
         this.isChangePasswordModalVisible = true;
         break;
 
-
       default:
-    }
-
-    if (this.currentAction !== 'cambiarContraseña') {
-      this.isPasswordModalVisible = false;
+        this.isPasswordModalVisible = false;
+        this.userStateService.clearPendingOperation();
     }
   }
 
@@ -376,43 +444,74 @@ export class Users implements OnInit, OnDestroy {
 }
 
   abrirConfirmModal(tipo: 'inactivar' | 'activar' | 'eliminarQR', usuario: Usuario) {
-  this.confirmModalAction = tipo;
-  this.currentUser = usuario;
-  switch(tipo) {
-    case 'inactivar':
-      this.confirmModalMessage = '¿Está seguro de que desea inactivar el usuario?';
-      break;
-    case 'activar':
-      this.confirmModalMessage = '¿Está seguro de que desea activar el usuario?';
-      break;
-    case 'eliminarQR':
-      this.confirmModalMessage = '¿Está seguro de que desea eliminar el código QR?';
-      break;
+    console.log('DEBUG: abrirConfirmModal called', { tipo, usuario });
+    
+    this.confirmModalAction = tipo;
+    this.currentUser = usuario;
+    
+    // GUARDAR EN EL SERVICIO
+    this.userStateService.setPendingOperation(usuario, tipo);
+    
+    switch(tipo) {
+      case 'inactivar':
+        this.confirmModalMessage = '¿Está seguro de que desea inactivar el usuario?';
+        break;
+      case 'activar':
+        this.confirmModalMessage = '¿Está seguro de que desea activar el usuario?';
+        break;
+      case 'eliminarQR':
+        this.confirmModalMessage = '¿Está seguro de que desea eliminar el código QR?';
+        break;
+    }
+
+    this.confirmModalVisible = true;
   }
 
-  this.confirmModalVisible = true;
-}
-
-onAceptarConfirmacion() {
-  this.confirmModalVisible = false;
-  switch(this.confirmModalAction) {
-    case 'inactivar':
-      this.mensajePasswordModal = 'Ingrese su contraseña para inactivar el usuario.';
-      this.isPasswordModalVisible = true;
-      this.currentAction = 'inactivar';
-      break;
-    case 'activar':
-      this.mensajePasswordModal = 'Ingrese su contraseña para activar el usuario.';
-      this.isPasswordModalVisible = true;
-      this.currentAction = 'activar';
-      break;
-    case 'eliminarQR':
-      this.mensajePasswordModal = 'Ingrese su contraseña para eliminar el código QR.';
-      this.isPasswordModalVisible = true;
-      this.currentAction = 'eliminarQR';
-      break;
+  onAceptarConfirmacion() {
+    console.log('DEBUG: onAceptarConfirmacion called', {
+      confirmModalAction: this.confirmModalAction,
+      currentUser: this.currentUser
+    });
+    
+    this.confirmModalVisible = false;
+    
+    // RECUPERAR DEL SERVICIO SI ES NULL
+    if (!this.currentUser) {
+      const pending = this.userStateService.getPendingOperation();
+      this.currentUser = pending.user;
+      this.confirmModalAction = pending.action as any;
+      console.log('DEBUG: Recuperado del servicio', {
+        currentUser: this.currentUser,
+        confirmModalAction: this.confirmModalAction
+      });
+    }
+    
+    switch(this.confirmModalAction) {
+      case 'inactivar':
+        this.mensajePasswordModal = 'Ingrese su contraseña para inactivar el usuario.';
+        this.currentAction = 'inactivar';
+        this.isPasswordModalVisible = true;
+        break;
+        
+      case 'activar':
+        this.mensajePasswordModal = 'Ingrese su contraseña para activar el usuario.';
+        this.currentAction = 'activar';
+        this.isPasswordModalVisible = true;
+        break;
+        
+      case 'eliminarQR':
+        this.mensajePasswordModal = 'Ingrese su contraseña para eliminar el código QR.';
+        this.currentAction = 'eliminarQR';
+        this.isPasswordModalVisible = true;
+        break;
+    }
+    
+    console.log('DEBUG: Después de onAceptarConfirmacion', {
+      currentAction: this.currentAction,
+      currentUser: this.currentUser,
+      isPasswordModalVisible: this.isPasswordModalVisible
+    });
   }
-}
 
   onCancelarConfirmacion() {
     this.confirmModalVisible = false;

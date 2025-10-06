@@ -71,6 +71,12 @@ input:checked + .slider:before {
   background: white;
   border-radius: 10px;
   overflow: hidden;
+  table-layout: fixed;
+}
+
+.body-table {
+  border-radius: 0 0 10px 10px;
+  margin-top: 0;
 }
 .usuarios-tabla th, .usuarios-tabla td {
   padding: 10px;

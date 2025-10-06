@@ -25,7 +25,7 @@
         <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
           <i class="fas fa-exclamation-triangle me-2"></i>
           <strong>Error:</strong>
-          <div [innerHTML]="errorMessage.replace('\n', '<br>')"></div>
+          <div style="white-space: pre-line;">{{ errorMessage }}</div>
           <button type="button" class="btn-close" (click)="errorMessage = ''" aria-label="Close"></button>
         </div>
 
