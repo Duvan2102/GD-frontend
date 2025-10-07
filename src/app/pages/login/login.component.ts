@@ -93,9 +93,17 @@ export class LoginComponent implements OnInit {
         case 'USUARIO_BLOQUEADO':
           this.errorMessage = 'Usuario bloqueado. Intenta más tarde';
           break;
+        case '2FA_DISABLED':
+          this.errorMessage = 'La doble autenticación no está configurada correctamente. Contacta al administrador.';
+          break;
+        case 'EMAIL_NOT_CONFIGURED':
+          this.errorMessage = 'El correo electrónico no está configurado. Contacta al administrador.';
+          break;
         default:
           this.errorMessage = error.error.message || 'Error de autenticación';
       }
+    } else if (error.status === 500) {
+      this.errorMessage = 'Error del servidor. Si el problema persiste, contacta al administrador del sistema.';
     } else if (error.status === 429) {
       this.errorMessage = 'Demasiados intentos. Usuario bloqueado temporalmente';
     } else if (error.status === 0) {

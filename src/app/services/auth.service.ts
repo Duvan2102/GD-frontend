@@ -466,6 +466,19 @@ export class AuthService {
     }).pipe(
         catchError((error: any) => {
           console.error('Error enviando código por email:', error);
+          
+          // Mejorar el mensaje de error según el código de respuesta
+          if (error.error?.code === '2FA_DISABLED') {
+            error.error.message = 'La doble autenticación no está habilitada para este usuario.';
+          } else if (error.error?.code === 'EMAIL_NOT_CONFIGURED') {
+            error.error.message = 'El correo electrónico no está configurado correctamente. Contacta al administrador.';
+          } else if (error.status === 400 && !error.error?.message) {
+            error.error = {
+              code: 'EMAIL_SEND_ERROR',
+              message: 'No se pudo enviar el código por correo. Verifica tu configuración de correo o contacta al administrador.'
+            };
+          }
+          
           return throwError(() => error);
         })
       );

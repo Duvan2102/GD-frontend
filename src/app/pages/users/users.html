@@ -70,6 +70,7 @@
                     <a href="#" *ngIf="!u.activo || (u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE')" (click)="abrirConfirmModal('activar', u); $event.preventDefault()"> 🗹 Activar usuario</a>
                     <a href="#" (click)="accion('editar', u, $event); $event.preventDefault()"> ✎ Editar usuario</a>
                     <a href="#" (click)="accion('cambiarContraseña', u, $event); $event.preventDefault()"> ⚷ Cambiar contraseña</a>
+                    <a href="#" (click)="accion('cambiar2FA', u, $event); $event.preventDefault()"> ⚠ Cambiar método 2FA</a>
                     <a href="#" *ngIf="u.dobleAutenticacion" (click)="abrirConfirmModal('eliminarQR', u); $event.preventDefault()"> ✖︎ Eliminar QR</a>
 
                   </div>

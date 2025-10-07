@@ -60,7 +60,7 @@ export interface Usuario {
   telefono1: string;
   telefono2?: string;
   direccion?: string;
-  dobleAutenticacion: boolean;
+  dobleAutenticacion: boolean | 'GOOGLE_AUTH' | 'EMAIL' | null;
   perfiles?: {
     administrador: boolean;
     funcionarioCreador: boolean;

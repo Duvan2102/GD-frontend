@@ -149,8 +149,14 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Error enviando código por email automáticamente:', error);
-        this.handleError(error);
         this.isLoading = false;
+        
+        // Mostrar mensaje de error específico
+        if (error.status === 400) {
+          this.errorMessage = 'No se pudo enviar el código por email. Por favor, verifica que tu correo empresarial esté configurado correctamente o contacta al administrador.';
+        } else {
+          this.handleError(error);
+        }
       }
     });
   }

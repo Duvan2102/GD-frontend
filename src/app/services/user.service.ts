@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError, of } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { environment } from '../environments/environment';
 import {
   Usuario,
@@ -144,13 +144,31 @@ export class UserService {
     }
 
     const url = `${this.apiUrl}/${userId}`;
+    
+    // RECREAR headers cada vez para asegurar que se envíen correctamente
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    
+    const options = {
+      headers: headers
+    };
+    
     console.log('=== ACTUALIZAR USUARIO - DEBUG ===');
     console.log('URL:', url);
-    console.log('Headers:', this.httpOptions.headers);
+    console.log('Headers (keys):', headers.keys());
+    console.log('Content-Type:', headers.get('Content-Type'));
     console.log('Datos enviados:', JSON.stringify(usuarioRequest, null, 2));
     console.log('==================================');
-    return this.http.put<any>(url, usuarioRequest, this.httpOptions).pipe(
-      map(response => {
+    
+    return this.http.put<any>(url, usuarioRequest, options).pipe(
+      tap((response: any) => {
+        console.log('=== RESPUESTA DEL SERVIDOR (ACTUALIZAR) ===');
+        console.log('Status: SUCCESS');
+        console.log('Response:', JSON.stringify(response, null, 2));
+        console.log('===========================================');
+      }),
+      map((response: any): ApiResponse => {
         if (response && response.idUsuario) {
           return {
             success: true,
@@ -158,18 +176,26 @@ export class UserService {
             data: response
           };
         }
-        
+
         if (response && typeof response.success !== 'undefined') {
           return response;
         }
-        
+
         return {
           success: true,
           message: 'Usuario actualizado correctamente',
           data: response
         };
       }),
-      catchError(this.handleError)
+      catchError((error: HttpErrorResponse) => {
+        console.error('=== ERROR DEL SERVIDOR (ACTUALIZAR) ===');
+        console.error('Status:', error.status);
+        console.error('StatusText:', error.statusText);
+        console.error('Error body:', error.error);
+        console.error('Full error:', error);
+        console.error('=======================================');
+        return this.handleError(error);
+      })
     );
   }
 
@@ -247,43 +273,22 @@ export class UserService {
   }
 
   private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest & { idUsuario?: number } {
-    // Determinar el rol
-    let rolUsuario;
-    if (usuario.rol && usuario.rol.idRol) {
-      rolUsuario = usuario.rol;
-    } else {
-      rolUsuario = { idRol: 2, descripcion: 'FUNCIONARIO' };
+    // El cargo, rol y estado deben venir ya con toda su estructura del componente
+    if (!usuario.cargo) {
+      throw new Error('Cargo requerido');
     }
 
-    // Determinar el estado
-    let estadoUsuario;
-    if (usuario.idUsuario) {
-      // Modo edición: mantener estado existente
-      if (typeof usuario.estado === 'object' && usuario.estado && usuario.estado.idEstado) {
-        estadoUsuario = usuario.estado;
-      } else {
-        estadoUsuario = { idEstado: 5, descripcion: 'ACTIVO' };
-      }
-    } else {
-      // Modo creación: siempre ACTIVO
-      estadoUsuario = { idEstado: 5, descripcion: 'ACTIVO' };
-    }
-
-    // Obtener cargo en formato correcto
-    const cargoObj = this.obtenerIdCargo(usuario.cargo);
-    
-    if (!cargoObj) {
-      throw new Error('Cargo inválido o no especificado');
-    }
+    // Extraer solo el idRol del objeto rol
+    const rolId = usuario.rol?.idRol || 2; // Default a FUNCIONARIO si no hay rol
 
     const result: any = {
       identificacion: usuario.identificacion?.trim() || '',
       nombres: usuario.nombres?.trim() || '',
       apellidos: usuario.apellidos?.trim() || '',
       usuario: usuario.usuario?.trim() || '',
-      cargo: cargoObj,  // Ahora siempre es { idCargo: number }
-      estado: estadoUsuario,
-      rol: rolUsuario,
+      cargo: usuario.cargo,  // Ya viene con estructura completa desde el componente
+      estado: usuario.estado,  // Ya viene con estructura completa
+      rol: { idRol: rolId },  // Enviar solo el idRol
       correoEmpresarial: usuario.correoEmpresarial?.trim() || '',
       correoPersonal: usuario.correoPersonal?.trim() || '',
       telefono1: this.cleanPhoneNumber(usuario.telefono1?.trim() || ''),
@@ -299,6 +304,7 @@ export class UserService {
     }
 
     console.log('DEBUG: transformarUsuarioParaApi resultado:', JSON.stringify(result, null, 2));
+    console.log('DEBUG: Rol enviado - idRol:', rolId);
     
     return result;
   }

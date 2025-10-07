@@ -35,10 +35,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   @Output() userUpdated = new EventEmitter<Usuario>();
 
   userForm!: FormGroup;
-  dobleAutenticacionOptions = [
-    { value: 'Google Authenticator', label: 'Google Authenticator' },
-    { value: 'Correo Electrónico', label: 'Correo Electrónico' },
-  ];
   cargosDisponibles: Position[] = [];
   departamentos: Department[] = [];
   areas: Area[] = [];
@@ -108,7 +104,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       celular: ['', [Validators.required, Validators.pattern(/^\+?[\d\s\-()]{10,15}$/)]],
       telefono: ['', [Validators.pattern(/^\+?[\d\s\-()]{10,15}$/)]],
       direccion: ['', [Validators.maxLength(200)]],
-      dobleAutenticacion: ['Google Authenticator', Validators.required],
+      dobleAutenticacion: ['GOOGLE_AUTH', Validators.required],
       perfil: ['funcionarios', Validators.required]
     });
   }
@@ -185,12 +181,13 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       }
 
       // Determinar el método de 2FA actual
-      let dobleAutenticacionValue = 'Google Authenticator';
+      let dobleAutenticacionValue: 'GOOGLE_AUTH' | 'EMAIL' = 'GOOGLE_AUTH';
       if (this.user.dobleAutenticacion) {
-        if (typeof this.user.dobleAutenticacion === 'string') {
-          dobleAutenticacionValue = this.user.dobleAutenticacion === 'GOOGLE_AUTH' || this.user.dobleAutenticacion === 'Google Authenticator' ? 'Google Authenticator' : 'Correo Electrónico';
+        if (this.user.dobleAutenticacion === 'GOOGLE_AUTH' || this.user.dobleAutenticacion === 'EMAIL') {
+          dobleAutenticacionValue = this.user.dobleAutenticacion;
         } else if (typeof this.user.dobleAutenticacion === 'boolean') {
-          dobleAutenticacionValue = this.user.dobleAutenticacion ? 'Google Authenticator' : 'Correo Electrónico';
+          // Si es boolean, por defecto usar GOOGLE_AUTH
+          dobleAutenticacionValue = 'GOOGLE_AUTH';
         }
       }
 
@@ -486,12 +483,17 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   }
 
   handlePasswordValidation(password: string): void {
+    console.log('=== DEBUG: handlePasswordValidation INICIADO ===');
+    console.log('Password recibido:', password ? '***' : 'vacío');
+    console.log('pendingUserData existe:', !!this.pendingUserData);
+    
     if (!password.trim()) {
       alert('La contraseña no puede estar vacía');
       return;
     }
 
     if (!this.pendingUserData) {
+      console.error('ERROR: pendingUserData es null en handlePasswordValidation');
       this.closePasswordModal();
       return;
     }
@@ -501,15 +503,23 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     this.confirmModalMessage = this.isEditMode
       ? `¿Confirmas la actualización del usuario ${this.pendingUserData.nombres} ${this.pendingUserData.apellidos}?`
       : `¿Confirmas la creación del usuario ${this.pendingUserData.nombres} ${this.pendingUserData.apellidos}?`;
+    
+    console.log('Abriendo modal de confirmación...');
     this.confirmModalVisible = true;
   }
 
   onAceptarConfirmacion(): void {
+    console.log('=== DEBUG: onAceptarConfirmacion INICIADO ===');
+    
     this.confirmModalVisible = false;
 
-    if (!this.pendingUserData) return;
+    if (!this.pendingUserData) {
+      console.error('ERROR: pendingUserData es null');
+      return;
+    }
 
     this.isLoading = true;
+    
     const operacion = this.isEditMode
       ? this.userService.actualizarUsuario(this.pendingUserData)
       : this.userService.crearUsuario(this.pendingUserData);
@@ -518,55 +528,29 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
+          console.log('=== RESPUESTA EXITOSA ===');
           this.isLoading = false;
 
-          // Si es edición y cambió el método de 2FA, cambiar el método
-          const currentDobleAutenticacion = this.userForm.get('dobleAutenticacion')?.value;
-          if (this.isEditMode && this.originalDobleAutenticacion !== currentDobleAutenticacion) {
-            const metodo2FA = currentDobleAutenticacion === 'Google Authenticator' ? 'GOOGLE_AUTH' : 'EMAIL';
-            this.authService.change2FAMethod(this.pendingUserData!.idUsuario!, metodo2FA)
-              .pipe(takeUntil(this.destroy$))
-              .subscribe({
-                next: (changeResponse) => {
-                  let mensaje = response?.message || 'Usuario actualizado correctamente';
-                  if (changeResponse.message) {
-                    mensaje += '\n\n' + changeResponse.message;
-                  }
-                  if (changeResponse.qrCodeUrl) {
-                    mensaje += '\n\nSe ha generado un nuevo código QR que el usuario deberá escanear en su próximo login.';
-                  }
-                  this.modalSuccessMessage = mensaje;
-                  this.modalSuccessVisible = true;
-                  this.userUpdated.emit(this.pendingUserData!);
-                  this.save.emit(this.pendingUserData!);
-                },
-                error: (changeError) => {
-                  console.error('Error cambiando método 2FA:', changeError);
-                  this.errorMessage = 'Usuario actualizado, pero error al cambiar método 2FA: ' + (changeError.error?.message || changeError.message);
-                  this.userUpdated.emit(this.pendingUserData!);
-                  this.save.emit(this.pendingUserData!);
-                }
-              });
+          // NO intentar cambiar el método 2FA aquí
+          // Ese cambio se hace desde el botón específico en users.ts
+          
+          this.modalSuccessMessage = this.isEditMode
+            ? 'Usuario actualizado correctamente'
+            : 'Usuario creado correctamente';
+          
+          this.modalSuccessVisible = true;
+          
+          if (this.isEditMode) {
+            this.userUpdated.emit(this.pendingUserData!);
           } else {
-            this.modalSuccessMessage = response?.message ||
-              (this.isEditMode ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente');
-            this.modalSuccessVisible = true;
-            if (this.isEditMode) {
-              this.userUpdated.emit(this.pendingUserData!);
-            } else {
-              this.userCreated.emit(this.pendingUserData!);
-            }
-            this.save.emit(this.pendingUserData!);
+            this.userCreated.emit(this.pendingUserData!);
           }
+          this.save.emit(this.pendingUserData!);
         },
         error: (error) => {
+          console.error('=== ERROR EN SERVIDOR ===');
           this.isLoading = false;
-          console.error('Error en operación:', error);
-          console.error('Error body completo:', error.error);
-          console.error('Error status:', error.status);
-          console.error('Error message:', error.message);
 
-          // Extraer el mensaje específico del servidor
           if (error.error && error.error.mensaje) {
             this.errorMessage = error.error.mensaje;
           } else if (error.error && typeof error.error === 'string') {
@@ -576,15 +560,12 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
           } else {
             this.errorMessage = 'Error inesperado al procesar la solicitud';
           }
-          
-          // Agregar detalles si existen
+
           if (error.error && error.error.details && Array.isArray(error.error.details)) {
             this.errorMessage += ':\n• ' + error.error.details.join('\n• ');
           }
-          
+
           this.pendingUserData = null;
-          
-          // Cerrar modales de confirmación
           this.confirmModalVisible = false;
           this.isPasswordModalVisible = false;
         }
@@ -650,6 +631,9 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   }
 
   onSave(): void {
+    console.log('=== DEBUG: onSave INICIADO ===');
+    console.log('isEditMode:', this.isEditMode);
+    
     this.resetMessages();
     const identificacionControl = this.userForm.get('identificacion');
     const wasDisabled = identificacionControl?.disabled;
@@ -658,6 +642,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     }
 
     if (this.userForm.invalid) {
+      console.error('Formulario inválido:', this.userForm.errors);
       this.markFormGroupTouched();
       this.errorMessage = 'Por favor, corrige los errores en el formulario.';
       if (wasDisabled) {
@@ -668,29 +653,65 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
     const formValue = this.userForm.getRawValue();
 
-    // CRÍTICO: Asegurar que cargo tiene la estructura correcta
-    const cargoFinal = this.selectedCargoInfo
-      ? { idCargo: this.selectedCargoInfo.idCargo }
-      : { idCargo: parseInt(formValue.cargo, 10) };
+    // CRÍTICO: Obtener el cargo completo con toda su estructura
+    const cargoCompleto = this.getCargoConTodasLasRelaciones(formValue.cargo);
+    
+    if (!cargoCompleto) {
+      this.errorMessage = 'Error: No se pudo obtener la información completa del cargo';
+      return;
+    }
 
-    console.log('DEBUG: Cargo final para pendingUserData:', cargoFinal);
+    console.log('DEBUG: Cargo completo:', JSON.stringify(cargoCompleto, null, 2));
+
+    // Convertir perfil a rol con estructura completa
+    let rolCompleto: any;
+    switch (formValue.perfil) {
+      case 'administrador':
+        rolCompleto = { idRol: 1, descripcion: 'ADMINISTRADOR' };
+        break;
+      case 'funcionarioCreador':
+        rolCompleto = { idRol: 3, descripcion: 'AUDITOR' };
+        break;
+      case 'funcionarios':
+      default:
+        rolCompleto = { idRol: 2, descripcion: 'FUNCIONARIO' };
+        break;
+    }
+
+    console.log('DEBUG: Rol completo:', rolCompleto);
+
+    // Estado con estructura completa
+    // Al crear: PENDIENTE (id: 1), Al editar: mantener el estado actual
+    const estadoCompleto = this.isEditMode
+      ? (this.user?.estado || { idEstado: 5, descripcion: 'ACTIVO' })
+      : { idEstado: 1, descripcion: 'PENDIENTE' };
 
     this.pendingUserData = {
-      ...formValue,
-      idUsuario: this.isEditMode ? (this.user?.idUsuario || this.user?.noUsuario) : undefined,
-      cargo: cargoFinal,  // Estructura garantizada: { idCargo: number }
+      identificacion: formValue.identificacion,
+      nombres: formValue.nombres,
+      apellidos: formValue.apellidos,
+      usuario: formValue.usuario,
+      cargo: cargoCompleto,  // Objeto completo con área y departamento
+      estado: estadoCompleto,
+      rol: rolCompleto,  // Objeto completo con idRol y descripcion
       correoEmpresarial: formValue.correoEmpresarial || '',
       correoPersonal: formValue.correoPersonal || '',
       telefono1: formValue.celular || '',
       telefono2: formValue.telefono || '',
       direccion: formValue.direccion || '',
-      dobleAutenticacion: formValue.dobleAutenticacion === 'Google Authenticator',
-      estado: this.isEditMode
-        ? (this.user?.estado || { idEstado: 5, descripcion: 'ACTIVO' })
-        : { idEstado: 5, descripcion: 'ACTIVO' },
-      activo: this.isEditMode ? (this.user?.activo !== false) : true,
-      rol: this.convertirPerfilARol(formValue.perfil)
-    };
+      // Enviar dobleAutenticacion solo en modo creación
+      // En modo edición, el cambio se hace con el botón "Cambiar método 2FA" en users.ts
+      dobleAutenticacion: this.isEditMode ? this.user?.dobleAutenticacion : formValue.dobleAutenticacion,
+      activo: this.isEditMode ? (this.user?.activo !== false) : true
+    } as Usuario;
+
+    // Agregar idUsuario solo en modo edición
+    if (this.isEditMode) {
+      const userId = this.user?.idUsuario || this.user?.noUsuario;
+      if (userId) {
+        this.pendingUserData.idUsuario = userId;
+      }
+    }
 
     console.log('DEBUG: pendingUserData completo:', JSON.stringify(this.pendingUserData, null, 2));
 
@@ -701,7 +722,60 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     this.mensajePasswordModal = this.isEditMode
       ? 'Ingrese su contraseña para guardar los cambios del usuario.'
       : 'Ingrese su contraseña para crear el nuevo usuario.';
+    
     this.isPasswordModalVisible = true;
+  }
+
+  private getCargoConTodasLasRelaciones(cargoId: string | number): any | null {
+    if (!cargoId) {
+      console.error('cargoId es null o undefined');
+      return null;
+    }
+
+    // Si selectedCargoInfo ya tiene toda la estructura, usarla
+    if (this.selectedCargoInfo && this.selectedCargoInfo.idCargo) {
+      // Buscar el cargo completo en cargosDisponibles para asegurar estructura completa
+      const cargoConRelaciones = this.cargosDisponibles.find(
+        c => c.idCargo === this.selectedCargoInfo!.idCargo
+      );
+
+      if (cargoConRelaciones && cargoConRelaciones.area) {
+        return {
+          idCargo: cargoConRelaciones.idCargo,
+          descripcion: cargoConRelaciones.descripcion,
+          area: {
+            idArea: cargoConRelaciones.area.idArea,
+            descripcion: cargoConRelaciones.area.descripcion,
+            departamento: {
+              idDepartamento: cargoConRelaciones.area.departamento.idDepartamento,
+              descripcion: cargoConRelaciones.area.departamento.descripcion
+            }
+          }
+        };
+      }
+    }
+
+    // Buscar por ID numérico en cargosDisponibles
+    const cargoIdNum = typeof cargoId === 'string' ? parseInt(cargoId, 10) : cargoId;
+    const cargo = this.cargosDisponibles.find(c => c.idCargo === cargoIdNum);
+
+    if (cargo && cargo.area && cargo.area.departamento) {
+      return {
+        idCargo: cargo.idCargo,
+        descripcion: cargo.descripcion,
+        area: {
+          idArea: cargo.area.idArea,
+          descripcion: cargo.area.descripcion,
+          departamento: {
+            idDepartamento: cargo.area.departamento.idDepartamento,
+            descripcion: cargo.area.departamento.descripcion
+          }
+        }
+      };
+    }
+
+    console.error('No se encontró cargo con estructura completa para ID:', cargoId);
+    return null;
   }
 
   onClose(): void {
@@ -719,7 +793,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
   private resetForm(): void {
     this.userForm.reset({
-      dobleAutenticacion: 'Google Authenticator',
+      dobleAutenticacion: 'GOOGLE_AUTH',
       perfil: 'funcionarios'
     });
     this.userForm.get('identificacion')?.enable();
@@ -813,4 +887,5 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   trackByCargo(index: number, item: any): any {
     return item?.idCargo || index;
   }
+
 }

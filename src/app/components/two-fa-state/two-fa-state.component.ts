@@ -91,9 +91,14 @@ export class TwoFAStateComponent implements OnInit, OnDestroy {
     } else if (this.twoFAState.hasEmailBackup && !this.twoFAState.hasGoogleAuth) {
       // Usuario tiene solo email configurado
       this.router.navigate(['/two-fa-verification']);
+    } else if (!this.twoFAState.hasGoogleAuth && !this.twoFAState.hasEmailBackup && !this.twoFAState.googleAuthPending) {
+      // Usuario no tiene ningún método 2FA configurado - redirigir a verificación para configurar
+      console.log('Usuario sin 2FA configurado, redirigiendo a verificación...');
+      this.router.navigate(['/two-fa-verification']);
     } else {
-      // Estado inesperado
-      this.errorMessage = 'Estado de configuración 2FA no reconocido';
+      // Estado inesperado - mostrar error con más detalles
+      console.error('Estado 2FA no reconocido:', this.twoFAState);
+      this.errorMessage = `Estado de configuración 2FA no reconocido. Por favor, contacta al administrador.`;
     }
   }
 

@@ -208,12 +208,81 @@ export class Users implements OnInit, OnDestroy {
         this.isPasswordModalVisible = true;
         break;
 
+      case 'cambiar2FA':
+        this.abrirModal2FA(u);
+        break;
+
       case 'eliminarQR':
         this.mensajePasswordModal = 'Ingrese su contraseña para eliminar el código QR del usuario.';
         this.isPasswordModalVisible = true;
         break;
 
       default:
+    }
+  }
+
+  abrirModal2FA(usuario: Usuario): void {
+    this.currentUser = { ...usuario };
+    this.currentAction = 'cambiar2FA';
+    
+    // Verificar si el usuario tiene 2FA habilitado
+    if (!usuario.dobleAutenticacion) {
+      this.mostrarModalSuccess(
+        'Este usuario no tiene la doble autenticación habilitada. Para habilitar 2FA, el usuario debe configurarlo desde su perfil al iniciar sesión.',
+        'Entendido'
+      );
+      return;
+    }
+    
+    // Determinar el método actual basado en la propiedad dobleAutenticacion
+    // Nota: Necesitaríamos información adicional del backend para saber el método exacto
+    // Por ahora, asumimos que si tiene 2FA habilitado, podemos cambiar entre métodos
+    const confirmacion = confirm(
+      '¿Desea cambiar el método de autenticación de este usuario?\n\n' +
+      'Nota: Si el usuario tiene Google Authenticator, se cambiará a Correo Electrónico y viceversa.\n' +
+      'El usuario deberá configurar el nuevo método en su próximo inicio de sesión.'
+    );
+    
+    if (!confirmacion) {
+      return;
+    }
+    
+    // Preguntar qué método desea establecer
+    const nuevoMetodoConfirm = confirm(
+      '¿Desea cambiar a Google Authenticator?\n\n' +
+      'Presione "Aceptar" para Google Authenticator\n' +
+      'Presione "Cancelar" para Correo Electrónico'
+    );
+    
+    const metodo2FA = nuevoMetodoConfirm ? 'GOOGLE_AUTH' : 'EMAIL';
+    
+    if (usuario.idUsuario) {
+      this.authService.change2FAMethod(usuario.idUsuario, metodo2FA)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response: any) => {
+            let mensaje = response.message || 'Método de autenticación cambiado correctamente';
+            if (response.qrCodeUrl) {
+              mensaje += '\n\nSe ha generado un nuevo código QR. El usuario deberá escanearlo en su próximo login.';
+            }
+            this.mostrarModalSuccess(mensaje, 'Aceptar');
+            this.cargarUsuarios();
+          },
+          error: (error: any) => {
+            console.error('Error cambiando método 2FA:', error);
+            let mensajeError = 'Error al cambiar el método de autenticación';
+            
+            if (error.error?.code === '2FA_DISABLED') {
+              mensajeError = 'La doble autenticación no está habilitada para este usuario. El usuario debe habilitarla desde su perfil.';
+            } else if (error.error?.message) {
+              mensajeError = error.error.message;
+            } else if (error.message) {
+              mensajeError = error.message;
+            }
+            
+            this.mostrarModalSuccess(mensajeError, 'Entendido');
+          }
+        });
     }
   }
 
