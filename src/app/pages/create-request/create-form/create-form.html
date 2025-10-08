@@ -32,20 +32,26 @@
 
           <div class="form-row-double">
             <div class="form-group-half">
-              <label for="prioridad" class="form-label">Prioridad</label>
-              <select id="prioridad" class="form-select" [(ngModel)]="prioridad">
-                <option value="NORMAL">NORMAL</option>
-                <option value="IMPORTANTE">IMPORTANTE</option>
-              </select>
+              <label class="form-label">Solicitud Prioritaria</label>
+              <div class="custom-switch" style="margin-top: 8px;">
+                <input type="checkbox" id="prioridad" class="switch-input" [(ngModel)]="prioridad" (change)="onPrioridadChange()">
+                <label for="prioridad" class="switch-label"></label>
+                <span style="margin-left: 10px; font-size: 14px; color: #666;">
+                  {{ prioridad ? 'Prioritaria' : 'Normal' }}
+                </span>
+              </div>
             </div>
             <div class="form-group-half">
-              <label for="recordatorio" class="form-label">Enviar recordatorio</label>
+              <label for="recordatorio" class="form-label">
+                Recordatorios (días)
+                <span *ngIf="prioridad" style="color: #d9534f; font-size: 12px;"> *obligatorio</span>
+              </label>
               <select id="recordatorio" class="form-select" [(ngModel)]="enviarRecordatorio">
-                <option value="NUNCA">NUNCA</option>
-                <option value="SEMANALMENTE">SEMANALMENTE</option>
-                <option value="CADA_3_DIAS">CADA 3 DÍAS</option>
-                <option value="TODOS_LOS_DIAS">TODOS LOS DÍAS</option>
+                <option *ngFor="let opt of recordatorioOpciones" [ngValue]="opt.value">{{ opt.label }}</option>
               </select>
+              <small *ngIf="prioridad" style="color: #666; font-size: 12px; display: block; margin-top: 4px;">
+                Default: 4 días
+              </small>
             </div>
           </div>
 

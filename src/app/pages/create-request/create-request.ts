@@ -140,6 +140,8 @@ export class CreateRequest implements OnInit, OnDestroy {
       ordenFirma: solicitudData.establecerOrden,
       comentarioInicial: solicitudData.detallesAdicionales,
       nombreSolicitud: solicitudData.nombreSolicitud,
+      prioridad: solicitudData.prioridad,
+      enviarRecordatorio: solicitudData.enviarRecordatorio,
       pdfPrincipal: pdf,
       adjuntos: adjuntos
     }).subscribe(appr => {
