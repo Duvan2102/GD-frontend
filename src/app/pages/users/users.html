@@ -10,8 +10,6 @@
       </button>
     </div>
 
-
-
     <!-- CONTROLES -->
     <app-controls
       [textoboton]="'Crear usuario'"
@@ -71,7 +69,7 @@
                     <a href="#" (click)="accion('editar', u, $event); $event.preventDefault()"> ✎ Editar usuario</a>
                     <a href="#" (click)="accion('cambiarContraseña', u, $event); $event.preventDefault()"> ⚷ Cambiar contraseña</a>
                     <a href="#" (click)="accion('cambiar2FA', u, $event); $event.preventDefault()"> ⚠ Cambiar método 2FA</a>
-                    <a href="#" *ngIf="u.dobleAutenticacion" (click)="abrirConfirmModal('eliminarQR', u); $event.preventDefault()"> ✖︎ Eliminar QR</a>
+                    <a href="#" *ngIf="u.dobleAutenticacion !== null && u.dobleAutenticacion !== undefined && u.dobleAutenticacion !== 'EMAIL' && u.dobleAutenticacion !== true" (click)="abrirConfirmModal('eliminarQR', u); $event.preventDefault()"> ✖︎ Eliminar QR</a>
 
                   </div>
                 </div>

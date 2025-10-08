@@ -245,9 +245,25 @@
               </option>
             </select>
             
-            <!-- Modo edición: Texto informativo -->
+            <!-- Modo edición: Texto informativo con método actual -->
             <div *ngIf="isEditMode" class="form-control-plaintext">
-              <strong>{{ userForm.get('dobleAutenticacion')?.value === 'GOOGLE_AUTH' ? 'Google Authenticator' : 'Correo Electrónico' }}</strong>
+              <ng-container [ngSwitch]="userForm.get('dobleAutenticacion')?.value">
+                <strong *ngSwitchCase="'GOOGLE_AUTH'">
+                  <i class="fas fa-mobile-alt me-2"></i>Google Authenticator
+                </strong>
+                <strong *ngSwitchCase="'EMAIL'">
+                  <i class="fas fa-envelope me-2"></i>Correo Electrónico
+                </strong>
+                <strong *ngSwitchCase="true">
+                  <i class="fas fa-envelope me-2"></i>Correo Electrónico
+                </strong>
+                <strong *ngSwitchCase="false">
+                  <i class="fas fa-mobile-alt me-2"></i>Google Authenticator
+                </strong>
+                <strong *ngSwitchDefault>
+                  <i class="fas fa-question-circle me-2"></i>No configurado
+                </strong>
+              </ng-container>
             </div>
             
             <div *ngIf="getErrorMessage('dobleAutenticacion') && !isEditMode" class="invalid-feedback">

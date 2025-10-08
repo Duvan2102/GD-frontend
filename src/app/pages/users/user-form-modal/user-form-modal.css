@@ -1,10 +1,10 @@
 .modal-content.user-form-modal .btn-primary-custom {
   background: #639382;
   color: #fff;
-  border-radius: 8px;
-  padding: 0.62rem 2.2rem;
-  font-weight: bold;
-  font-size: 1.09rem;
+  border-radius: 4px;
+  padding: 6px 16px;
+  font-weight: 600;
+  font-size: 12px;
   border: none;
   box-shadow: 0 2px 6px rgba(76, 114, 103, 0.11);
   transition: background 0.2s;
@@ -15,11 +15,11 @@
 .modal-content.user-form-modal .btn-secondary {
   background: #c7cbcc;
   color: #46655a;
-  border-radius: 8px;
-  font-weight: bold;
+  border-radius: 4px;
+  font-weight: 600;
   border: none;
-  padding: 0.62rem 2.2rem;
-  font-size: 1.09rem;
+  padding: 6px 16px;
+  font-size: 12px;
   transition: background 0.2s;
 }
 .modal-content.user-form-modal .btn-secondary:hover:not(:disabled) {
@@ -29,45 +29,54 @@
 /* Inputs y selects */
 .modal-content.user-form-modal .form-control,
 .modal-content.user-form-modal .form-select {
-  border: 1.2px solid #bed6cd;
-  border-radius: 7px;
-  font-size: 1.07rem;
-  background: #fafcfc;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  font-size: 12px;
+  background: white;
   color: #355345;
-  padding: 9px 11px;
+  padding: 5px 8px;
   transition: border 0.18s;
 }
 .modal-content.user-form-modal .form-control:focus,
 .modal-content.user-form-modal .form-select:focus {
   border-color: #639382;
-  box-shadow: 0 0 0 0.07rem #63938221;
+  box-shadow: 0 0 0 1px #639382;
 }
 .modal-content.user-form-modal .form-control.is-invalid {
   border-color: #c23e3e;
   background: #fff6f6;
 }
 .modal-content.user-form-modal .form-label {
-  font-weight: 500;
-  color: #46655a;
-  font-size: 1.02rem;
-  margin-bottom: 4px;
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 12px;
+  margin-bottom: 3px;
 }
 
-/* Perfiles (checkboxes) */
-.modal-content.user-form-modal .form-check-input[type="checkbox"] {
+/* Perfiles (checkboxes y radios) */
+.modal-content.user-form-modal .form-check-input[type="checkbox"],
+.modal-content.user-form-modal .form-check-input[type="radio"] {
   accent-color: #639382;
+  width: 14px;
+  height: 14px;
 }
 .modal-content.user-form-modal .form-check-label {
-  font-size: 1rem;
-  color: #344d3b;
-  font-weight: 400;
+  font-size: 12px;
+  color: #2d3748;
+  font-weight: 500;
 }
 
 /* Titulos y subtitulos */
 .modal-content.user-form-modal h6.mb-3 {
-  font-size: 1.07rem;
-  color: #46655a;
-  font-weight: bold;
+  font-size: 13px;
+  color: #2d3748;
+  font-weight: 600;
+}
+
+.modal-content.user-form-modal .modal-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #5a7a6a;
 }
 
 /* Separador visual para el modal */
@@ -83,7 +92,9 @@
 
 .alert {
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 8px 10px;
 }
 
 .alert-success {
@@ -130,11 +141,41 @@
 .user-form-modal .modal-header {
   background-color: #f8f9fa;
   border-bottom: 1px solid #ddd;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.user-form-modal .modal-body {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.user-form-modal .modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.user-form-modal .modal-body::-webkit-scrollbar-track {
+  background: #f8f9fa;
+}
+
+.user-form-modal .modal-body::-webkit-scrollbar-thumb {
+  background-color: #639382;
+  border-radius: 10px;
+  border: 2px solid #f8f9fa;
+}
+
+.user-form-modal .modal-body::-webkit-scrollbar-thumb:hover {
+  background-color: #46655a;
 }
 
 .user-form-modal .modal-footer {
   background-color: #f8f9fa;
   border-top: 1px solid #ddd;
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
 }
 
 .btn-primary-custom {
@@ -155,15 +196,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 1.2px solid #bed6cd;
-  border-radius: 7px;
-  background: #fafcfc;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  background: white;
   color: #355345;
   cursor: pointer;
   transition: border 0.18s, box-shadow 0.15s ease-in-out;
-  min-height: 42px;
-  font-size: 1.07rem;
-  padding: 9px 11px;
+  min-height: 30px;
+  font-size: 12px;
+  padding: 5px 8px;
 }
 
 .dropdown-display:hover {
@@ -189,7 +230,7 @@
 .selected-text {
   flex: 1;
   color: #355345;
-  font-size: 1.07rem;
+  font-size: 12px;
 }
 
 .selected-text.placeholder {
@@ -199,8 +240,8 @@
 .dropdown-arrow {
   color: #6c757d;
   transition: transform 0.2s ease;
-  font-size: 0.875rem;
-  margin-left: 8px;
+  font-size: 10px;
+  margin-left: 6px;
 }
 
 .dropdown-arrow.rotated {
@@ -214,11 +255,11 @@
   right: 0;
   z-index: 1070;
   background: #fff;
-  border: 1.2px solid #bed6cd;
+  border: 1px solid #cbd5e0;
   border-top: none;
-  border-radius: 0 0 7px 7px;
+  border-radius: 0 0 4px 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  max-height: 320px;
+  max-height: 250px;
   overflow-y: auto;
 }
 
@@ -234,7 +275,7 @@
 .area-header {
   display: flex;
   align-items: center;
-  padding: 0.75rem 1rem;
+  padding: 6px 10px;
   cursor: pointer;
   transition: background-color 0.15s ease;
   border-radius: 4px;
@@ -251,23 +292,23 @@
 
 .department-header i,
 .area-header i {
-  width: 1.1rem;
-  margin-right: 0.6rem;
+  width: 12px;
+  margin-right: 6px;
   color: #639382;
-  font-size: 0.8rem;
+  font-size: 10px;
   transition: transform 0.2s ease;
 }
 
 .department-name {
   font-weight: 600;
   color: #46655a;
-  font-size: 1rem;
+  font-size: 12px;
 }
 
 .area-name {
   font-weight: 500;
   color: #6c757d;
-  font-size: 0.95rem;
+  font-size: 11px;
 }
 
 .areas-container {
@@ -289,11 +330,11 @@
 .cargo-item {
   display: flex;
   align-items: center;
-  padding: 0.6rem 1rem;
-  margin: 0.15rem 0.25rem;
+  padding: 6px 10px;
+  margin: 2px 4px;
   cursor: pointer;
   transition: all 0.15s ease;
-  border-radius: 6px;
+  border-radius: 4px;
   background: #fafcfc;
   border: 1px solid transparent;
 }
@@ -317,7 +358,7 @@
 }
 
 .cargo-name {
-  font-size: 0.9rem;
+  font-size: 11px;
   color: #355345;
   font-weight: 500;
   width: 100%;
@@ -334,11 +375,11 @@
 }
 
 .no-data-message {
-  padding: 1.5rem;
+  padding: 12px;
   text-align: center;
   color: #6c757d;
   font-style: italic;
-  font-size: 0.95rem;
+  font-size: 11px;
 }
 
 .dropdown-backdrop {
@@ -354,10 +395,14 @@
 .invalid-feedback.d-block {
   display: block !important;
   width: 100%;
-  margin-top: 0.25rem;
-  font-size: 0.875em;
+  margin-top: 3px;
+  font-size: 11px;
   color: #c23e3e;
   font-weight: 500;
+}
+
+.form-text {
+  font-size: 11px;
 }
 
 .dropdown-panel::-webkit-scrollbar {

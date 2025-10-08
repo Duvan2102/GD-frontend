@@ -196,8 +196,9 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         // Si ya viene como string 'GOOGLE_AUTH' o 'EMAIL', usarlo directamente
         dobleAutenticacionValue = this.user.dobleAutenticacion;
       } else if (typeof this.user.dobleAutenticacion === 'boolean') {
-        // Si es boolean: true = GOOGLE_AUTH, false = EMAIL
-        dobleAutenticacionValue = this.user.dobleAutenticacion ? 'GOOGLE_AUTH' : 'EMAIL';
+        // INVERTIDO: Si es boolean: false = GOOGLE_AUTH, true = EMAIL
+        // Esto es porque el servidor parece enviar la lógica inversa
+        dobleAutenticacionValue = this.user.dobleAutenticacion ? 'EMAIL' : 'GOOGLE_AUTH';
       } else if (this.user.dobleAutenticacion === null || this.user.dobleAutenticacion === undefined) {
         // Si es null o undefined, usar GOOGLE_AUTH por defecto
         dobleAutenticacionValue = 'GOOGLE_AUTH';
