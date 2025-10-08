@@ -43,6 +43,11 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   selectedCargoInfo: Position | null = null;
   originalDobleAutenticacion: string = '';
   isDataLoaded = false;
+  
+  dobleAutenticacionOptions = [
+    { value: 'GOOGLE_AUTH', label: 'Google Authenticator' },
+    { value: 'EMAIL', label: 'Correo Electrónico' }
+  ];
 
   isPasswordModalVisible = false;
   confirmModalVisible = false;
@@ -181,15 +186,25 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       }
 
       // Determinar el método de 2FA actual
+      console.log('=== DEBUG: Valor de dobleAutenticacion del servidor ===');
+      console.log('Valor raw:', this.user.dobleAutenticacion);
+      console.log('Tipo:', typeof this.user.dobleAutenticacion);
+      
       let dobleAutenticacionValue: 'GOOGLE_AUTH' | 'EMAIL' = 'GOOGLE_AUTH';
-      if (this.user.dobleAutenticacion) {
-        if (this.user.dobleAutenticacion === 'GOOGLE_AUTH' || this.user.dobleAutenticacion === 'EMAIL') {
-          dobleAutenticacionValue = this.user.dobleAutenticacion;
-        } else if (typeof this.user.dobleAutenticacion === 'boolean') {
-          // Si es boolean, por defecto usar GOOGLE_AUTH
-          dobleAutenticacionValue = 'GOOGLE_AUTH';
-        }
+      
+      if (this.user.dobleAutenticacion === 'GOOGLE_AUTH' || this.user.dobleAutenticacion === 'EMAIL') {
+        // Si ya viene como string 'GOOGLE_AUTH' o 'EMAIL', usarlo directamente
+        dobleAutenticacionValue = this.user.dobleAutenticacion;
+      } else if (typeof this.user.dobleAutenticacion === 'boolean') {
+        // Si es boolean: true = GOOGLE_AUTH, false = EMAIL
+        dobleAutenticacionValue = this.user.dobleAutenticacion ? 'GOOGLE_AUTH' : 'EMAIL';
+      } else if (this.user.dobleAutenticacion === null || this.user.dobleAutenticacion === undefined) {
+        // Si es null o undefined, usar GOOGLE_AUTH por defecto
+        dobleAutenticacionValue = 'GOOGLE_AUTH';
       }
+      
+      console.log('Valor final asignado:', dobleAutenticacionValue);
+      console.log('=============================================');
 
       this.userForm.patchValue({
         noUsuario: this.user.idUsuario,

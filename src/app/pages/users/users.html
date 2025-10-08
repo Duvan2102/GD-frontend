@@ -136,3 +136,49 @@
   (passwordChanged)="handlePasswordChanged($event)">
 </app-change-password>
 
+<!-- Modal para cambiar método de 2FA -->
+<div *ngIf="isChange2FAMethodModalVisible" class="modal-overlay" (click)="closeChange2FAMethodModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Cambiar Método de 2FA</h3>
+      <button type="button" class="close-btn" (click)="closeChange2FAMethodModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>Selecciona el nuevo método de autenticación de dos factores para <strong>{{currentUser?.nombres}} {{currentUser?.apellidos}}</strong>:</p>
+
+      <div class="form-group">
+        <label>
+          <input type="radio"
+                 name="metodo2FA"
+                 value="GOOGLE_AUTH"
+                 [(ngModel)]="selected2FAMethod"
+                 [checked]="selected2FAMethod === 'GOOGLE_AUTH'">
+          <span class="radio-label">Google Authenticator (QR Code)</span>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <input type="radio"
+                 name="metodo2FA"
+                 value="EMAIL"
+                 [(ngModel)]="selected2FAMethod"
+                 [checked]="selected2FAMethod === 'EMAIL'">
+          <span class="radio-label">Correo Electrónico</span>
+        </label>
+      </div>
+
+      <div class="warning-message">
+        <p><strong>⚠️ Importante:</strong></p>
+        <ul>
+          <li>Si cambias a <strong>Google Authenticator</strong>, el usuario deberá escanear un nuevo código QR en su próximo login.</li>
+          <li>Si cambias a <strong>Correo Electrónico</strong>, se eliminará el QR existente y se enviará un código por email en el próximo login.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeChange2FAMethodModal()">Cancelar</button>
+      <button type="button" class="btn btn-primary" (click)="on2FAMethodChange()">Cambiar Método</button>
+    </div>
+  </div>
+</div>

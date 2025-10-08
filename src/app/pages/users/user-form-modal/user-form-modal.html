@@ -223,6 +223,7 @@
           </div>
         </div>
 
+        
         <!-- Dirección y Doble Autenticación -->
         <div class="row mb-3">
           <div class="col-md-6">
@@ -234,53 +235,65 @@
             </div>
           </div>
           <div class="col-md-6">
-            <label class="form-label">Doble Autenticación <span class="text-danger">*</span></label>
-            <select class="form-select" formControlName="dobleAutenticacion"
+            <label class="form-label">Doble Autenticación <span class="text-danger" *ngIf="!isEditMode">*</span></label>
+            
+            <!-- Modo creación: Select editable -->
+            <select *ngIf="!isEditMode" class="form-select" formControlName="dobleAutenticacion"
                     [class.is-invalid]="userForm.get('dobleAutenticacion')?.invalid && userForm.get('dobleAutenticacion')?.touched">
               <option *ngFor="let option of dobleAutenticacionOptions" [value]="option.value">
                 {{ option.label }}
               </option>
             </select>
-            <div *ngIf="getErrorMessage('dobleAutenticacion')" class="invalid-feedback">
+            
+            <!-- Modo edición: Texto informativo -->
+            <div *ngIf="isEditMode" class="form-control-plaintext">
+              <strong>{{ userForm.get('dobleAutenticacion')?.value === 'GOOGLE_AUTH' ? 'Google Authenticator' : 'Correo Electrónico' }}</strong>
+            </div>
+            
+            <div *ngIf="getErrorMessage('dobleAutenticacion') && !isEditMode" class="invalid-feedback">
               {{ getErrorMessage('dobleAutenticacion') }}
             </div>
+            <small *ngIf="isEditMode" class="form-text text-muted">
+              <i class="fas fa-info-circle"></i> Para cambiar el método de autenticación, usa el botón "Cambiar método 2FA" en la tabla de usuarios.
+            </small>
           </div>
         </div>
 
         <!-- Separador -->
-<hr class="my-4">
+        <hr class="my-4">
 
-<!-- Perfiles -->
-<h6 class="mb-3">Perfil <span class="text-danger">*</span></h6>
-<div class="mb-3">
-  <div class="form-check mb-2">
-    <input class="form-check-input" type="radio" id="administrador"
-           formControlName="perfil" value="administrador">
-    <label class="form-check-label" for="administrador">
-      ADMINISTRADOR
-    </label>
-  </div>
-  <div class="form-check mb-2">
-    <input class="form-check-input" type="radio" id="funcionarioCreador"
-           formControlName="perfil" value="funcionarioCreador">
-    <label class="form-check-label" for="funcionarioCreador">
-      AUDITOR
-    </label>
-  </div>
-  <div class="form-check mb-2">
-    <input class="form-check-input" type="radio" id="funcionarios"
-           formControlName="perfil" value="funcionarios">
-    <label class="form-check-label" for="funcionarios">
-      FUNCIONARIOS
-    </label>
-  </div>
+        <!-- Perfiles -->
+        <h6 class="mb-3">Perfil <span class="text-danger">*</span></h6>
+        <div class="mb-3">
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="radio" id="administrador"
+                   formControlName="perfil" value="administrador">
+            <label class="form-check-label" for="administrador">
+              ADMINISTRADOR
+            </label>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="radio" id="funcionarioCreador"
+                   formControlName="perfil" value="funcionarioCreador">
+            <label class="form-check-label" for="funcionarioCreador">
+              AUDITOR
+            </label>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="radio" id="funcionarios"
+                   formControlName="perfil" value="funcionarios">
+            <label class="form-check-label" for="funcionarios">
+              FUNCIONARIOS
+            </label>
+          </div>
 
-  <!-- Mensaje de error si es necesario -->
-  <div *ngIf="userForm.get('perfil')?.invalid && userForm.get('perfil')?.touched"
-       class="invalid-feedback d-block">
-    Debe seleccionar un perfil
-  </div>
-</div>
+          <!-- Mensaje de error si es necesario -->
+          <div *ngIf="userForm.get('perfil')?.invalid && userForm.get('perfil')?.touched"
+               class="invalid-feedback d-block">
+            Debe seleccionar un perfil
+          </div>
+        </div>
+      </div>
 
       <!-- Footer -->
       <div class="modal-footer">

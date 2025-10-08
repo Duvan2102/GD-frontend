@@ -296,7 +296,7 @@ export class UserService {
       direccion: usuario.direccion?.trim() || '',
       dobleAutenticacion: typeof usuario.dobleAutenticacion === 'boolean'
         ? usuario.dobleAutenticacion
-        : usuario.dobleAutenticacion === 'Google Authenticator'
+        : usuario.dobleAutenticacion === 'GOOGLE_AUTH' || usuario.dobleAutenticacion === 'EMAIL'
     };
 
     if (usuario.idUsuario) {
@@ -359,8 +359,8 @@ export class UserService {
       direccion: usuario.direccion || '',
       correoPersonal: usuario.correoPersonal || '',
       dobleAutenticacion: typeof usuario.dobleAutenticacion === 'boolean'
-        ? (usuario.dobleAutenticacion ? 'Google Authenticator' : '')
-        : (usuario.dobleAutenticacion || 'Google Authenticator')
+        ? (usuario.dobleAutenticacion ? 'GOOGLE_AUTH' : 'EMAIL')
+        : (usuario.dobleAutenticacion || null)
     };
   }
 
