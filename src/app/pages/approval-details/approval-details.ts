@@ -10,6 +10,7 @@ import { DocumentView, DocumentViewData } from '../create-request/document-view/
 import { ApprovalService } from '../../services/approval.service';
 import { SuccessModalService } from '../../services/success-modal.service';
 import { Subscription, combineLatest } from 'rxjs';
+import { distinctUntilChanged, shareReplay } from 'rxjs/operators';
 import { Approval } from '../approvals/approvals';
 import { Typology, TypologyService } from '../../services/typology.service';
 import { AuthService } from '../../services/auth.service';
@@ -71,12 +72,14 @@ export class ApprovalDetails implements OnInit, OnDestroy {
     ) {}
 
   ngOnInit(): void {
-    this.authService.getCurrentUser().subscribe(u => {
-      if (u) {
-        this.currentUserId = u.idUsuario;
-        this.loadInitialData();
-      }
-    });
+    this.authService.getCurrentUser()
+      .pipe(distinctUntilChanged((prev, curr) => prev?.idUsuario === curr?.idUsuario))
+      .subscribe(u => {
+        if (u) {
+          this.currentUserId = u.idUsuario;
+          this.loadInitialData();
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -86,9 +89,16 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   loadInitialData(): void {
     this.isLoading = true;
     combineLatest([
-      this.userService.obtenerUsuarios(),
-      this.typologyService.getAll()
-    ]).subscribe(([users, typologies]) => {
+      this.userService.obtenerUsuarios().pipe(shareReplay(1)),
+      this.typologyService.getAll().pipe(shareReplay(1))
+    ]).pipe(
+      distinctUntilChanged((prev, curr) => {
+        const [prevUsers, prevTypologies] = prev;
+        const [currUsers, currTypologies] = curr;
+        return prevUsers.length === currUsers.length && 
+               prevTypologies.length === currTypologies.length;
+      })
+    ).subscribe(([users, typologies]) => {
       this.allUsers = users;
       this.tipologias = typologies;
       this.subscribeToApprovals();

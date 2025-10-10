@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { map, Observable } from 'rxjs';
+import { map, Observable, shareReplay } from 'rxjs';
 import { Position } from './positions.service';
 import { environment } from '../environments/environment';
 
@@ -27,7 +27,8 @@ export class TypologyService {
         const data = res?.data ?? res;
         const list = data?.content ?? data?.items ?? data?.rows ?? data?.tipologias ?? data?.results ?? data?.list ?? data;
         return Array.isArray(list) ? list : [];
-      })
+      }),
+      shareReplay(1) // Evitar múltiples llamadas HTTP para el mismo endpoint
     );
   }
 

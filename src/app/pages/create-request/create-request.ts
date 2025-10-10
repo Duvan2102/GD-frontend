@@ -14,6 +14,7 @@ import { TypologyService, Typology } from '../../services/typology.service';
 import { ApprovalService } from '../../services/approval.service';
 import { SuccessModalService } from '../../services/success-modal.service';
 import { Observable, of, Subscription, combineLatest } from 'rxjs';
+import { distinctUntilChanged, shareReplay } from 'rxjs/operators';
 import { Approval } from '../approvals/approvals';
 import { AuthService } from '../../services/auth.service';
 import { applyViewLogic } from '../../utils/view.utils';
@@ -74,19 +75,29 @@ export class CreateRequest implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.authService.getCurrentUser().subscribe(user => {
-      this.currentUser = user;
-      this.loadInitialData();
-    });
-
+    this.authService.getCurrentUser()
+      .pipe(distinctUntilChanged((prev, curr) => prev?.idUsuario === curr?.idUsuario))
+      .subscribe(user => {
+        this.currentUser = user;
+        if (user) {
+          this.loadInitialData();
+        }
+      });
   }
 
   loadInitialData(): void {
     this.isLoading = true;
     combineLatest([
-      this.userService.obtenerUsuarios(),
-      this.typologyService.getAll()
-    ]).subscribe(([users, typologies]) => {
+      this.userService.obtenerUsuarios().pipe(shareReplay(1)),
+      this.typologyService.getAll().pipe(shareReplay(1))
+    ]).pipe(
+      distinctUntilChanged((prev, curr) => {
+        const [prevUsers, prevTypologies] = prev;
+        const [currUsers, currTypologies] = curr;
+        return prevUsers.length === currUsers.length && 
+               prevTypologies.length === currTypologies.length;
+      })
+    ).subscribe(([users, typologies]) => {
       this.allUsers = users;
       this.tipologias = typologies;
       this.subscribeToApprovals();
@@ -147,14 +158,10 @@ export class CreateRequest implements OnInit, OnDestroy {
     }).subscribe(appr => {
       if (appr) {
         this.wasRequestCreatedSuccessfully = true; // Marcar que se creó exitosamente
-        // Preparar datos para la success-modal
-        const ensureUsers$ = this.allUsers.length > 0 ? of(this.allUsers) : this.userService.obtenerUsuarios();
-        ensureUsers$.subscribe((users: Usuario[]) => {
-          this.allUsers = users;
-          this.successModalData = this.approvalService.mapToSuccessData(appr.fullData, this.allUsers);
-          this.isCreateModalVisible = false;
-          this.isDetailModalVisible = true;
-        });
+        // Preparar datos para la success-modal - ya tenemos usuarios cargados
+        this.successModalData = this.approvalService.mapToSuccessData(appr.fullData, this.allUsers);
+        this.isCreateModalVisible = false;
+        this.isDetailModalVisible = true;
       }
     });
   }

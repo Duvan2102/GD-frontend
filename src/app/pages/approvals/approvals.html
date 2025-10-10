@@ -7,6 +7,8 @@
 
     <app-controls
       [labelAprobados]="'GESTIONADOS'"
+      [labelAprobadosInactivo]="'PENDIENTES'"
+      [toggleApproved]="showOnlyManaged"
       (quantityChange)="onQuantityChange($event)"
       (toggleApprovedChange)="onToggleManaged($event)"
       (searchChange)="onSearchChange($event)">

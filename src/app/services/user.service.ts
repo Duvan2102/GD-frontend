@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError, of } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { catchError, map, switchMap, shareReplay } from 'rxjs/operators';
 import { environment } from '../environments/environment';
 import {
   Usuario,
@@ -83,7 +83,8 @@ export class UserService {
     return intento1$.pipe(
       switchMap(list => (list && list.length > 0) ? of(list) : intento2$()),
       switchMap(list => (list && list.length > 0) ? of(list) : intento3$()),
-      catchError(this.handleError)
+      catchError(this.handleError),
+      shareReplay(1) // Evitar múltiples llamadas HTTP para el mismo endpoint
     );
   }
 
