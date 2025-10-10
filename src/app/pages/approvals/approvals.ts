@@ -196,56 +196,37 @@ export class Approvals implements OnInit, OnDestroy {
   }
 
   handleViewApprovedDocument(data: SuccessModalData): void {
+    // Verificar si tenemos un File object en memoria (para solicitudes recién creadas)
+    const mainDocumentFile = data?.documentoAprobacion ||
+                            (data as any)?.documento ||
+                            (data as any)?.archivo ||
+                            (data as any)?.file;
 
-    const documentFile = data?.documentoAprobacion ||
-                        (data as any)?.documentoAprobado ||
-                        (data?.documentosAnexos as any)?.[0] ||
-                        (data?.anexos as any)?.[0] ||
-                        (data?.adjuntos as any)?.[0] ||
-                        (data as any)?.documento ||
-                        (data as any)?.archivo ||
-                        (data as any)?.file ||
-                        (data as any)?.pdfPrincipal;
-
-    const documentUrl = data?.documentoUrl ||
-                       (data as any)?.urlDocumentoAprobado ||
-                       (data as any)?.documentoAprobadoUrl ||
-                       (data as any)?.url ||
-                       (data as any)?.documentUrl ||
-                       (data as any)?.pdfUrl ||
-                       (data as any)?.urlDocumentoOriginal;
-
-    // Si no hay documento directo, intentar obtenerlo del servidor
-    if (!documentFile && !documentUrl && this.currentUser?.idUsuario) {
-      this.isLoadingDetails = true;
-
-      // Verificar si tenemos información del documento en los datos
-      if (data.pdfOriginalName || data.documentoFileName) {
-        // Mostrar directamente la información del documento sin intentar obtenerlo del servidor
+    // Si tenemos el archivo en memoria (solicitud recién creada), usarlo directamente
+    if (mainDocumentFile && mainDocumentFile instanceof File) {
+      try {
+        const documentUrl = URL.createObjectURL(mainDocumentFile);
         this.documentViewData = {
           id: data.id!,
-          file: undefined,
-          url: undefined,
+          file: mainDocumentFile,
+          url: documentUrl,
           title: data.nombreSolicitud,
-          fileName: data.pdfOriginalName || data.documentoFileName || this.getDocumentTitle(data.estado),
-          metadata: {
-            pdfOriginalName: data.pdfOriginalName || data.documentoFileName,
-            pdfSizeBytes: data.pdfSizeBytes,
-            isPdfMetadata: true,
-            error: 'Documento no disponible en el servidor, pero se tiene información del archivo: ' + (data.pdfOriginalName || data.documentoFileName)
-          }
+          fileName: data.documentoFileName || data.pdfOriginalName || mainDocumentFile.name || 'Documento Principal'
         };
         this.isDetailModalVisible = false;
         this.isDocumentViewVisible = true;
-        this.isLoadingDetails = false;
         return;
+      } catch (error) {
+        console.error('Error creating object URL:', error);
       }
+    }
 
-      // Para todas las solicitudes, usar el endpoint correcto del backend
-      // Estrategia 1: Obtener PDF directamente del endpoint /solicitudes/{id}/pdf
-      this.approvalService.getDocumentPdf(data.id!, this.currentUser.idUsuario).subscribe({
+    // Para todas las demás solicitudes, obtener el PDF del servidor
+    if (data.id && this.currentUser?.idUsuario) {
+      this.isLoadingDetails = true;
+
+      this.approvalService.getDocumentPdf(data.id, this.currentUser.idUsuario).subscribe({
         next: (pdfBlob: Blob) => {
-          // Crear URL temporal para el blob del PDF
           const pdfUrl = URL.createObjectURL(pdfBlob);
           const fileName = data.pdfOriginalName || data.documentoFileName || `documento_${data.id}.pdf`;
           
@@ -267,10 +248,9 @@ export class Approvals implements OnInit, OnDestroy {
           this.isLoadingDetails = false;
         },
         error: (error) => {
-          console.error('Error obteniendo PDF del servidor:', error);
+          console.error('Error al cargar el documento desde el servidor:', error);
           this.isLoadingDetails = false;
           
-          // Si falla, mostrar error pero con información del archivo
           this.documentViewData = {
             id: data.id!,
             file: undefined,
@@ -288,18 +268,20 @@ export class Approvals implements OnInit, OnDestroy {
           this.isDocumentViewVisible = true;
         }
       });
-    } else if (data && (documentFile || documentUrl)) {
+    } else {
+      // Si no hay ID o usuario, mostrar error
       this.documentViewData = {
         id: data.id!,
-        file: documentFile,
-        url: documentUrl,
+        file: undefined,
+        url: undefined,
         title: data.nombreSolicitud,
-        fileName: data.documentoFileName || documentFile?.name || this.getDocumentTitle(data.estado)
+        fileName: 'Documento no disponible',
+        metadata: {
+          error: 'No se pudo obtener la información del documento.'
+        }
       };
       this.isDetailModalVisible = false;
       this.isDocumentViewVisible = true;
-    } else {
-      alert(`No se encontró el documento ${this.getDocumentTitle(data.estado).toLowerCase()} para visualizar.`);
     }
   }
 

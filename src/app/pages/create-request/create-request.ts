@@ -181,57 +181,50 @@ export class CreateRequest implements OnInit, OnDestroy {
   }
 
   handleViewApprovedDocument(data: SuccessModalData): void {
-    // Priorizar documento principal sobre anexos
+    this.hideSendButtonInDocumentView = true;
+
+    // Verificar si tenemos un File object en memoria (para solicitudes recién creadas)
     const mainDocumentFile = data?.documentoAprobacion ||
                             (data as any)?.documento ||
                             (data as any)?.archivo ||
                             (data as any)?.file;
 
-    const mainDocumentUrl = data?.documentoUrl ||
-                           (data as any)?.url ||
-                           (data as any)?.documentUrl;
-
-    this.hideSendButtonInDocumentView = true;
-
-    // Si hay documento principal, usarlo
-    if (mainDocumentFile || mainDocumentUrl) {
-      // Si tenemos un File object, crear una URL temporal para mejor compatibilidad
-      let documentUrl = mainDocumentUrl;
-      if (mainDocumentFile && !mainDocumentUrl) {
-        try {
-          documentUrl = URL.createObjectURL(mainDocumentFile);
-        } catch (error) {
-          console.error('Error creating object URL:', error);
-        }
+    // Si tenemos el archivo en memoria (solicitud recién creada), usarlo directamente
+    if (mainDocumentFile && mainDocumentFile instanceof File) {
+      try {
+        const documentUrl = URL.createObjectURL(mainDocumentFile);
+        this.documentViewData = {
+          id: data.id!,
+          file: mainDocumentFile,
+          url: documentUrl,
+          title: data.nombreSolicitud,
+          fileName: data.documentoFileName || data.pdfOriginalName || mainDocumentFile.name || 'Documento Principal'
+        };
+        this.isDetailModalVisible = false;
+        this.isDocumentViewVisible = true;
+        return;
+      } catch (error) {
+        console.error('Error creating object URL:', error);
       }
-
-      this.documentViewData = {
-        id: data.id!,
-        file: mainDocumentFile,
-        url: documentUrl,
-        title: data.nombreSolicitud,
-        fileName: data.documentoFileName || data.pdfOriginalName || mainDocumentFile?.name || 'Documento Principal'
-      };
-      this.isDetailModalVisible = false;
-      this.isDocumentViewVisible = true;
-      return;
     }
 
-    // Si no hay documento principal pero hay metadatos PDF, intentar descargarlo
-    if (data?.pdfOriginalName && this.currentUser?.idUsuario) {
+    // Para todas las demás solicitudes, obtener el PDF del servidor
+    if (data.id && this.currentUser?.idUsuario) {
       this.isLoadingDetails = true;
 
-      this.approvalService.getDocumentPdf(data.id!, this.currentUser.idUsuario).subscribe({
+      this.approvalService.getDocumentPdf(data.id, this.currentUser.idUsuario).subscribe({
         next: (pdfBlob: Blob) => {
           const pdfUrl = URL.createObjectURL(pdfBlob);
+          const fileName = data.pdfOriginalName || data.documentoFileName || `documento_${data.id}.pdf`;
+          
           this.documentViewData = {
             id: data.id!,
             file: undefined,
             url: pdfUrl,
             title: data.nombreSolicitud,
-            fileName: data.pdfOriginalName,
+            fileName: fileName,
             metadata: {
-              pdfOriginalName: data.pdfOriginalName,
+              pdfOriginalName: fileName,
               pdfSizeBytes: data.pdfSizeBytes,
               isPdfMetadata: false,
               isPdfFromService: true
@@ -242,18 +235,20 @@ export class CreateRequest implements OnInit, OnDestroy {
           this.isLoadingDetails = false;
         },
         error: (error) => {
+          console.error('Error al cargar el documento desde el servidor:', error);
           this.isLoadingDetails = false;
+          
           this.documentViewData = {
             id: data.id!,
             file: undefined,
             url: undefined,
             title: data.nombreSolicitud,
-            fileName: data.pdfOriginalName,
+            fileName: data.pdfOriginalName || data.documentoFileName || 'Documento no disponible',
             metadata: {
-              pdfOriginalName: data.pdfOriginalName,
+              pdfOriginalName: data.pdfOriginalName || data.documentoFileName,
               pdfSizeBytes: data.pdfSizeBytes,
               isPdfMetadata: true,
-              error: 'Error al cargar el documento. Por favor, inténtelo de nuevo.'
+              error: 'Error al cargar el documento desde el servidor. Verifique que el archivo existe.'
             }
           };
           this.isDetailModalVisible = false;
@@ -261,7 +256,7 @@ export class CreateRequest implements OnInit, OnDestroy {
         }
       });
     } else {
-      // Si no hay documento principal ni metadatos, mostrar error
+      // Si no hay ID o usuario, mostrar error
       this.documentViewData = {
         id: data.id!,
         file: undefined,
@@ -269,7 +264,7 @@ export class CreateRequest implements OnInit, OnDestroy {
         title: data.nombreSolicitud,
         fileName: 'Documento no disponible',
         metadata: {
-          error: 'No se encontró un documento principal para visualizar.'
+          error: 'No se pudo obtener la información del documento.'
         }
       };
       this.isDetailModalVisible = false;

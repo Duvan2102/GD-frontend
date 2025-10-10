@@ -125,7 +125,6 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
 
   onPagesLoaded(event: PagesLoadedEvent): void {
     this.totalPages = event.pagesCount;
-    console.log('PDF cargado - Total de páginas:', this.totalPages);
     
     // Iniciar verificación de scroll después de cargar las páginas
     setTimeout(() => {
@@ -135,7 +134,6 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
 
   public onPageChange(page: number): void {
     this.currentPage = page;
-    console.log(`📄 Cambio de página: ${page}/${this.totalPages}`);
     
     // Verificar si llegó a la última página
     this.checkIfScrolledToEnd();
@@ -143,10 +141,8 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
     // Si llegó a la última página, dar un tiempo para que el usuario vea la página
     // y luego habilitar automáticamente (estrategia de respaldo)
     if (page >= this.totalPages && !this.isScrolledToEnd) {
-      console.log('Usuario en última página - Iniciando timer de habilitación automática (3s)');
       setTimeout(() => {
         if (!this.isScrolledToEnd && this.currentPage >= this.totalPages) {
-          console.log('⏰ Timer cumplido - Habilitando botones automáticamente');
           this.isScrolledToEnd = true;
           this.stopScrollCheck();
           this.cdr.detectChanges();
@@ -329,18 +325,14 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
   private startScrollCheck(): void {
     this.stopScrollCheck();
     
-    console.log('Iniciando verificación de scroll - Páginas totales:', this.totalPages);
-    
     // Para documentos de una sola página, habilitar inmediatamente
     if (this.totalPages === 1) {
-      console.log('Documento de 1 página - Habilitando botones inmediatamente');
       this.isScrolledToEnd = true;
       this.cdr.detectChanges();
       return;
     }
     
     // Para documentos multi-página, verificar cada 500ms
-    console.log('Documento multi-página - Iniciando verificación periódica');
     this.scrollCheckInterval = setInterval(() => {
       this.checkIfScrolledToEnd();
     }, 500);
@@ -367,12 +359,8 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
       return; // Ya está habilitado, no hacer nada más
     }
 
-    console.log(`Verificando scroll - Página actual: ${this.currentPage}/${this.totalPages}`);
-
     // Estrategia 1: Verificar si está en la última página
     if (this.currentPage >= this.totalPages) {
-      console.log('Usuario en la última página - Verificando scroll...');
-      
       // Obtener el contenedor de scroll del visor PDF
       const scrollContainer = this.getScrollContainer();
       
@@ -381,27 +369,16 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
         const scrollHeight = scrollContainer.scrollHeight;
         const clientHeight = scrollContainer.clientHeight;
         
-        console.log('Scroll info:', {
-          scrollTop,
-          scrollHeight,
-          clientHeight,
-          distanceToBottom: scrollHeight - scrollTop - clientHeight
-        });
-        
         // Si está cerca del final (dentro de 100px del fondo) o si el contenido no requiere scroll
         const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
         const noScrollNeeded = scrollHeight <= clientHeight + 10;
         
-        console.log('Estado:', { isAtBottom, noScrollNeeded });
-        
         if (isAtBottom || noScrollNeeded) {
-          console.log('✅ Usuario llegó al final - Habilitando botones');
           this.isScrolledToEnd = true;
           this.stopScrollCheck(); // Detener verificación una vez alcanzado
           this.cdr.detectChanges();
         }
       } else {
-        console.log('⚠️ No se encontró contenedor de scroll - Habilitando por defecto');
         // Si no se puede obtener el contenedor, asumir que está al final si está en la última página
         this.isScrolledToEnd = true;
         this.stopScrollCheck();
@@ -424,12 +401,9 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
       'ngx-extended-pdf-viewer'
     ];
     
-    console.log('Buscando contenedor de scroll...');
-    
     for (const selector of selectors) {
       const element = document.querySelector(selector) as HTMLElement;
       if (element) {
-        console.log(`✅ Contenedor encontrado con selector: ${selector}`);
         return element;
       }
     }
@@ -437,11 +411,9 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
     // Intentar a través de la API de ngx-extended-pdf-viewer
     const pdfApp = (window as any).PDFViewerApplication;
     if (pdfApp?.pdfViewer?.container) {
-      console.log('✅ Contenedor encontrado a través de PDFViewerApplication');
       return pdfApp.pdfViewer.container;
     }
     
-    console.log('❌ No se encontró ningún contenedor de scroll');
     return null;
   }
 
@@ -449,14 +421,11 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
    * Adjunta listeners de scroll para detectar cuando el usuario scrollea
    */
   private attachScrollListeners(): void {
-    console.log('Adjuntando listeners de scroll...');
-    
     // Buscar y adjuntar listener al contenedor después de un delay
     setTimeout(() => {
       const container = this.getScrollContainer();
       if (container) {
         container.addEventListener('scroll', this.handleScroll.bind(this));
-        console.log('✅ Listener de scroll adjuntado');
       }
       
       // También escuchar eventos de scroll en window por si acaso
@@ -480,7 +449,6 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
    */
   private handleScroll(): void {
     if (!this.isScrolledToEnd) {
-      console.log('📜 Evento de scroll detectado');
       this.checkIfScrolledToEnd();
     }
   }

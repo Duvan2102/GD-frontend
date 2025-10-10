@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { UserFormRegister } from '../../components/user-form-register/user-form-register';
@@ -17,11 +17,13 @@ export class LoginComponent implements OnInit {
   errorMessage: string = '';
   isLoading: boolean = false;
   isRegisterModalVisible = false;
+  tokenExpiredMessage: string = '';
 
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {
     this.loginForm = this.fb.group({
       usuario: ['', [Validators.required]],
@@ -30,6 +32,19 @@ export class LoginComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Verificar si el usuario fue redirigido por token expirado
+    this.route.queryParams.subscribe(params => {
+      if (params['expired'] === 'true') {
+        this.tokenExpiredMessage = 'Su sesión ha expirado. Por favor, inicie sesión nuevamente.';
+        
+        // Limpiar el parámetro de la URL después de 5 segundos
+        setTimeout(() => {
+          this.tokenExpiredMessage = '';
+          this.router.navigate(['/login'], { replaceUrl: true });
+        }, 5000);
+      }
+    });
+
     if (this.authService.getCurrentUserValue()) {
       this.router.navigate(['/']);
     }

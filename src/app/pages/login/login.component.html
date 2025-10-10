@@ -61,6 +61,9 @@
                   <div class="error-message general-error" *ngIf="errorMessage">
                     {{ errorMessage }}
                   </div>
+                  <div class="info-message" *ngIf="tokenExpiredMessage" style="background-color: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 12px; border-radius: 6px; margin-bottom: 15px; text-align: center; font-size: 14px;">
+                    <i class="fas fa-clock" style="margin-right: 8px;"></i>{{ tokenExpiredMessage }}
+                  </div>
                   <div class="links-container">
                     <a (click)="goToForgotPassword()" style="cursor: pointer;">¿Olvidó su contraseña?</a>
                     <a (click)="openRegisterModal()" style="cursor: pointer;">Registrarse</a>
