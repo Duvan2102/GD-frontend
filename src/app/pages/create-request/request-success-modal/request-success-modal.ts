@@ -56,9 +56,9 @@ export interface SuccessModalData {
   id?: string | number;
   nombreSolicitud: string;
   detallesAdicionales: string;
-  prioridad: 'NORMAL' | 'IMPORTANTE';
+  prioridad?: boolean;  // true = prioritaria, false/null = normal
   tipologia: string;
-  enviarRecordatorio: 'NUNCA' | 'SEMANALMENTE' | 'CADA_3_DIAS' | 'TODOS_LOS_DIAS';
+  enviarRecordatorio?: number;  // días entre recordatorios (0 = sin recordatorios)
   documentosAnexos: boolean;
   establecerOrden: boolean;
   destinatarios: DestinatarioData[];

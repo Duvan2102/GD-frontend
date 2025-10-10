@@ -1,10 +1,19 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Typology } from '../../../services/typology.service';
 import { Department } from '../../../services/department.service';
 import { Area } from '../../../services/area.service';
 import { Position } from '../../../services/positions.service';
+
+// Interfaces extendidas para el árbol
+interface DepartmentWithExpanded extends Department {
+  expanded?: boolean;
+}
+
+interface AreaWithExpanded extends Area {
+  expanded?: boolean;
+}
 
 @Component({
   selector: 'app-tipology-creation',
@@ -21,15 +30,25 @@ export class Tipology implements OnChanges {
   @Input() areas: Area[] = [];
   @Input() positions: Position[] = [];
 
+  // Arrays con propiedades expandidas para el árbol
+  departmentsWithExpanded: DepartmentWithExpanded[] = [];
+  areasWithExpanded: AreaWithExpanded[] = [];
+
+  // Estados de los desplegables
+  showDepartmentDropdown = false;
+  showAreaDropdown = false;
+  showPositionDropdown = false;
+  
+  // Posición del desplegable
+  dropdownPosition = { top: 0, left: 0 };
+
   @Output() create = new EventEmitter<Partial<Typology>>();
   @Output() update = new EventEmitter<Typology>();
   @Output() cancel = new EventEmitter<void>();
 
   descripcion = '';
   selectedDepartment?: Department;
-  filteredAreas: Area[] = [];
   selectedArea?: Area;
-  filteredPositions: Position[] = [];
   selectedPosition?: Position;
 
   get modalTitle(): string {
@@ -37,7 +56,17 @@ export class Tipology implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    // Inicializar arrays cuando cambien los datos de entrada
+    if (changes['departments'] || changes['areas']) {
+      this.initializeExpandedArrays();
+    }
+    
     if (changes['isVisible'] && this.isVisible) {
+      // Asegurar que los arrays estén inicializados
+      if (this.departmentsWithExpanded.length === 0) {
+        this.initializeExpandedArrays();
+      }
+      
       if (this.mode === 'update' && this.typologyToEdit) {
         this.descripcion = this.typologyToEdit.descripcion;
         if (this.typologyToEdit.cargo) {
@@ -45,12 +74,15 @@ export class Tipology implements OnChanges {
           const { area } = cargo;
           const { departamento } = area;
 
-          this.selectedDepartment = this.departments.find(d => d.idDepartamento === departamento.idDepartamento);
-          if (this.selectedDepartment) {
-            this.onDepartmentSelect(this.selectedDepartment);
-            this.selectedArea = this.areas.find(a => a.idArea === area.idArea);
-            if (this.selectedArea) {
-              this.onAreaSelect(this.selectedArea);
+          const deptWithExpanded = this.departmentsWithExpanded.find(d => d.idDepartamento === departamento.idDepartamento);
+          if (deptWithExpanded) {
+            this.selectedDepartment = deptWithExpanded;
+            deptWithExpanded.expanded = true;
+            
+            const areaWithExpanded = this.areasWithExpanded.find(a => a.idArea === area.idArea);
+            if (areaWithExpanded) {
+              this.selectedArea = areaWithExpanded;
+              areaWithExpanded.expanded = true;
               this.selectedPosition = this.positions.find(p => p.idCargo === cargo.idCargo);
             }
           }
@@ -61,20 +93,71 @@ export class Tipology implements OnChanges {
     }
   }
 
-  onDepartmentSelect(department: Department) {
-    this.filteredAreas = this.areas.filter(area => area.departamento.idDepartamento === department.idDepartamento);
-    this.selectedArea = undefined;
-    this.filteredPositions = [];
-    this.selectedPosition = undefined;
+  private initializeExpandedArrays(): void {
+    this.departmentsWithExpanded = this.departments.map(dept => ({ ...dept, expanded: false }));
+    this.areasWithExpanded = this.areas.map(area => ({ ...area, expanded: false }));
   }
 
-  onAreaSelect(area: Area) {
-    this.filteredPositions = this.positions.filter(pos => pos.area.idArea === area.idArea);
+  toggleDepartmentDropdown() {
+    this.showDepartmentDropdown = !this.showDepartmentDropdown;
+    // Cerrar otros desplegables
+    this.showAreaDropdown = false;
+    this.showPositionDropdown = false;
+  }
+
+  toggleAreaDropdown() {
+    this.showAreaDropdown = !this.showAreaDropdown;
+    // Cerrar otros desplegables
+    this.showDepartmentDropdown = false;
+    this.showPositionDropdown = false;
+  }
+
+  togglePositionDropdown() {
+    this.showPositionDropdown = !this.showPositionDropdown;
+    // Cerrar otros desplegables
+    this.showDepartmentDropdown = false;
+    this.showAreaDropdown = false;
+  }
+
+  // Cerrar desplegables al hacer clic fuera
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event) {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.level-header') && !target.closest('.level-dropdown')) {
+      this.showDepartmentDropdown = false;
+      this.showAreaDropdown = false;
+      this.showPositionDropdown = false;
+    }
+  }
+
+  selectDepartment(department: DepartmentWithExpanded) {
+    this.selectedDepartment = department;
+    this.selectedArea = undefined;
     this.selectedPosition = undefined;
+    this.showDepartmentDropdown = false;
+  }
+
+  selectArea(area: AreaWithExpanded) {
+    this.selectedArea = area;
+    this.selectedPosition = undefined;
+    this.showAreaDropdown = false;
+  }
+
+  selectPosition(position: Position) {
+    this.selectedPosition = position;
+    this.showPositionDropdown = false;
+  }
+
+  getAreasByDepartment(departmentId: number): AreaWithExpanded[] {
+    return this.areasWithExpanded.filter(area => area.departamento.idDepartamento === departmentId);
+  }
+
+  getPositionsByArea(areaId: number): Position[] {
+    return this.positions.filter(position => position.area.idArea === areaId);
   }
 
   onSubmit() {
-    if (!this.descripcion.trim() || !this.selectedDepartment) return;
+    if (!this.descripcion.trim() || !this.selectedPosition) return;
 
     const payload: Partial<Typology> = {
       descripcion: this.descripcion.trim(),
@@ -96,9 +179,16 @@ export class Tipology implements OnChanges {
   private resetForm(): void {
     this.descripcion = '';
     this.selectedDepartment = undefined;
-    this.filteredAreas = [];
     this.selectedArea = undefined;
-    this.filteredPositions = [];
     this.selectedPosition = undefined;
+    
+    // Reset dropdown states
+    this.showDepartmentDropdown = false;
+    this.showAreaDropdown = false;
+    this.showPositionDropdown = false;
+    
+    // Reset expanded states
+    this.departmentsWithExpanded.forEach(dept => dept.expanded = false);
+    this.areasWithExpanded.forEach(area => area.expanded = false);
   }
 }

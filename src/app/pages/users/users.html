@@ -4,10 +4,12 @@
     <!-- CABECERA -->
     <div class="seccion-cabecera">
       <h2 class="mb-2">USUARIOS</h2>
-      <button class="btn-crear" (click)="openCreateUserModal()">
-        <i class="bi bi-plus-circle-dotted"></i>
-        Crear usuario
-      </button>
+      <div class="d-flex gap-2">
+        <button class="btn-crear" (click)="openCreateUserModal()">
+          <i class="bi bi-plus-circle-dotted"></i>
+          Crear usuario
+        </button>
+      </div>
     </div>
 
     <!-- CONTROLES -->
@@ -135,6 +137,13 @@
 </app-change-password>
 
 <!-- Modal para cambiar método de 2FA -->
+
+<!-- Modal de registro de usuario -->
+<app-user-form-register
+  *ngIf="isRegisterUserModalVisible"
+  (registered)="handleUserRegistered($event)"
+  (close)="closeRegisterUserModal()">
+</app-user-form-register>
 <div *ngIf="isChange2FAMethodModalVisible" class="modal-overlay" (click)="closeChange2FAMethodModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">

@@ -18,6 +18,7 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
   verificationForm: FormGroup;
   errorMessage: string = '';
   isLoading: boolean = false;
+  isLoadingState: boolean = true;
   currentUser: string = '';
   twoFAState: TwoFAState | null = null;
   qrCodeDataUrl: string = '';
@@ -64,6 +65,9 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
         this.currentUser = user;
       });
 
+    // Verificar y cargar el estado de 2FA
+    this.check2FAStatus();
+
     // Suscribirse al estado de 2FA para mostrar opciones apropiadas
     this.authService.getTwoFAState()
       .pipe(takeUntil(this.destroy$))
@@ -82,6 +86,18 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
           }
         }
       });
+  }
+
+  check2FAStatus(): void {
+    this.authService.check2FAStatus().subscribe({
+      next: (response) => {
+        console.log('Estado 2FA cargado en verificación:', response);
+      },
+      error: (error) => {
+        console.error('Error verificando estado 2FA:', error);
+        this.handleError(error);
+      }
+    });
   }
 
   ngOnDestroy(): void {

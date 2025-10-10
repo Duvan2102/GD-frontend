@@ -33,22 +33,19 @@ export class TwoFAStateComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Suscribirse al usuario que requiere 2FA
-    this.authService.getTwoFAUser()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(user => {
-        this.currentUser = user;
-      });
+    // Redirigir inmediatamente a verificación sin mostrar esta pantalla
+    // Esto elimina el flash visual de la pantalla azul
+    this.router.navigate(['/two-fa-verification']);
 
-    // Suscribirse al estado de 2FA
-    this.authService.getTwoFAState()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(state => {
-        this.twoFAState = state;
-      });
-
-    // Verificar estado de 2FA
-    this.check2FAStatus();
+    // Cargar el estado de 2FA en segundo plano para que esté disponible
+    this.authService.check2FAStatus().subscribe({
+      next: (response) => {
+        console.log('Estado 2FA cargado:', response);
+      },
+      error: (error) => {
+        console.error('Error verificando estado 2FA:', error);
+      }
+    });
   }
 
   ngOnDestroy(): void {

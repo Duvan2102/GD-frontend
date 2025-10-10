@@ -449,3 +449,27 @@ export interface Change2FAMethodResponse {
   secret?: string;
   nuevoMetodo: 'GOOGLE_AUTH' | 'EMAIL';
 }
+
+// Interfaces para registro de usuarios
+export interface RegisterRequest {
+  identificacion: string;
+  nombres: string;
+  apellidos: string;
+  usuario: string;
+  password: string;
+  correoEmpresarial?: string;
+  correoPersonal?: string;
+  telefono1?: string;
+  telefono2?: string;
+  direccion?: string;
+}
+
+export interface RegisterResponse {
+  message: string;
+  idUsuario: number;
+}
+
+export interface RegisterErrorResponse {
+  code: 'USUARIO_EXISTE' | 'IDENTIFICACION_EXISTE' | 'CORREO_EXISTE';
+  message: string;
+}
