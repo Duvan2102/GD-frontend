@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError, of } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { environment } from '../environments/environment';
 import {
   Usuario,
@@ -105,7 +105,7 @@ export class UserService {
   }
 
   verificarUsuarioExiste(identificacion: string): Observable<boolean> {
-    return this.http.get<Usuario[]>(`${this.apiUrl}/buscar?identificacion=${identificacion}`)
+    return this.http.post<Usuario[]>(`${this.apiUrl}/buscar`, { identificacion: identificacion }, this.httpOptions)
       .pipe(
         map(usuarios => usuarios.length > 0),
         catchError(() => of(false))
@@ -114,6 +114,11 @@ export class UserService {
 
   crearUsuario(usuario: Usuario): Observable<ApiResponse> {
     const usuarioRequest: UsuarioRequest = this.transformarUsuarioParaApi(usuario);
+    console.log('=== CREAR USUARIO - DEBUG ===');
+    console.log('URL:', this.apiUrl);
+    console.log('Headers:', this.httpOptions.headers);
+    console.log('Datos enviados:', JSON.stringify(usuarioRequest, null, 2));
+    console.log('============================');
     return this.http.post<ApiResponse>(this.apiUrl, usuarioRequest, this.httpOptions).pipe(
       catchError(this.handleError)
     );
@@ -139,8 +144,31 @@ export class UserService {
     }
 
     const url = `${this.apiUrl}/${userId}`;
-    return this.http.put<any>(url, usuarioRequest, this.httpOptions).pipe(
-      map(response => {
+    
+    // RECREAR headers cada vez para asegurar que se envíen correctamente
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    
+    const options = {
+      headers: headers
+    };
+    
+    console.log('=== ACTUALIZAR USUARIO - DEBUG ===');
+    console.log('URL:', url);
+    console.log('Headers (keys):', headers.keys());
+    console.log('Content-Type:', headers.get('Content-Type'));
+    console.log('Datos enviados:', JSON.stringify(usuarioRequest, null, 2));
+    console.log('==================================');
+    
+    return this.http.put<any>(url, usuarioRequest, options).pipe(
+      tap((response: any) => {
+        console.log('=== RESPUESTA DEL SERVIDOR (ACTUALIZAR) ===');
+        console.log('Status: SUCCESS');
+        console.log('Response:', JSON.stringify(response, null, 2));
+        console.log('===========================================');
+      }),
+      map((response: any): ApiResponse => {
         if (response && response.idUsuario) {
           return {
             success: true,
@@ -148,18 +176,26 @@ export class UserService {
             data: response
           };
         }
-        
+
         if (response && typeof response.success !== 'undefined') {
           return response;
         }
-        
+
         return {
           success: true,
           message: 'Usuario actualizado correctamente',
           data: response
         };
       }),
-      catchError(this.handleError)
+      catchError((error: HttpErrorResponse) => {
+        console.error('=== ERROR DEL SERVIDOR (ACTUALIZAR) ===');
+        console.error('Status:', error.status);
+        console.error('StatusText:', error.statusText);
+        console.error('Error body:', error.error);
+        console.error('Full error:', error);
+        console.error('=======================================');
+        return this.handleError(error);
+      })
     );
   }
 
@@ -169,14 +205,54 @@ export class UserService {
     );
   }
 
-  desactivarUsuario(id: number): Observable<ApiResponse> {
-    return this.http.put<ApiResponse>(`${this.apiUrl}/${id}/desactivar`, {}, this.httpOptions)
-      .pipe(catchError(this.handleError));
+  desactivarUsuario(usuario: Usuario, password: string): Observable<ApiResponse> {
+    const userId = usuario.idUsuario || usuario.noUsuario;
+    if (!userId) {
+      return throwError(() => new Error('ID de usuario requerido'));
+    }
+    const usuarioRequest = { password };
+    const url = `${this.apiUrl}/${userId}/desactivar`;
+    console.log('=== DESACTIVAR USUARIO - DEBUG ===');
+    console.log('URL:', url);
+    console.log('Headers:', this.httpOptions.headers);
+    console.log('Datos enviados:', JSON.stringify(usuarioRequest, null, 2));
+    console.log('==================================');
+    return this.http.put<ApiResponse>(url, usuarioRequest, this.httpOptions)
+      .pipe(
+        map(response => {
+          console.log('✓ Desactivación exitosa:', response);
+          return response;
+        }),
+        catchError(error => {
+          console.error('✗ Error en desactivación:', error);
+          return this.handleError(error);
+        })
+      );
   }
 
-  activarUsuario(id: number): Observable<ApiResponse> {
-    return this.http.put<ApiResponse>(`${this.apiUrl}/${id}/activar`, {}, this.httpOptions)
-      .pipe(catchError(this.handleError));
+  activarUsuario(usuario: Usuario, password: string): Observable<ApiResponse> {
+    const userId = usuario.idUsuario || usuario.noUsuario;
+    if (!userId) {
+      return throwError(() => new Error('ID de usuario requerido'));
+    }
+    const usuarioRequest = { password };
+    const url = `${this.apiUrl}/${userId}/activar`;
+    console.log('=== ACTIVAR USUARIO - DEBUG ===');
+    console.log('URL:', url);
+    console.log('Headers:', this.httpOptions.headers);
+    console.log('Datos enviados:', JSON.stringify(usuarioRequest, null, 2));
+    console.log('===============================');
+    return this.http.put<ApiResponse>(url, usuarioRequest, this.httpOptions)
+      .pipe(
+        map(response => {
+          console.log('✓ Activación exitosa:', response);
+          return response;
+        }),
+        catchError(error => {
+          console.error('✗ Error en activación:', error);
+          return this.handleError(error);
+        })
+      );
   }
 
   validarPasswordActual(id: number, password: string): Observable<boolean> {
@@ -197,42 +273,40 @@ export class UserService {
   }
 
   private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest & { idUsuario?: number } {
-    const rolUsuario = usuario.rol || { idRol: 2, descripcion: 'USUARIO' };
-
-    let estadoUsuario;
-    if (typeof usuario.estado === 'object' && usuario.estado) {
-      estadoUsuario = usuario.estado;
-    } else {
-      estadoUsuario = { idEstado: 5, descripcion: 'ACTIVO' };
+    // El cargo, rol y estado deben venir ya con toda su estructura del componente
+    if (!usuario.cargo) {
+      throw new Error('Cargo requerido');
     }
 
-    let cargoId = 2;
-    if (usuario.cargo && typeof usuario.cargo === 'object' && usuario.cargo.idCargo) {
-      cargoId = usuario.cargo.idCargo;
-    } else if (usuario.cargo && typeof usuario.cargo === 'number') {
-      cargoId = usuario.cargo;
-    } else if (usuario.cargo && typeof usuario.cargo === 'string') {
-      cargoId = parseInt(usuario.cargo, 10) || 2;
-    }
+    // Extraer solo el idRol del objeto rol
+    const rolId = usuario.rol?.idRol || 2; // Default a FUNCIONARIO si no hay rol
 
-    return {
-      idUsuario: usuario.idUsuario,
+    const result: any = {
       identificacion: usuario.identificacion?.trim() || '',
       nombres: usuario.nombres?.trim() || '',
       apellidos: usuario.apellidos?.trim() || '',
       usuario: usuario.usuario?.trim() || '',
-      cargo: {
-        idCargo: cargoId
-      },
-      estado: estadoUsuario,
-      rol: rolUsuario,
+      cargo: usuario.cargo,  // Ya viene con estructura completa desde el componente
+      estado: usuario.estado,  // Ya viene con estructura completa
+      rol: { idRol: rolId },  // Enviar solo el idRol
       correoEmpresarial: usuario.correoEmpresarial?.trim() || '',
       correoPersonal: usuario.correoPersonal?.trim() || '',
-      telefono1: usuario.telefono1?.trim() || '',
-      telefono2: usuario.telefono2?.trim() || '',
+      telefono1: this.cleanPhoneNumber(usuario.telefono1?.trim() || ''),
+      telefono2: this.cleanPhoneNumber(usuario.telefono2?.trim() || ''),
       direccion: usuario.direccion?.trim() || '',
-      dobleAutenticacion: this.convertirDobleAutenticacion(usuario.dobleAutenticacion)
+      dobleAutenticacion: typeof usuario.dobleAutenticacion === 'boolean'
+        ? usuario.dobleAutenticacion
+        : usuario.dobleAutenticacion === 'GOOGLE_AUTH' || usuario.dobleAutenticacion === 'EMAIL'
     };
+
+    if (usuario.idUsuario) {
+      result.idUsuario = usuario.idUsuario;
+    }
+
+    console.log('DEBUG: transformarUsuarioParaApi resultado:', JSON.stringify(result, null, 2));
+    console.log('DEBUG: Rol enviado - idRol:', rolId);
+    
+    return result;
   }
 
   private procesarUsuariosRecibidos(usuarios: any[]): Usuario[] {
@@ -285,49 +359,32 @@ export class UserService {
       direccion: usuario.direccion || '',
       correoPersonal: usuario.correoPersonal || '',
       dobleAutenticacion: typeof usuario.dobleAutenticacion === 'boolean'
-        ? (usuario.dobleAutenticacion ? 'Google Authenticator' : '')
-        : (usuario.dobleAutenticacion || 'Google Authenticator')
+        ? (usuario.dobleAutenticacion ? 'GOOGLE_AUTH' : 'EMAIL')
+        : (usuario.dobleAutenticacion || null)
     };
   }
 
-  private obtenerIdCargo(cargo: any): number {
+  private obtenerIdCargo(cargo: any): { idCargo: number } | null {
+    // Si cargo ya es un objeto con idCargo, devolverlo tal cual
     if (cargo && typeof cargo === 'object' && cargo.idCargo) {
-      return cargo.idCargo;
+      return { idCargo: cargo.idCargo };
     }
 
-    if (cargo && typeof cargo === 'object' && cargo.descripcion) {
-      const cargoMapFallback: { [key: string]: number } = {
-        'Gerente': 1,
-        'Analista': 2,
-        'Desarrollador': 3,
-        'Administrador': 4,
-        'Funcionario': 5
-      };
-      return cargoMapFallback[cargo.descripcion] || 2;
-    }
-
+    // Si cargo es un número, envolver en objeto
     if (typeof cargo === 'number') {
-      return cargo;
+      return { idCargo: cargo };
     }
 
+    // Si cargo es string numérico, convertir y envolver
     if (typeof cargo === 'string') {
       const cargoNumerico = parseInt(cargo, 10);
       if (!isNaN(cargoNumerico)) {
-        return cargoNumerico;
+        return { idCargo: cargoNumerico };
       }
-
-      const cargoMapFallback: { [key: string]: number } = {
-        'Gerente': 1,
-        'Analista': 2,
-        'Desarrollador': 3,
-        'Administrador': 4,
-        'Funcionario': 5
-      };
-
-      return cargoMapFallback[cargo] || 2;
     }
 
-    return 2;
+    console.error('No se pudo obtener ID de cargo válido:', cargo);
+    return null;
   }
 
   private convertirDobleAutenticacion(dobleAuth: boolean | string | undefined): boolean {
@@ -337,7 +394,11 @@ export class UserService {
     if (typeof dobleAuth === 'string') {
       return dobleAuth.toLowerCase() === 'true' || dobleAuth === '1';
     }
-    return false; 
+    return false;
+  }
+
+  private cleanPhoneNumber(phone: string): string {
+    return phone.replace(/[\s\-()]/g, '');
   }
 
   private handleError = (error: HttpErrorResponse): Observable<never> => {

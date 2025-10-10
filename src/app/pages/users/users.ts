@@ -12,6 +12,7 @@ import { ChangePassword } from './change-password/change-password';
 import { UserFormRegister } from '../../components/user-form-register/user-form-register';
 import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
+import { UserStateService } from '../../services/user-state.service';
 import { Usuario } from '../../interfaces/common.interfaces';
 
 @Component({
@@ -45,11 +46,10 @@ export class Users implements OnInit, OnDestroy {
   isPasswordModalVisible = false;
   isChangePasswordModalVisible = false;
   isChange2FAMethodModalVisible = false;
-  isRegisterUserModalVisible = false;
+  selected2FAMethod: 'GOOGLE_AUTH' | 'EMAIL' = 'GOOGLE_AUTH';
   currentUser: Usuario | null = null;
   currentAction = '';
   mensajePasswordModal: string = '';
-  selected2FAMethod: 'GOOGLE_AUTH' | 'EMAIL' = 'GOOGLE_AUTH';
 
   isLoading = false;
   errorMessage = '';
@@ -65,7 +65,8 @@ export class Users implements OnInit, OnDestroy {
 
   constructor(
     private userService: UserService,
-    private authService: AuthService
+    private authService: AuthService,
+    private userStateService: UserStateService
   ) {}
 
   ngOnInit(): void {
@@ -75,6 +76,7 @@ export class Users implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.userStateService.clearPendingOperation(); // Limpiar al destruir
   }
 
   cargarUsuarios(): void {
@@ -133,13 +135,13 @@ export class Users implements OnInit, OnDestroy {
   filtrarUsuarios() {
     let filtrados = this.usuarios.filter(u => {
       if (this.activos) {
-        // Verificar múltiples formas de saber si está activo
+        // Verificar múltiples formas de saber si está activo o pendiente
         const estadoDescripcion = typeof u.estado === 'object'
           ? (u.estado.descripcion || '').toString().trim().toUpperCase()
           : String(u.estado || '').trim().toUpperCase();
 
         // Usar tanto la propiedad activo como el estado.descripcion para filtrar
-        return estadoDescripcion === 'ACTIVO' || u.activo === true;
+        return estadoDescripcion === 'ACTIVO' || estadoDescripcion === 'PENDIENTE' || u.activo === true;
       } else {
         return true;
       }
@@ -155,13 +157,6 @@ export class Users implements OnInit, OnDestroy {
       );
     }
 
-    // Debug para ver qué usuarios se están filtrando
-    console.log('Usuarios filtrados:', filtrados.map(u => ({
-      nombre: u.nombres,
-      estado: u.estado,
-      activo: u.activo
-    })));
-
     this.usuariosFiltradosLength = filtrados.length;
     const start = (this.paginaActual - 1) * this.itemsPerPage;
     this.usuariosFiltrados = filtrados.slice(start, start + this.itemsPerPage);
@@ -175,7 +170,7 @@ export class Users implements OnInit, OnDestroy {
   }
 
   onToggleActivos(checked: boolean) {
-    this.activos = checked;
+    this.activos = !checked;
     this.paginaActual = 1;
     this.filtrarUsuarios();
   }
@@ -217,18 +212,96 @@ export class Users implements OnInit, OnDestroy {
         this.isPasswordModalVisible = true;
         break;
 
+      case 'cambiar2FA':
+        this.abrirModal2FA(u);
+        break;
+
       case 'eliminarQR':
         this.mensajePasswordModal = 'Ingrese su contraseña para eliminar el código QR del usuario.';
         this.isPasswordModalVisible = true;
         break;
 
-      case 'cambiarMetodo2FA':
-        this.isChange2FAMethodModalVisible = true;
-        break;
-
       default:
-        console.log('Acción no reconocida:', tipo);
     }
+  }
+
+  abrirModal2FA(usuario: Usuario): void {
+    this.currentUser = { ...usuario };
+    this.currentAction = 'cambiar2FA';
+    
+    // Verificar si el usuario tiene 2FA habilitado
+    if (!usuario.dobleAutenticacion) {
+      this.mostrarModalSuccess(
+        'Este usuario no tiene la doble autenticación habilitada. Para habilitar 2FA, el usuario debe configurarlo desde su perfil al iniciar sesión.',
+        'Entendido'
+      );
+      return;
+    }
+    
+    // Determinar el método actual y establecerlo como seleccionado
+    const dobleAuth = usuario.dobleAutenticacion;
+    if (dobleAuth === 'GOOGLE_AUTH') {
+      this.selected2FAMethod = 'GOOGLE_AUTH';
+    } else if (dobleAuth === 'EMAIL') {
+      this.selected2FAMethod = 'EMAIL';
+    } else if (typeof dobleAuth === 'boolean' && dobleAuth) {
+      // Por defecto, si es boolean true, asumir GOOGLE_AUTH
+      this.selected2FAMethod = 'GOOGLE_AUTH';
+    } else {
+      // Por defecto GOOGLE_AUTH
+      this.selected2FAMethod = 'GOOGLE_AUTH';
+    }
+    
+    // Abrir el modal
+    this.isChange2FAMethodModalVisible = true;
+  }
+
+  closeChange2FAMethodModal(): void {
+    this.isChange2FAMethodModalVisible = false;
+    this.currentUser = null;
+    this.currentAction = '';
+  }
+
+  on2FAMethodChange(): void {
+    if (!this.currentUser || !this.currentUser.idUsuario) {
+      alert('Error: No se encontró la información del usuario');
+      this.closeChange2FAMethodModal();
+      return;
+    }
+
+    if (!this.selected2FAMethod) {
+      alert('Por favor selecciona un método de autenticación');
+      return;
+    }
+
+    this.authService.change2FAMethod(this.currentUser.idUsuario, this.selected2FAMethod)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: any) => {
+          let mensaje = response.message || 'Método de autenticación cambiado correctamente';
+          if (response.qrCodeUrl) {
+            mensaje += '\n\nSe ha generado un nuevo código QR. El usuario deberá escanearlo en su próximo login.';
+          }
+          this.closeChange2FAMethodModal();
+          this.mostrarModalSuccess(mensaje, 'Aceptar');
+          this.cargarUsuarios();
+        },
+        error: (error: any) => {
+          console.error('Error cambiando método 2FA:', error);
+          let mensajeError = 'Error al cambiar el método de autenticación';
+          
+          if (error.error?.code === '2FA_DISABLED') {
+            mensajeError = 'La doble autenticación no está habilitada para este usuario. El usuario debe habilitarla desde su perfil.';
+          } else if (error.error?.message) {
+            mensajeError = error.error.message;
+          } else if (error.message) {
+            mensajeError = error.message;
+          }
+          
+          this.closeChange2FAMethodModal();
+          this.mostrarModalSuccess(mensajeError, 'Entendido');
+        }
+      });
   }
 
   openCreateUserModal(): void {
@@ -284,41 +357,63 @@ export class Users implements OnInit, OnDestroy {
   }
 
   handlePasswordValidation(password: string): void {
+    if (!this.currentUser) {
+      const pending = this.userStateService.getPendingOperation();
+      this.currentUser = pending.user;
+      this.currentAction = pending.action as any;
+    }
+    
+    if (!this.currentUser) {
+      alert('Error: No se encontró la información del usuario. Por favor, intente de nuevo.');
+      this.isPasswordModalVisible = false;
+      this.userStateService.clearPendingOperation();
+      return;
+    }
+
     if (this.currentAction === 'eliminarQR') {
       if (this.currentUser && this.currentUser.usuario) {
         this.authService.removeUserQR(this.currentUser.usuario, password)
           .pipe(takeUntil(this.destroy$))
           .subscribe({
             next: (response: any) => {
-              console.log('QR eliminado exitosamente:', response);
               this.mostrarModalSuccess('Código QR eliminado con éxito', 'Aceptar');
               this.cargarUsuarios();
               this.isPasswordModalVisible = false;
+              this.userStateService.clearPendingOperation();
             },
             error: (error: any) => {
-              console.error('Error eliminando QR:', error);
               if (error.error?.code === 'PASSWORD_INCORRECT') {
                 alert('Contraseña incorrecta. Intente nuevamente.');
               } else {
                 alert('Error al eliminar el código QR: ' + (error.error?.message || error.message || 'Error desconocido'));
               }
+              this.userStateService.clearPendingOperation();
             }
           });
       }
     } else {
-      // Para otras acciones que requieren contraseña
       this.confirmAction(password);
     }
   }
 
-  handlePasswordValidationError(error: string): void {
-    // El error ya se muestra en el modal, no necesitamos hacer nada adicional aquí
-    console.log('Error de validación de contraseña:', error);
-  }
+  handlePasswordValidationError(error: string): void {}
 
   confirmAction(password: string): void {
     if (!password.trim()) {
       return alert('La contraseña no puede estar vacía');
+    }
+
+    if (!this.currentUser) {
+      const pending = this.userStateService.getPendingOperation();
+      this.currentUser = pending.user;
+      this.currentAction = pending.action as any;
+    }
+
+    if (!this.currentUser) {
+      alert('Error: No se encontró la información del usuario. Por favor, intente de nuevo.');
+      this.isPasswordModalVisible = false;
+      this.userStateService.clearPendingOperation();
+      return;
     }
 
     switch (this.currentAction) {
@@ -330,10 +425,13 @@ export class Users implements OnInit, OnDestroy {
               next: (response: any) => {
                 this.mostrarModalSuccess('Usuario creado con éxito', 'Aceptar');
                 this.cargarUsuarios();
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
               },
               error: (error: any) => {
-                console.error('Error creando usuario:', error);
                 alert('Error al crear el usuario: ' + (error.message || 'Error desconocido'));
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
               }
             });
         }
@@ -347,63 +445,66 @@ export class Users implements OnInit, OnDestroy {
               next: (response: any) => {
                 this.mostrarModalSuccess('Usuario editado con éxito', 'Aceptar');
                 this.cargarUsuarios();
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
               },
               error: (error: any) => {
-                console.error('Error actualizando usuario:', error);
                 alert('Error al actualizar el usuario: ' + (error.message || 'Error desconocido'));
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
               }
             });
         }
         break;
 
       case 'inactivar':
-      if (this.currentUser && this.currentUser.idUsuario) {
-      this.userService.desactivarUsuario(this.currentUser.idUsuario)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response: any) => {
-          console.log('Usuario desactivado exitosamente:', response);
-          this.mostrarModalSuccess('Usuario inactivado con éxito', 'Aceptar');
-          this.cargarUsuarios();
-        },
-        error: (error: any) => {
-          console.error('Error desactivando usuario:', error);
-          alert('Error al inactivar el usuario: ' + (error.message || 'Error desconocido'));
+        if (this.currentUser) {
+          this.userService.desactivarUsuario(this.currentUser, password)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (response: any) => {
+                this.mostrarModalSuccess('Usuario inactivado con éxito', 'Aceptar');
+                this.cargarUsuarios();
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
+              },
+              error: (error: any) => {
+                alert('Error al inactivar el usuario: ' + (error.message || 'Error desconocido'));
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
+              }
+            });
         }
-      });
-      }
-      break;
+        break;
 
       case 'activar':
-      if (this.currentUser && this.currentUser.idUsuario) {
-      this.userService.activarUsuario(this.currentUser.idUsuario)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response: any) => {
-          console.log('Usuario activado exitosamente:', response);
-          this.mostrarModalSuccess('Usuario activado con éxito', 'Aceptar');
-          this.cargarUsuarios();
-        },
-        error: (error: any) => {
-          console.error('Error activando usuario:', error);
-          alert('Error al activar el usuario: ' + (error.message || 'Error desconocido'));
+        if (this.currentUser) {
+          this.userService.activarUsuario(this.currentUser, password)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (response: any) => {
+                this.mostrarModalSuccess('Usuario activado con éxito', 'Aceptar');
+                this.cargarUsuarios();
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
+              },
+              error: (error: any) => {
+                alert('Error al activar el usuario: ' + (error.message || 'Error desconocido'));
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
+              }
+            });
         }
-      });
-      }
-      break;
+        break;
 
       case 'cambiarContraseña':
         this.isPasswordModalVisible = false;
         this.isChangePasswordModalVisible = true;
         break;
 
-
       default:
-        console.log('Acción no reconocida en validación:', this.currentAction);
-    }
-
-    if (this.currentAction !== 'cambiarContraseña') {
-      this.isPasswordModalVisible = false;
+        this.isPasswordModalVisible = false;
+        this.userStateService.clearPendingOperation();
     }
   }
 
@@ -422,43 +523,54 @@ export class Users implements OnInit, OnDestroy {
 }
 
   abrirConfirmModal(tipo: 'inactivar' | 'activar' | 'eliminarQR', usuario: Usuario) {
-  this.confirmModalAction = tipo;
-  this.currentUser = usuario;
-  switch(tipo) {
-    case 'inactivar':
-      this.confirmModalMessage = '¿Está seguro de que desea inactivar el usuario?';
-      break;
-    case 'activar':
-      this.confirmModalMessage = '¿Está seguro de que desea activar el usuario?';
-      break;
-    case 'eliminarQR':
-      this.confirmModalMessage = '¿Está seguro de que desea eliminar el código QR?';
-      break;
+    this.confirmModalAction = tipo;
+    this.currentUser = usuario;
+    this.userStateService.setPendingOperation(usuario, tipo);
+    
+    switch(tipo) {
+      case 'inactivar':
+        this.confirmModalMessage = '¿Está seguro de que desea inactivar el usuario?';
+        break;
+      case 'activar':
+        this.confirmModalMessage = '¿Está seguro de que desea activar el usuario?';
+        break;
+      case 'eliminarQR':
+        this.confirmModalMessage = '¿Está seguro de que desea eliminar el código QR?';
+        break;
+    }
+
+    this.confirmModalVisible = true;
   }
 
-  this.confirmModalVisible = true;
-}
-
-onAceptarConfirmacion() {
-  this.confirmModalVisible = false;
-  switch(this.confirmModalAction) {
-    case 'inactivar':
-      this.mensajePasswordModal = 'Ingrese su contraseña para inactivar el usuario.';
-      this.isPasswordModalVisible = true;
-      this.currentAction = 'inactivar';
-      break;
-    case 'activar':
-      this.mensajePasswordModal = 'Ingrese su contraseña para activar el usuario.';
-      this.isPasswordModalVisible = true;
-      this.currentAction = 'activar';
-      break;
-    case 'eliminarQR':
-      this.mensajePasswordModal = 'Ingrese su contraseña para eliminar el código QR.';
-      this.isPasswordModalVisible = true;
-      this.currentAction = 'eliminarQR';
-      break;
+  onAceptarConfirmacion() {
+    this.confirmModalVisible = false;
+    
+    if (!this.currentUser) {
+      const pending = this.userStateService.getPendingOperation();
+      this.currentUser = pending.user;
+      this.confirmModalAction = pending.action as any;
+    }
+    
+    switch(this.confirmModalAction) {
+      case 'inactivar':
+        this.mensajePasswordModal = 'Ingrese su contraseña para inactivar el usuario.';
+        this.currentAction = 'inactivar';
+        this.isPasswordModalVisible = true;
+        break;
+        
+      case 'activar':
+        this.mensajePasswordModal = 'Ingrese su contraseña para activar el usuario.';
+        this.currentAction = 'activar';
+        this.isPasswordModalVisible = true;
+        break;
+        
+      case 'eliminarQR':
+        this.mensajePasswordModal = 'Ingrese su contraseña para eliminar el código QR.';
+        this.currentAction = 'eliminarQR';
+        this.isPasswordModalVisible = true;
+        break;
+    }
   }
-}
 
   onCancelarConfirmacion() {
     this.confirmModalVisible = false;
@@ -476,7 +588,6 @@ onAceptarConfirmacion() {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response: any) => {
-            console.log('Contraseña cambiada exitosamente:', response);
             this.mostrarModalSuccess('Contraseña cambiada con éxito', 'Aceptar');
             this.cargarUsuarios();
           },
@@ -488,45 +599,4 @@ onAceptarConfirmacion() {
     }
   }
 
-  // Métodos para el modal de cambio de método 2FA
-  closeChange2FAMethodModal(): void {
-    this.isChange2FAMethodModalVisible = false;
-    this.currentUser = null;
-    this.selected2FAMethod = 'GOOGLE_AUTH';
-  }
-
-  on2FAMethodChange(): void {
-    if (!this.currentUser || !this.currentUser.idUsuario) {
-      alert('Usuario no válido');
-      return;
-    }
-
-    this.authService.change2FAMethod(this.currentUser.idUsuario, this.selected2FAMethod)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response: any) => {
-          console.log('Método 2FA cambiado exitosamente:', response);
-
-          if (response.success) {
-            const metodoTexto = this.selected2FAMethod === 'GOOGLE_AUTH' ? 'Google Authenticator' : 'Correo electrónico';
-            let mensaje = response.message;
-
-            // Si hay QR generado, mostrar información adicional
-            if (response.qrCodeUrl) {
-              mensaje += `\n\nSe ha generado un nuevo código QR que el usuario deberá escanear en su próximo login.`;
-            }
-
-            this.mostrarModalSuccess(mensaje, 'Aceptar');
-            this.closeChange2FAMethodModal();
-            this.cargarUsuarios();
-          } else {
-            alert('Error al cambiar el método de 2FA: ' + (response.message || 'Error desconocido'));
-          }
-        },
-        error: (error: any) => {
-          console.error('Error cambiando método 2FA:', error);
-          alert('Error al cambiar el método de 2FA: ' + (error.error?.message || error.message || 'Error desconocido'));
-        }
-      });
-  }
 }

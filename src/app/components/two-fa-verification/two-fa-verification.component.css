@@ -1,5 +1,3 @@
-/* Two-FA Verification Styles - Idéntico a auth-approval */
-
 .two-fa-container {
   min-height: 100vh;
   display: flex;
@@ -16,7 +14,7 @@
   pointer-events: none;
   transform: scale(0.95) translateY(-15px);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  max-width: 900px;
+  max-width: 1200px;
   width: 100%;
 }
 
@@ -57,7 +55,7 @@
     var(--color-primary, #346464) 50%,
     var(--color-primary-light, #4a7a7a) 100%
   );
-  padding: 2rem 2rem 1.5rem;
+  padding: 2.5rem 2.5rem 2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -72,8 +70,8 @@
 
 .two-fa-logo-svg svg {
   display: block;
-  width: 80px;
-  height: 80px;
+  width: 100px;
+  height: 100px;
 }
 
 .two-fa-brand-text {
@@ -81,20 +79,20 @@
 }
 
 .two-fa-brand-name {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: bold;
   margin-bottom: 2px;
 }
 
 .two-fa-brand-subtitle {
-  font-size: 14px;
+  font-size: 16px;
   font-style: italic;
   opacity: 0.9;
 }
 
 .two-fa-title {
   color: white;
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 600;
   margin: 0;
   text-align: center;
@@ -103,10 +101,9 @@
 
 /* Body */
 .two-fa-body {
-  padding: 1.5rem;
+  padding: 2rem;
   display: flex;
-  gap: 1.5rem;
-  min-height: 250px;
+  gap: 2rem;
 }
 
 /* Instructions */
@@ -117,7 +114,7 @@
 
 .two-fa-instructions-title {
   color: #2d3748;
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 600;
   margin: 0 0 1rem 0;
   text-align: left;
@@ -137,7 +134,7 @@
   position: relative;
   line-height: 1.4;
   color: #333;
-  font-size: 15px;
+  font-size: 17px;
 }
 
 .two-fa-step::before {
@@ -145,15 +142,15 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   background: var(--color-primary, #346464);
   color: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
 }
 
@@ -172,10 +169,10 @@
   background: #f8fafc;
   border: 2px solid #e2e8f0;
   border-radius: 12px;
-  padding: 16px;
+  padding: 20px;
   margin: 10px 0;
   width: 100%;
-  max-width: 400px;
+  max-width: 450px;
 }
 
 .two-fa-qr-header {
@@ -187,14 +184,14 @@
 }
 
 .two-fa-qr-icon {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   color: #667eea;
 }
 
 .two-fa-qr-header h3 {
   color: #2d3748;
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 600;
   margin: 0;
 }
@@ -206,7 +203,7 @@
 
 .two-fa-qr-instructions p {
   color: #4a5568;
-  font-size: 14px;
+  font-size: 16px;
   margin: 8px 0;
   padding-left: 16px;
   position: relative;
@@ -224,15 +221,15 @@
   display: flex;
   justify-content: center;
   margin: 20px 0;
-  padding: 20px;
+  padding: 25px;
   background: white;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
 }
 
 .two-fa-qr-code {
-  max-width: 200px;
-  max-height: 200px;
+  max-width: 250px;
+  max-height: 250px;
   width: 100%;
   height: auto;
   border-radius: 4px;
@@ -240,7 +237,7 @@
 
 .two-fa-secret-info {
   background: #edf2f7;
-  padding: 16px;
+  padding: 20px;
   border-radius: 8px;
   margin-top: 16px;
   text-align: left;
@@ -248,7 +245,7 @@
 
 .two-fa-secret-info p {
   margin: 4px 0;
-  font-size: 14px;
+  font-size: 16px;
   color: #4a5568;
 }
 
@@ -299,7 +296,7 @@
 /* Verification Form */
 .two-fa-verification-form {
   width: 100%;
-  max-width: 300px;
+  max-width: 350px;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -309,15 +306,15 @@
 /* Input Group */
 .two-fa-input-group {
   width: 100%;
-  max-width: 300px;
+  max-width: 350px;
 }
 
 .two-fa-input {
   width: 100%;
-  padding: 12px 16px;
+  padding: 14px 18px;
   border: 2px solid #c8c8c8;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 18px;
   text-align: center;
   background: white;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
@@ -347,13 +344,13 @@
   background: var(--color-success, #346464);
   color: white;
   border: none;
-  padding: 14px 32px;
+  padding: 16px 36px;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-width: 200px;
+  min-width: 220px;
   position: relative;
   display: flex;
   align-items: center;
@@ -419,9 +416,9 @@
 .two-fa-timer {
   background: #d3d3d3;
   color: white;
-  padding: 12px 20px;
+  padding: 14px 22px;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   text-align: center;
   margin-bottom: 20px;
@@ -433,12 +430,12 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 14px 18px;
   background-color: #d4edda;
   border: 1px solid #c3e6cb;
   border-radius: 8px;
   color: #155724;
-  font-size: 14px;
+  font-size: 16px;
   margin: 16px 0;
 }
 
@@ -457,12 +454,12 @@
   margin-bottom: 15px;
   align-items: center;
   width: 100%;
-  max-width: 300px;
+  max-width: 350px;
 }
 
 .two-fa-icon {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 
@@ -474,7 +471,7 @@
   border-radius: 4px;
   padding: 0.75rem;
   margin: 1rem 0;
-  font-size: 14px;
+  font-size: 16px;
   text-align: center;
   animation: shake 0.5s ease-in-out;
   width: 100%;
@@ -488,8 +485,8 @@
 
 /* Spinner */
 .two-fa-spinner {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border: 2px solid transparent;
   border-top: 2px solid currentColor;
   border-radius: 50%;
@@ -507,21 +504,21 @@
     flex-direction: column;
     gap: 1.5rem;
   }
-  
+
   .two-fa-instructions {
     padding-right: 0;
   }
-  
+
   .two-fa-header {
     flex-direction: column;
     gap: 1rem;
     text-align: center;
   }
-  
+
   .two-fa-title {
-    font-size: 24px;
+    font-size: 28px;
   }
-  
+
   .two-fa-dialog {
     margin: 0.5rem;
   }
@@ -535,21 +532,21 @@
   .two-fa-header {
     padding: 1.5rem 1rem 1rem;
   }
-  
+
   .two-fa-body {
     padding: 1.5rem 1rem;
   }
-  
+
   .two-fa-title {
-    font-size: 20px;
+    font-size: 24px;
   }
-  
+
   .two-fa-step {
-    font-size: 14px;
+    font-size: 16px;
   }
 
   .two-fa-input {
-    font-size: 16px;
-    padding: 14px;
+    font-size: 18px;
+    padding: 16px;
   }
 }
