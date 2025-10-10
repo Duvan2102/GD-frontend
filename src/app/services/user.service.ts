@@ -1,11 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError, of } from 'rxjs';
-<<<<<<< HEAD
-import { catchError, map, switchMap, shareReplay } from 'rxjs/operators';
-=======
-import { catchError, map, switchMap, tap } from 'rxjs/operators';
->>>>>>> bf09bab3e38436fab04566ec5d14c4175805ef9f
+import { catchError, map, switchMap, shareReplay, tap } from 'rxjs/operators';
 import { environment } from '../environments/environment';
 import {
   Usuario,
