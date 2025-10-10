@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable, of, BehaviorSubject, throwError } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { map, catchError } from 'rxjs/operators';
-import { Usuario, LoginRequest, AuthResponse, UsuarioData, AuthErrorResponse, MessageResponse, PasswordValidationRequest, PasswordValidationResponse, TwoFARequest, TwoFAResponse, TwoFARequiredResponse, TwoFAErrorResponse, TwoFAStatusResponse, QRCodeResponse, GoogleAuthSetupResponse, GoogleAuthConfirmRequest, GoogleAuthConfirmResponse, UnlinkGoogleAuthRequest, UnlinkGoogleAuthResponse, EmailCodeRequest, EmailCodeResponse, TwoFAState, QRSetupData, Change2FAMethodRequest, Change2FAMethodResponse } from '../interfaces/common.interfaces';
+import { Usuario, LoginRequest, AuthResponse, UsuarioData, AuthErrorResponse, MessageResponse, PasswordValidationRequest, PasswordValidationResponse, TwoFARequest, TwoFAResponse, TwoFARequiredResponse, TwoFAErrorResponse, TwoFAStatusResponse, QRCodeResponse, GoogleAuthSetupResponse, GoogleAuthConfirmRequest, GoogleAuthConfirmResponse, UnlinkGoogleAuthRequest, UnlinkGoogleAuthResponse, EmailCodeRequest, EmailCodeResponse, TwoFAState, QRSetupData, Change2FAMethodRequest, Change2FAMethodResponse, RegisterRequest, RegisterResponse, RegisterErrorResponse } from '../interfaces/common.interfaces';
 import { Position } from './positions.service';
 import { environment } from '../environments/environment';
 
@@ -697,6 +697,22 @@ export class AuthService {
     }).pipe(
       catchError((error: any) => {
         console.error('Error cambiando método 2FA:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  // ==================== REGISTRO DE USUARIOS ====================
+
+  // Registrar nuevo usuario
+  register(body: RegisterRequest): Observable<RegisterResponse> {
+    return this.http.post<RegisterResponse>(`${this.apiUrl}/auth/register`, body, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }).pipe(
+      catchError((error: any) => {
+        console.error('Error registrando usuario:', error);
         return throwError(() => error);
       })
     );

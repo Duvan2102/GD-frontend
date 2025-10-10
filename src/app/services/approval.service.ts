@@ -135,7 +135,7 @@ export class ApprovalService {
       lastUpdate: updatedAt,
       status: ['APROBADO', 'RECHAZADO', 'PENDIENTE', 'CANCELADA'].includes(estado) ? estado : 'PENDIENTE',
       approvers: approvers,
-      priority: Boolean(item?.prioridad === 'IMPORTANTE' || item?.prioridad === true),
+      priority: item?.prioridad === true,  // Boolean del backend (true = prioritaria)
       fullData: item,
       // Agregar el ID del creador para resolver después
       _creadorId: creadorId
@@ -505,9 +505,9 @@ export class ApprovalService {
       id: String(id),
       nombreSolicitud: this.extractRequestName(item, id),
       detallesAdicionales: this.extractRequestDescription(item),
-      prioridad: (item?.prioridad === true || item?.prioridad === 'IMPORTANTE' ? 'IMPORTANTE' : 'NORMAL') as any,
+      prioridad: item?.prioridad === true,  // Boolean del backend
       tipologia: String(item?.tipologiaId ?? item?.idTipologia ?? ''),
-      enviarRecordatorio: 'NUNCA' as any,
+      enviarRecordatorio: typeof item?.enviarRecordatorio === 'number' ? item.enviarRecordatorio : 0,  // Días del backend
       documentosAnexos: Array.isArray(item?.adjuntos) && item.adjuntos.length > 0,
       establecerOrden: Boolean(item?.ordenFirma),
       destinatarios,
@@ -823,6 +823,8 @@ export class ApprovalService {
     ordenFirma: boolean;
     comentarioInicial?: string;
     nombreSolicitud?: string;
+    prioridad?: boolean;
+    enviarRecordatorio?: number;
     pdfPrincipal: File;
     adjuntos?: File[];
   }): Observable<Approval | null> {
@@ -835,13 +837,24 @@ export class ApprovalService {
     form.append('ordenFirma', String(payload.ordenFirma));
     if (payload.comentarioInicial) form.append('comentarioInicial', payload.comentarioInicial);
     if (payload.comentarioInicial) form.append('comentarionicial', payload.comentarioInicial);
+    if (typeof payload.prioridad === 'boolean') form.append('prioridad', String(payload.prioridad));
+    if (typeof payload.enviarRecordatorio === 'number') form.append('enviarRecordatorio', String(payload.enviarRecordatorio));
     form.append('pdfPrincipal', payload.pdfPrincipal);
     (payload.adjuntos || []).forEach(a => form.append('adjuntos', a));
 
     return this.http.post<any>(`${this.baseUrl}/solicitudes`, form, { headers: this.headersForUser(payload.idSolicitante) }).pipe(
       map(item => this.mapServerToApproval(item)),
       tap(appr => this.addApproval(appr)),
-      catchError(() => of(null))
+      catchError((error) => {
+        if (error.status === 413) {
+          alert('Error: Los archivos son demasiado grandes. El tamaño total no debe exceder 50MB. Por favor, reduce el tamaño de los archivos e intenta nuevamente.');
+        } else if (error.status === 0) {
+          alert('Error de conexión. Por favor, verifica tu conexión a internet e intenta nuevamente.');
+        } else {
+          alert('Error al crear la solicitud. Por favor, intenta nuevamente.');
+        }
+        return of(null);
+      })
     );
   }
 
@@ -1057,7 +1070,7 @@ export class ApprovalService {
         initials: this.getInitials((dest as any).nombresApellidos || ''),
         fullName: (dest as any).nombresApellidos || ''
       })),
-      priority: successData.prioridad === 'IMPORTANTE',
+      priority: successData.prioridad === true,  // Boolean de SuccessModalData
       fullData: successData as any // Incluir todos los datos para el modal
     };
   }

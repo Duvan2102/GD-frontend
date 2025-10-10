@@ -9,6 +9,7 @@ import { PasswordModal } from './password-modal/password-modal';
 import { SuccessModal } from './success-modal/success-modal';
 import { ConfirmModal } from './confirm-modal/confirm-modal';
 import { ChangePassword } from './change-password/change-password';
+import { UserFormRegister } from '../../components/user-form-register/user-form-register';
 import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { UserStateService } from '../../services/user-state.service';
@@ -26,7 +27,8 @@ import { Usuario } from '../../interfaces/common.interfaces';
     PasswordModal,
     SuccessModal,
     ConfirmModal,
-    ChangePassword
+    ChangePassword,
+    UserFormRegister
   ],
   templateUrl: './users.html',
   styleUrls: ['./users.css']
@@ -307,6 +309,27 @@ export class Users implements OnInit, OnDestroy {
     this.currentAction = 'crear';
     this.mensajePasswordModal = 'Por favor ingrese su contraseña para crear el usuario.';
     this.isUserFormVisible = true;
+  }
+
+  openRegisterUserModal(): void {
+    this.isRegisterUserModalVisible = true;
+  }
+
+  closeRegisterUserModal(): void {
+    this.isRegisterUserModalVisible = false;
+  }
+
+  handleUserRegistered(event: { idUsuario: number }): void {
+    console.log('Usuario registrado con ID:', event.idUsuario);
+    this.closeRegisterUserModal();
+    
+    // Mostrar mensaje de éxito y recargar usuarios
+    this.modalSuccessMessage = `Usuario registrado exitosamente con ID: ${event.idUsuario}. Debe ser activado por un administrador.`;
+    this.modalSuccessBtn = 'Aceptar';
+    this.modalSuccessVisible = true;
+    
+    // Recargar la lista de usuarios
+    this.cargarUsuarios();
   }
 
   openEditUserModal(user: Usuario): void {

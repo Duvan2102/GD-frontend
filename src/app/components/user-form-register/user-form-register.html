@@ -1,0 +1,212 @@
+<div class="custom-backdrop show" (click)="onClose()"></div>
+
+<div class="modal show">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content user-form-modal">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Registro de Usuario</h5>
+        <button type="button" class="btn-close" (click)="onClose()"></button>
+      </div>
+
+      <div class="modal-body">
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+
+          <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>¡Éxito!</strong> {{ successMessage }}
+          </div>
+
+          <div *ngIf="apiError" class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Error:</strong> {{ apiError }}
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label class="form-label" for="identificacion">Identificación <span class="text-danger">*</span></label>
+              <input 
+                id="identificacion"
+                type="text" 
+                class="form-control" 
+                formControlName="identificacion"
+                placeholder=" 12345678"
+                [class.is-invalid]="form.get('identificacion')?.invalid && form.get('identificacion')?.touched"
+                aria-describedby="identificacion-error"
+                aria-invalid="form.get('identificacion')?.invalid">
+              <div 
+                *ngIf="getErrorMessage('identificacion')" 
+                id="identificacion-error"
+                class="invalid-feedback">
+                {{ getErrorMessage('identificacion') }}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="nombres">Nombres <span class="text-danger">*</span></label>
+              <input 
+                id="nombres"
+                type="text" 
+                class="form-control" 
+                formControlName="nombres"
+                placeholder=" Nombre1 Nombre2"
+                [class.is-invalid]="form.get('nombres')?.invalid && form.get('nombres')?.touched"
+                aria-describedby="nombres-error"
+                aria-invalid="form.get('nombres')?.invalid">
+              <div 
+                *ngIf="getErrorMessage('nombres')" 
+                id="nombres-error"
+                class="invalid-feedback">
+                {{ getErrorMessage('nombres') }}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="apellidos">Apellidos <span class="text-danger">*</span></label>
+              <input 
+                id="apellidos"
+                type="text" 
+                class="form-control" 
+                formControlName="apellidos"
+                placeholder=" Apellido1 Apellido2"
+                [class.is-invalid]="form.get('apellidos')?.invalid && form.get('apellidos')?.touched"
+                aria-describedby="apellidos-error"
+                aria-invalid="form.get('apellidos')?.invalid">
+              <div 
+                *ngIf="getErrorMessage('apellidos')" 
+                id="apellidos-error"
+                class="invalid-feedback">
+                {{ getErrorMessage('apellidos') }}
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-12">
+              <label class="form-label" for="usuario">Usuario</label>
+              <input 
+                id="usuario"
+                type="text" 
+                class="form-control" 
+                formControlName="usuario"
+                readonly
+                style="background-color: #f8f9fa; cursor: not-allowed;"
+                placeholder="Se genera automáticamente">
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label" for="correoEmpresarial">Correo empresarial</label>
+              <input 
+                id="correoEmpresarial"
+                type="email" 
+                class="form-control" 
+                formControlName="correoEmpresarial"
+                placeholder=" nombre1.apellido1@empresa.com"
+                [class.is-invalid]="form.get('correoEmpresarial')?.invalid && form.get('correoEmpresarial')?.touched"
+                aria-describedby="correoEmpresarial-error"
+                aria-invalid="form.get('correoEmpresarial')?.invalid">
+              <div 
+                *ngIf="getErrorMessage('correoEmpresarial')" 
+                id="correoEmpresarial-error"
+                class="invalid-feedback">
+                {{ getErrorMessage('correoEmpresarial') }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="correoPersonal">Correo personal</label>
+              <input 
+                id="correoPersonal"
+                type="email" 
+                class="form-control" 
+                formControlName="correoPersonal"
+                placeholder=" nombre1.apellido1@gmail.com"
+                [class.is-invalid]="form.get('correoPersonal')?.invalid && form.get('correoPersonal')?.touched"
+                aria-describedby="correoPersonal-error"
+                aria-invalid="form.get('correoPersonal')?.invalid">
+              <div 
+                *ngIf="getErrorMessage('correoPersonal')" 
+                id="correoPersonal-error"
+                class="invalid-feedback">
+                {{ getErrorMessage('correoPersonal') }}
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label" for="telefono1">Teléfono 1</label>
+              <input 
+                id="telefono1"
+                type="text" 
+                class="form-control" 
+                formControlName="telefono1"
+                placeholder=" 3001234567"
+                [class.is-invalid]="form.get('telefono1')?.invalid && form.get('telefono1')?.touched"
+                aria-describedby="telefono1-error"
+                aria-invalid="form.get('telefono1')?.invalid">
+              <div 
+                *ngIf="getErrorMessage('telefono1')" 
+                id="telefono1-error"
+                class="invalid-feedback">
+                {{ getErrorMessage('telefono1') }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="telefono2">Teléfono 2</label>
+              <input 
+                id="telefono2"
+                type="text" 
+                class="form-control" 
+                formControlName="telefono2"
+                placeholder=" 6012345678"
+                [class.is-invalid]="form.get('telefono2')?.invalid && form.get('telefono2')?.touched"
+                aria-describedby="telefono2-error"
+                aria-invalid="form.get('telefono2')?.invalid">
+              <div 
+                *ngIf="getErrorMessage('telefono2')" 
+                id="telefono2-error"
+                class="invalid-feedback">
+                {{ getErrorMessage('telefono2') }}
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-12">
+              <label class="form-label" for="direccion">Dirección</label>
+              <input 
+                id="direccion"
+                type="text" 
+                class="form-control" 
+                formControlName="direccion"
+                placeholder=" Calle 123 #45-67, Bogotá"
+                [class.is-invalid]="form.get('direccion')?.invalid && form.get('direccion')?.touched"
+                aria-describedby="direccion-error"
+                aria-invalid="form.get('direccion')?.invalid">
+              <div 
+                *ngIf="getErrorMessage('direccion')" 
+                id="direccion-error"
+                class="invalid-feedback">
+                {{ getErrorMessage('direccion') }}
+              </div>
+            </div>
+          </div>
+
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="onClose()" [disabled]="loading">
+          Cancelar
+        </button>
+        <button type="button"
+                class="btn btn-primary-custom"
+                (click)="onSubmit()"
+                [disabled]="form.invalid || loading">
+          <span *ngIf="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+          Registrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

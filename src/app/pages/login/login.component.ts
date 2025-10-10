@@ -3,11 +3,12 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
+import { UserFormRegister } from '../../components/user-form-register/user-form-register';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, CommonModule],
+  imports: [ReactiveFormsModule, CommonModule, UserFormRegister],
   templateUrl: './login.component.html',
   styleUrls: ['./shared-login-styles.css']
 })
@@ -15,6 +16,7 @@ export class LoginComponent implements OnInit {
   loginForm: FormGroup;
   errorMessage: string = '';
   isLoading: boolean = false;
+  isRegisterModalVisible = false;
 
   constructor(
     private fb: FormBuilder,
@@ -82,6 +84,22 @@ export class LoginComponent implements OnInit {
 
   goToForgotPassword(): void {
     this.router.navigate(['/forgot-password']);
+  }
+
+  openRegisterModal(): void {
+    this.isRegisterModalVisible = true;
+  }
+
+  closeRegisterModal(): void {
+    this.isRegisterModalVisible = false;
+  }
+
+  handleUserRegistered(event: { idUsuario: number }): void {
+    console.log('Usuario registrado exitosamente con ID:', event.idUsuario);
+    this.closeRegisterModal();
+    
+    // Mostrar mensaje de éxito
+    alert(`¡Usuario registrado exitosamente! ID: ${event.idUsuario}\n\nEl usuario ha sido registrado y está pendiente de activación por un administrador.`);
   }
 
   private handleLoginError(error: any): void {

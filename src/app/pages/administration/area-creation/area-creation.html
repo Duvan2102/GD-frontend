@@ -8,13 +8,14 @@
       </div>
 
       <form (ngSubmit)="onSubmit()">
-        <div class="modal-body text-center">
-          <div class="mb-3">
+        <div class="modal-body">
+          <!-- Nombre del Área -->
+          <div class="form-section">
             <label for="areaDescripcion" class="form-label">Nombre del Área</label>
             <input
               type="text"
               id="areaDescripcion"
-              class="form-control text-center"
+              class="form-control"
               [(ngModel)]="area.descripcion"
               name="areaDescripcion"
               placeholder="Escribe el nombre del área"
@@ -22,20 +23,51 @@
               autocomplete="off"
             />
           </div>
-          <div class="mb-3">
-            <label for="areaDepartamento" class="form-label">Departamento</label>
-            <select
-              id="areaDepartamento"
-              class="form-select text-center"
-              [(ngModel)]="area.departamento.idDepartamento"
-              name="areaDepartamento"
-              required
-            >
-              <option value="0" disabled>Selecciona un departamento</option>
-              <option *ngFor="let dep of departments" [value]="dep.idDepartamento">
-                {{ dep.descripcion }}
-              </option>
-            </select>
+
+          <!-- Selector de Departamento -->
+          <div class="form-section">
+            <label class="form-label">Departamento del Área</label>
+            
+            <!-- Vista de Árbol Compacta -->
+            <div class="tree-compact">
+              <!-- Departamento -->
+              <div class="tree-level">
+                <div class="level-header" (click)="toggleDepartmentDropdown()">
+                  <div class="level-content">
+                    <i class="bi bi-building"></i>
+                    <span class="level-label">Departamento</span>
+                    <span class="level-value" *ngIf="selectedDepartment">{{ selectedDepartment.descripcion }}</span>
+                    <span class="level-placeholder" *ngIf="!selectedDepartment">Seleccionar</span>
+                  </div>
+                  <i class="bi" [class.bi-chevron-down]="!showDepartmentDropdown" [class.bi-chevron-up]="showDepartmentDropdown"></i>
+                </div>
+                
+                <div *ngIf="showDepartmentDropdown" class="level-dropdown">
+                  <div *ngIf="departmentsWithExpanded.length === 0" class="no-data">
+                    <i class="bi bi-info-circle"></i>
+                    No hay departamentos disponibles
+                  </div>
+                  <div *ngFor="let department of departmentsWithExpanded" class="level-item" (click)="selectDepartment(department)">
+                    <i class="bi bi-building"></i>
+                    <span>{{ department.descripcion }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resumen de Selección -->
+            <div *ngIf="selectedDepartment" class="selection-summary">
+              <div class="summary-header">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Departamento seleccionado</span>
+              </div>
+              <div class="summary-path">
+                <span class="path-item">
+                  <i class="bi bi-building"></i>
+                  {{ selectedDepartment.descripcion }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -44,7 +76,7 @@
           <button
             type="submit"
             class="btn btn-primary"
-            [disabled]="!area.descripcion.trim() || !area.departamento.idDepartamento"
+            [disabled]="!area.descripcion.trim() || !selectedDepartment"
           >
             {{ mode === 'update' ? 'Actualizar' : 'Crear' }}
           </button>

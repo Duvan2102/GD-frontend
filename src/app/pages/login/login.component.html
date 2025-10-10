@@ -63,7 +63,7 @@
                   </div>
                   <div class="links-container">
                     <a (click)="goToForgotPassword()" style="cursor: pointer;">¿Olvidó su contraseña?</a>
-                    <a href="#">Registrarse</a>
+                    <a (click)="openRegisterModal()" style="cursor: pointer;">Registrarse</a>
                 </div>
                   <button
         type="submit"
@@ -78,6 +78,13 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal de registro de usuario -->
+    <app-user-form-register
+      *ngIf="isRegisterModalVisible"
+      (registered)="handleUserRegistered($event)"
+      (close)="closeRegisterModal()">
+    </app-user-form-register>
 
     <!-- Footer -->
     <footer>

@@ -215,6 +215,7 @@
     <app-positions-creation
       [isVisible]="showPositionCreateModal"
       [mode]="'create'"
+      [departments]="departments"
       [areas]="areas"
       (create)="confirmPositionCreate($event)"
       (cancel)="closePositionModal()">
@@ -223,6 +224,7 @@
     <app-positions-creation
       [isVisible]="showPositionUpdateModal"
       [mode]="'update'"
+      [departments]="departments"
       [areas]="areas"
       [positionToEdit]="selectedPosition"
       (update)="confirmPositionUpdate($event)"
