@@ -79,10 +79,4 @@ export class PasswordModal  {
   togglePasswordVisibility(): void {
     this.passwordVisible = !this.passwordVisible;
   }
-
-  onKeyPress(event: KeyboardEvent): void {
-    if (event.key === 'Enter') {
-      this.onValidate();
-    }
-  }
 }

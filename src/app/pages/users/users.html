@@ -12,22 +12,20 @@
       </div>
     </div>
 
-
-
     <!-- CONTROLES -->
     <app-controls
       [textoboton]="'Crear usuario'"
       [labelAprobados]="activos ? 'ACTIVOS' : 'TODOS'"
       [quantity]="itemsPerPage"
-      [toggleApproved]="activos"
+      [toggleApproved]="!activos"
       [search]="searchTerm"
       (quantityChange)="onChangeCantidad($event)"
       (toggleApprovedChange)="onToggleActivos($event)"
       (searchChange)="onBuscar($event)">
     </app-controls>
 
-    <!-- TABLA -->
-    <div class="panel-tabla-scroll">
+    <!-- TABLA HEADER -->
+    <div class="header-table">
       <table class="usuarios-tabla">
         <thead>
           <tr>
@@ -40,6 +38,12 @@
             <th></th>
           </tr>
         </thead>
+      </table>
+    </div>
+
+    <!-- TABLA BODY -->
+    <div class="panel-tabla-scroll">
+      <table class="usuarios-tabla body-table">
         <tbody>
           <ng-container *ngFor="let u of usuariosFiltrados; let i = index">
             <tr>
@@ -62,12 +66,12 @@
                   <!-- Perfil y acciones desplegables -->
                   <div><b>Perfil</b><br> Funcionario</div>
                   <div class="acciones-usuario">
-                    <a href="#" *ngIf="u.activo" (click)="abrirConfirmModal('inactivar', u); $event.preventDefault()"> ㊀ Inactivar usuario</a>
-                    <a href="#" *ngIf="!u.activo" (click)="abrirConfirmModal('activar', u); $event.preventDefault()"> 🗹 Activar usuario</a>
+                    <a href="#" *ngIf="u.activo && !(u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE')" (click)="abrirConfirmModal('inactivar', u); $event.preventDefault()"> ㊀ Inactivar usuario</a>
+                    <a href="#" *ngIf="!u.activo || (u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE')" (click)="abrirConfirmModal('activar', u); $event.preventDefault()"> 🗹 Activar usuario</a>
                     <a href="#" (click)="accion('editar', u, $event); $event.preventDefault()"> ✎ Editar usuario</a>
                     <a href="#" (click)="accion('cambiarContraseña', u, $event); $event.preventDefault()"> ⚷ Cambiar contraseña</a>
-                    <a href="#" (click)="accion('cambiarMetodo2FA', u, $event); $event.preventDefault()"> 🔄 Cambiar método 2FA</a>
-                    <a href="#" (click)="abrirConfirmModal('eliminarQR', u); $event.preventDefault()"> ✖︎ Eliminar QR</a>
+                    <a href="#" (click)="accion('cambiar2FA', u, $event); $event.preventDefault()"> ⚠ Cambiar método 2FA</a>
+                    <a href="#" *ngIf="u.dobleAutenticacion !== null && u.dobleAutenticacion !== undefined && u.dobleAutenticacion !== 'EMAIL' && u.dobleAutenticacion !== true" (click)="abrirConfirmModal('eliminarQR', u); $event.preventDefault()"> ✖︎ Eliminar QR</a>
 
                   </div>
                 </div>
