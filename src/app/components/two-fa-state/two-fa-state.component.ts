@@ -37,15 +37,6 @@ export class TwoFAStateComponent implements OnInit, OnDestroy {
     // Esto elimina el flash visual de la pantalla azul
     this.router.navigate(['/two-fa-verification']);
 
-    // Cargar el estado de 2FA en segundo plano para que esté disponible
-    this.authService.check2FAStatus().subscribe({
-      next: (response) => {
-        console.log('Estado 2FA cargado:', response);
-      },
-      error: (error) => {
-        console.error('Error verificando estado 2FA:', error);
-      }
-    });
   }
 
   ngOnDestroy(): void {

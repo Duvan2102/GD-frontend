@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, distinctUntilChanged } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { TwoFAState } from '../../interfaces/common.interfaces';
 import * as QRCode from 'qrcode';
@@ -70,7 +70,13 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
 
     // Suscribirse al estado de 2FA para mostrar opciones apropiadas
     this.authService.getTwoFAState()
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        takeUntil(this.destroy$),
+        distinctUntilChanged((prev, curr) => {
+          // Comparar por referencia y por metodoActual para evitar emisiones duplicadas
+          return JSON.stringify(prev) === JSON.stringify(curr);
+        })
+      )
       .subscribe(state => {
         if (state) {
           this.twoFAState = state;
@@ -78,10 +84,12 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
           // Si Google Auth está pendiente, intentar validar para obtener QR
           if (state.googleAuthPending) {
             this.attemptValidationForQR();
+            // NO enviar email si Google Auth está pendiente
+            return;
           }
           
-          // Si el método es EMAIL, enviar correo automáticamente
-          if (state.metodoActual === 'EMAIL' && !this.emailSent) {
+          // Si el método es EMAIL y NO hay Google Auth pendiente, enviar correo automáticamente
+          if (state.metodoActual === 'EMAIL' && !this.emailSent && !state.googleAuthPending) {
             this.sendEmailAutomatically();
           }
         }
@@ -153,6 +161,10 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
 
   // Enviar correo automáticamente cuando el método es EMAIL
   private sendEmailAutomatically(): void {
+    if (this.emailSent) {
+      return;
+    }
+    
     this.isLoading = true;
     this.errorMessage = '';
 

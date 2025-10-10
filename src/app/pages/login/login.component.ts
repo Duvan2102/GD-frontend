@@ -36,6 +36,10 @@ export class LoginComponent implements OnInit {
   }
 
   onSubmit(): void {
+    if (this.isLoading) {
+      return;
+    }
+
     if (this.loginForm.valid) {
       this.isLoading = true;
       this.errorMessage = '';
@@ -46,7 +50,10 @@ export class LoginComponent implements OnInit {
       this.authService.loginWith2FA(usuario, password).subscribe({
         next: (response) => {
           if (response.success && response.requires2FA) {
+            // Siempre requiere 2FA - verificar estado para determinar el flujo
             this.router.navigate(['/two-fa-state']);
+          } else {
+            console.log('Unexpected response state:', response);
           }
           this.isLoading = false;
         },
