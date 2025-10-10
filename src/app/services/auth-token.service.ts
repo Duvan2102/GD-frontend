@@ -44,9 +44,6 @@ export class AuthTokenService {
     private authService: AuthService
   ) {}
 
-  /**
-   * Obtiene el tipo de autenticación del usuario actual
-   */
   getUserAuthType(): Observable<UserAuthType> {
     const currentUser = this.authService.getCurrentUserValue();
     if (!currentUser) {
@@ -94,23 +91,13 @@ export class AuthTokenService {
         const data = JSON.parse(persisted);
         const now = Date.now();
         const age = now - data.timestamp;
-        const maxAge = 24 * 60 * 60 * 1000; // 24 horas en ms
-        
-        console.log('🔐 ===== VERIFICANDO MÉTODO 2FA PERSISTIDO =====');
-        console.log('🔐 Timestamp del método:', new Date(data.timestamp).toISOString());
-        console.log('🔐 Tiempo actual:', new Date(now).toISOString());
-        console.log('🔐 Edad del método:', Math.round(age / (60 * 1000)), 'minutos');
-        console.log('🔐 Límite de edad:', Math.round(maxAge / (60 * 1000)), 'minutos');
-        
+        const maxAge = 24 * 60 * 60 * 1000;
+
         if (age < maxAge) {
-          console.log('🔐 ✅ Método 2FA persistido válido');
           return data;
         } else {
-          console.log('🔐 ⚠️ Método 2FA persistido expirado, eliminando...');
           localStorage.removeItem('user_2fa_method');
         }
-      } else {
-        console.log('🔐 No hay método 2FA persistido');
       }
     } catch (error) {
       console.error('🔐 ❌ Error leyendo método 2FA persistido:', error);
@@ -130,12 +117,7 @@ export class AuthTokenService {
     }
 
     const endpoint = `${this.apiUrl}/auth/2fa-status/${currentUser.usuario}`;
-    
-    console.log('🔍 ===== VALIDANDO ESTADO 2FA =====');
-    console.log('🔍 Endpoint:', endpoint);
-    console.log('🔍 Usuario:', currentUser.usuario);
-    console.log('🔍 Token disponible:', !!this.authService.getToken());
-    
+
     return this.http.get<any>(endpoint, {
       headers: {
         'Authorization': `Bearer ${this.authService.getToken()}`,
@@ -143,31 +125,17 @@ export class AuthTokenService {
       }
     }).pipe(
       map(response => {
-        console.log('✅ ===== RESPUESTA 2FA STATUS =====');
-        console.log('✅ hasGoogleAuth:', response.hasGoogleAuth);
-        console.log('✅ hasEmailBackup:', response.hasEmailBackup);
-        console.log('✅ googleAuthPending:', response.googleAuthPending);
-        console.log('✅ message:', response.message);
-        
         const result = {
           hasGoogleAuth: response.hasGoogleAuth || false,
           hasEmailBackup: response.hasEmailBackup || true,
-          authType: response.hasGoogleAuth ? 
-            DobleAutenticacionTipo.GOOGLE_AUTHENTICATOR : 
+          authType: response.hasGoogleAuth ?
+            DobleAutenticacionTipo.GOOGLE_AUTHENTICATOR :
             DobleAutenticacionTipo.TOKEN_SEGURIDAD
         };
-        
-        console.log('✅ ===== RESULTADO FINAL =====');
-        console.log('✅ Tipo de autenticación:', result.authType);
-        console.log('✅ Enviará correo:', result.authType === DobleAutenticacionTipo.TOKEN_SEGURIDAD);
-        
+
         return result;
       }),
       catchError((error) => {
-        console.error('❌ ===== ERROR 2FA STATUS =====');
-        console.error('❌ Error:', error);
-        console.log('❌ Usando fallback: TOKEN_SEGURIDAD');
-        
         return of({
           hasGoogleAuth: false,
           hasEmailBackup: true,
@@ -177,9 +145,6 @@ export class AuthTokenService {
     );
   }
 
-  /**
-   * Valida un token de autenticación
-   */
   validateToken(request: TokenValidationRequest): Observable<TokenValidationResponse> {
     const currentUser = this.authService.getCurrentUserValue();
     
@@ -201,13 +166,6 @@ export class AuthTokenService {
     });
   }
 
-  // MÉTODO ELIMINADO: validate2FACode ya no se usa
-  // El sistema solo debe usar tempToken, nunca usuario
-
-
-  /**
-   * Envía código por email para aprobación
-   */
   sendEmailCode(documentId: string | number | null | undefined, action: 'approve' | 'reject'): Observable<{ success: boolean; message: string }> {
     const currentUser = this.authService.getCurrentUserValue();
     if (!currentUser) {
@@ -224,40 +182,25 @@ export class AuthTokenService {
     }
 
     const endpoint = `${this.apiUrl}/auth/send-email-code`;
-    const payload = { 
+    const payload = {
       tempToken: tempToken,
-      usuario: currentUser.usuario,  // Agregar usuario como en el login
+      usuario: currentUser.usuario,
       documentId: documentId,
       action: action
     };
-    
-    console.log('📧 ===== ENVIANDO CÓDIGO POR EMAIL =====');
-    console.log('📧 Endpoint:', endpoint);
-    console.log('📧 DocumentId:', documentId);
-    console.log('📧 Action:', action);
-    console.log('📧 Usuario:', currentUser.usuario);
-    console.log('📧 TempToken disponible:', !!tempToken);
-    console.log('📧 Payload:', payload);
-    
+
     return this.http.post<{ message: string }>(endpoint, payload, {
       headers: { 'Content-Type': 'application/json' }
     }).pipe(
       map(response => {
-        console.log('✅ ===== CORREO ENVIADO EXITOSAMENTE =====');
-        console.log('✅ Respuesta:', response);
-        return { 
-          success: true, 
-          message: response.message || 'Código enviado exitosamente' 
+        return {
+          success: true,
+          message: response.message || 'Código enviado exitosamente'
         };
       }),
       catchError(error => {
-        console.error('❌ ===== ERROR ENVIANDO CORREO =====');
-        console.error('❌ Error:', error);
-        console.error('❌ Status:', error.status);
-        console.error('❌ Error body:', error.error);
-        
-        return of({ 
-          success: false, 
+        return of({
+          success: false,
           message: error.status === 400 ? 'Error en los datos enviados' :
                   error.status === 500 ? 'Error del servidor. Intente más tarde.' :
                   error.status === 401 ? 'Sesión expirada. Debe cerrar sesión e iniciar sesión nuevamente.' :
@@ -267,9 +210,6 @@ export class AuthTokenService {
     );
   }
 
-  /**
-   * Obtiene el texto de instrucciones según el tipo de autenticación
-   */
   getInstructionsText(authType: DobleAutenticacionTipo): string[] {
     switch (authType) {
       case DobleAutenticacionTipo.GOOGLE_AUTHENTICATOR:
@@ -293,9 +233,6 @@ export class AuthTokenService {
     }
   }
 
-  /**
-   * Obtiene el texto del botón según el tipo de autenticación
-   */
   getButtonText(authType: DobleAutenticacionTipo): string {
     switch (authType) {
       case DobleAutenticacionTipo.GOOGLE_AUTHENTICATOR:
@@ -307,18 +244,11 @@ export class AuthTokenService {
     }
   }
 
-  /**
-   * Obtiene la duración del timer según el tipo de autenticación
-   */
   getTimerDuration(authType: DobleAutenticacionTipo): number {
-    // Ambos tipos de autenticación usan 90 segundos (1 minuto y medio)
     return 90;
   }
 
 
-  /**
-   * Valida código 2FA usando tempToken específico para aprobaciones
-   */
   private validateWithTempToken(code: string, tempToken: string, action: string): Observable<TokenValidationResponse> {
     const currentUser = this.authService.getCurrentUserValue();
     if (!currentUser) {
@@ -347,7 +277,6 @@ export class AuthTokenService {
           try {
             localStorage.setItem('auth_token', response.token);
           } catch (error) {
-            // Error silencioso
           }
           return {
             success: true,
@@ -387,6 +316,4 @@ export class AuthTokenService {
       })
     );
   }
-
-
 }

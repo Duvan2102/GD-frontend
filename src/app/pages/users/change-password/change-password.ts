@@ -99,7 +99,6 @@ export class ChangePassword implements OnChanges {
       this.userService.cambiarPasswordUsuario(this.user.idUsuario, this.nuevaPassword)
         .subscribe({
           next: (response: any) => {
-            console.log('Contraseña cambiada exitosamente:', response);
             this.passwordChanged.emit(this.nuevaPassword);
           },
           error: (error: any) => {

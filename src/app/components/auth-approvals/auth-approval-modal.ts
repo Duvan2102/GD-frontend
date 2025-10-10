@@ -13,7 +13,6 @@ import { DobleAutenticacionTipo } from '../../interfaces/common.interfaces';
 })
 export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
   @Input() isVisible = false;
-  // Document context for validation
   @Input() documentId: string | number | null | undefined = undefined;
   @Input() action: 'approve' | 'reject' = 'approve';
   @Output() close = new EventEmitter<void>();
@@ -24,7 +23,7 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
   tokenCode = '';
   timeRemaining = 90;
   private timerInterval?: number;
-  private readonly TIMER_DURATION = 90; // seconds
+  private readonly TIMER_DURATION = 90; // segundos
 
   // Dynamic UI state (based on user auth type)
   authType: DobleAutenticacionTipo = DobleAutenticacionTipo.TOKEN_SEGURIDAD;
@@ -57,40 +56,18 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
   }
 
   private loadAuthType(): void {
-    console.log('🔐 ===== CARGANDO TIPO DE AUTENTICACIÓN =====');
-    console.log('🔐 DocumentId:', this.documentId);
-    console.log('🔐 Action:', this.action);
-    
     this.authTokenService.getUserAuthType().subscribe({
       next: (authType: UserAuthType) => {
-        console.log('✅ ===== TIPO DE AUTENTICACIÓN OBTENIDO =====');
-        console.log('✅ hasGoogleAuth:', authType.hasGoogleAuth);
-        console.log('✅ hasEmailBackup:', authType.hasEmailBackup);
-        console.log('✅ authType:', authType.authType);
-        
         this.authType = authType.authType || DobleAutenticacionTipo.TOKEN_SEGURIDAD;
         this.instructions = this.authTokenService.getInstructionsText(this.authType);
         this.buttonText = this.authTokenService.getButtonText(this.authType);
         this.timeRemaining = this.authTokenService.getTimerDuration(this.authType);
-        
-        console.log('✅ ===== CONFIGURACIÓN FINAL =====');
-        console.log('✅ Tipo seleccionado:', this.authType);
-        console.log('✅ Instrucciones:', this.instructions);
-        console.log('✅ Texto del botón:', this.buttonText);
-        console.log('✅ Tiempo restante:', this.timeRemaining);
-        
+
         if (this.authType === DobleAutenticacionTipo.TOKEN_SEGURIDAD) {
-          console.log('📧 ===== ENVIANDO CORREO AUTOMÁTICAMENTE =====');
           this.sendEmailCode();
-        } else {
-          console.log('🔐 ===== USANDO GOOGLE AUTHENTICATOR =====');
         }
       },
       error: (error) => {
-        console.error('❌ ===== ERROR CARGANDO TIPO DE AUTENTICACIÓN =====');
-        console.error('❌ Error:', error);
-        console.log('❌ Usando fallback: TOKEN_SEGURIDAD');
-        
         this.authType = DobleAutenticacionTipo.TOKEN_SEGURIDAD;
         this.instructions = this.authTokenService.getInstructionsText(this.authType);
         this.buttonText = this.authTokenService.getButtonText(this.authType);
@@ -110,7 +87,6 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
 
   private startTimer(): void {
     this.clearTimer();
-    // Use dynamic duration based on auth type when available
     this.timeRemaining = this.authTokenService.getTimerDuration(this.authType) || this.TIMER_DURATION;
     this.timerInterval = window.setInterval(() => {
       this.timeRemaining--;
