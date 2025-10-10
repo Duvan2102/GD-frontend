@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Observable, Subscription, forkJoin, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, distinctUntilChanged } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ApprovalService } from '../../services/approval.service';
 import { UserService } from '../../services/user.service';
@@ -79,12 +79,21 @@ export class PageMain implements OnInit, OnDestroy {
   }
 
   private loadUserData(): void {
-    const userSub = this.authService.getCurrentUser().subscribe(user => {
-      this.currentUser = user;
-      if (user) {
-        this.loadApprovalStats();
-      }
-    });
+    const userSub = this.authService.getCurrentUser()
+      .pipe(
+        distinctUntilChanged((prev, curr) => {
+          // Comparar por ID de usuario para evitar cargas duplicadas
+          const prevId = prev?.idUsuario;
+          const currId = curr?.idUsuario;
+          return prevId === currId && prevId !== undefined;
+        })
+      )
+      .subscribe(user => {
+        this.currentUser = user;
+        if (user) {
+          this.loadApprovalStats();
+        }
+      });
     this.subscriptions.push(userSub);
   }
 
