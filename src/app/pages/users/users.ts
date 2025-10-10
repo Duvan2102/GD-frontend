@@ -43,6 +43,7 @@ export class Users implements OnInit, OnDestroy {
   paginaActual = 1;
   filaDesplegada: number | null = null;
   isUserFormVisible = false;
+  isRegisterUserModalVisible = false;
   isPasswordModalVisible = false;
   isChangePasswordModalVisible = false;
   isChange2FAMethodModalVisible = false;
