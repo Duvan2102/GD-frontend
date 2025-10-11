@@ -32,12 +32,10 @@ export class LoginComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Verificar si el usuario fue redirigido por token expirado
     this.route.queryParams.subscribe(params => {
       if (params['expired'] === 'true') {
         this.tokenExpiredMessage = 'Su sesión ha expirado. Por favor, inicie sesión nuevamente.';
         
-        // Limpiar el parámetro de la URL después de 5 segundos
         setTimeout(() => {
           this.tokenExpiredMessage = '';
           this.router.navigate(['/login'], { replaceUrl: true });
@@ -61,11 +59,9 @@ export class LoginComponent implements OnInit {
 
       const { usuario, password } = this.loginForm.value;
 
-      // Usar el método de login con 2FA OBLIGATORIO (actualizado)
       this.authService.loginWith2FA(usuario, password).subscribe({
         next: (response) => {
           if (response.success && response.requires2FA) {
-            // Siempre requiere 2FA - verificar estado para determinar el flujo
             this.router.navigate(['/two-fa-state']);
           } else {
             console.log('Unexpected response state:', response);

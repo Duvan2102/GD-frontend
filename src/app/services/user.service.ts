@@ -20,6 +20,9 @@ export class UserService {
     ? environment.apiUrl.slice(0, -1)
     : environment.apiUrl;
   private readonly apiUrl = `${this.baseUrl}/usuarios`;
+  private usersCache: Usuario[] | null = null;
+  private lastCacheTime = 0;
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
   private readonly httpOptions = {
     headers: new HttpHeaders({
@@ -37,12 +40,22 @@ export class UserService {
 
   constructor(private http: HttpClient) {}
 
+  clearUsersCache(): void {
+    this.usersCache = null;
+    this.lastCacheTime = 0;
+  }
+
   obtenerCargosDisponibles(): Observable<string[]> {
     const cargos = ['Gerente', 'Analista', 'Desarrollador', 'Administrador', 'Funcionario'];
     return of(cargos);
   }
 
   obtenerUsuarios(): Observable<Usuario[]> {
+    const now = Date.now();
+    if (this.usersCache && (now - this.lastCacheTime) < this.CACHE_DURATION) {
+      return of(this.usersCache);
+    }
+
     const normalize = (res: any): Usuario[] => {
       if (Array.isArray(res)) {
         return this.procesarUsuariosRecibidos(res as any[]);
@@ -66,17 +79,28 @@ export class UserService {
         .set('sortDir', 'asc')
     }).pipe(
       map(normalize),
+      tap(users => {
+        this.usersCache = users;
+        this.lastCacheTime = now;
+      }),
       catchError(() => of([] as Usuario[]))
     );
 
     const intento2$ = () => this.http.get<any>(this.apiUrl).pipe(
       map(normalize),
+      tap(users => {
+        this.usersCache = users;
+        this.lastCacheTime = now;
+      }),
       catchError(() => of([] as Usuario[]))
     );
 
-    // Fallback final: endpoint alterno
     const intento3$ = () => this.http.get<any>(`${this.apiUrl}/activos`).pipe(
       map(normalize),
+      tap(users => {
+        this.usersCache = users;
+        this.lastCacheTime = now;
+      }),
       catchError(() => of([] as Usuario[]))
     );
 
@@ -84,7 +108,7 @@ export class UserService {
       switchMap(list => (list && list.length > 0) ? of(list) : intento2$()),
       switchMap(list => (list && list.length > 0) ? of(list) : intento3$()),
       catchError(this.handleError),
-      shareReplay(1) // Evitar múltiples llamadas HTTP para el mismo endpoint
+      shareReplay(1)
     );
   }
 

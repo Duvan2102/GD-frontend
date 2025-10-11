@@ -9,24 +9,20 @@ function isFormData(body: any): boolean {
   return typeof FormData !== 'undefined' && body instanceof FormData;
 }
 
-/**
- * Función auxiliar para verificar si un token JWT está expirado
- */
 function isTokenExpired(token: string): boolean {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     const exp = payload.exp;
     
     if (!exp) {
-      return false; // Si no hay exp, asumimos que no expira
+      return false;
     }
     
-    // Verificar si el token expiró (exp está en segundos)
     const currentTime = Math.floor(Date.now() / 1000);
     return currentTime >= exp;
   } catch (error) {
     console.error('Error al verificar expiración del token:', error);
-    return true; // Si hay error al decodificar, consideramos el token como expirado
+    return true;
   }
 }
 
@@ -36,10 +32,9 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
   const user = auth.getCurrentUserValue();
   const token = auth.getToken();
 
-  // Verificar si el token existe y está expirado
   if (token && isTokenExpired(token)) {
-    console.warn('🔐 Token expirado detectado - Redirigiendo al login');
-    auth.logout();
+    console.warn('🔐 Token expirado - Redirigiendo al login');
+    auth.logoutSync();
     router.navigate(['/login'], { queryParams: { expired: 'true' } });
     return throwError(() => new Error('Token expirado'));
   }
@@ -61,17 +56,14 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
 
   let headers = req.headers;
 
-  // Agregar token de autenticación si existe, excepto cuando se valida con tempToken
   if (token && isApi && !(isTwoFAValidation && hasTempTokenInBody)) {
     headers = headers.set('Authorization', `Bearer ${token}`);
   }
 
-  // Agregar ID de usuario si existe (para compatibilidad con el sistema actual)
   if ((isApi || isSolicitudes) && user?.idUsuario) {
     headers = headers.set('X-User-Id', String(user.idUsuario));
   }
   
-  // Evitar forzar Content-Type cuando es FormData
   if (!isFormData(req.body) && !headers.has('Content-Type')) {
     headers = headers.set('Content-Type', 'application/json');
   }
@@ -81,7 +73,6 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
 
   const cloned = req.clone({ headers });
 
-  // Log detallado para debugging de errores 400
   if (isSolicitudes && (req.method === 'POST' || req.method === 'PUT')) {
     const headersObj: { [key: string]: string } = {};
     cloned.headers.keys().forEach(key => {
@@ -89,14 +80,11 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
     });
   }
 
-  // Manejar respuestas y errores
   return next(cloned).pipe(
     catchError((error: HttpErrorResponse) => {
-      // Detectar errores 401 (No autorizado) o 403 (Prohibido) que indiquen token inválido/expirado
       if (error.status === 401 || error.status === 403) {
-        console.warn(`🔐 Error ${error.status} detectado - Token inválido o expirado`);
+        console.warn(`🔐 Error ${error.status} - Token inválido`);
         
-        // Verificar si el error es específicamente por token expirado
         const errorMessage = error.error?.message || error.message || '';
         const isTokenError = errorMessage.toLowerCase().includes('token') || 
                            errorMessage.toLowerCase().includes('unauthorized') ||
@@ -104,7 +92,7 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
                            errorMessage.toLowerCase().includes('invalid');
         
         if (isTokenError) {
-          auth.logout();
+          auth.logoutSync();
           router.navigate(['/login'], { queryParams: { expired: 'true' } });
         }
       }
@@ -114,12 +102,10 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
     tap({
       next: (event) => {
         if (environment.enableLogging) {
-          // Log básico de solicitudes/respuestas para debug en dev
         }
       },
       error: (err) => {
         if (environment.enableLogging) {
-          // Log de errores
         }
       }
     })

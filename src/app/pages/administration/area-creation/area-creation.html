@@ -19,9 +19,13 @@
               [(ngModel)]="area.descripcion"
               name="areaDescripcion"
               placeholder="Escribe el nombre del área"
+              (ngModelChange)="validateOnChange()"
               required
               autocomplete="off"
             />
+            <div *ngIf="errorMessage" class="text-danger mt-2 small">
+              {{ errorMessage }}
+            </div>
           </div>
 
           <!-- Selector de Departamento -->
@@ -76,7 +80,7 @@
           <button
             type="submit"
             class="btn btn-primary"
-            [disabled]="!area.descripcion.trim() || !selectedDepartment"
+            [disabled]="!isFormValid"
           >
             {{ mode === 'update' ? 'Actualizar' : 'Crear' }}
           </button>

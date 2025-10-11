@@ -13,6 +13,7 @@ import { Subscription, combineLatest } from 'rxjs';
 import { distinctUntilChanged, shareReplay } from 'rxjs/operators';
 import { Approval } from '../approvals/approvals';
 import { Typology, TypologyService } from '../../services/typology.service';
+import { UsuarioData } from '../../interfaces/common.interfaces';
 import { AuthService } from '../../services/auth.service';
 import { Usuario, UsuarioRequest, ApiResponse, ErrorResponse, DobleAutenticacionTipo } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
@@ -53,6 +54,7 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   ascendingOrder: boolean = false;
   isLoading = true;
   currentUserId?: number;
+  currentUser: UsuarioData | null = null;
 
   // Propiedades para document-view
   isDocumentViewVisible = false;
@@ -77,6 +79,7 @@ export class ApprovalDetails implements OnInit, OnDestroy {
       .subscribe(u => {
         if (u) {
           this.currentUserId = u.idUsuario;
+          this.currentUser = u;
           this.loadInitialData();
         }
       });

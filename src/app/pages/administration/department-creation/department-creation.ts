@@ -23,11 +23,47 @@ export class DepartmentCreation implements OnChanges {
   @Output() cancel = new EventEmitter<void>();
 
   nombreDepartamento = '';
+  errorMessage = '';
 
   get modalTitle(): string {
     return this.mode === 'update'
       ? 'Actualización del departamento'
       : 'Crear Departamento';
+  }
+
+  get isFormValid(): boolean {
+    const trimmed = this.nombreDepartamento.trim();
+    return trimmed.length > 0 && this.validateName(trimmed);
+  }
+
+  private validateName(name: string): boolean {
+    // Contar cuántas letras tiene el nombre
+    const letterCount = (name.match(/[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/g) || []).length;
+    
+    // Verificar si es solo numérico
+    const isOnlyNumeric = /^[\d\s]+$/.test(name);
+    
+    if (isOnlyNumeric) {
+      this.errorMessage = 'El nombre no puede contener solo números';
+      return false;
+    }
+    
+    if (letterCount < 3) {
+      this.errorMessage = 'El nombre debe contener al menos 3 letras';
+      return false;
+    }
+    
+    this.errorMessage = '';
+    return true;
+  }
+
+  validateOnChange(): void {
+    const trimmed = this.nombreDepartamento.trim();
+    if (trimmed.length > 0) {
+      this.validateName(trimmed);
+    } else {
+      this.errorMessage = '';
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -45,7 +81,7 @@ export class DepartmentCreation implements OnChanges {
 
   onCreate(): void {
     const value = this.nombreDepartamento.trim();
-    if (!value) return;
+    if (!value || !this.validateName(value)) return;
 
     if (this.mode === 'create') {
       this.create.emit(value);
@@ -63,5 +99,6 @@ export class DepartmentCreation implements OnChanges {
 
   private reset(): void {
     this.nombreDepartamento = '';
+    this.errorMessage = '';
   }
 }

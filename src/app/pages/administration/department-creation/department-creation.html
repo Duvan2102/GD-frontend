@@ -17,13 +17,17 @@
             [(ngModel)]="nombreDepartamento"
             name="nombreDepartamento"
             placeholder="Escribe el nombre"
+            (ngModelChange)="validateOnChange()"
             required
           />
+          <div *ngIf="errorMessage" class="text-danger mt-2 small">
+            {{ errorMessage }}
+          </div>
         </div>
 
         <div class="modal-footer justify-content-center">
           <button type="button" class="btn btn-secondary" (click)="onCancel()">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="!nombreDepartamento.trim()">
+          <button type="submit" class="btn btn-primary" [disabled]="!isFormValid">
           {{ mode === 'update' ? 'Actualizar' : 'Crear' }}
           </button>  
         </div>

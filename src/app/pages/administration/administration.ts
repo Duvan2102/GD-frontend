@@ -198,30 +198,22 @@ export class Administration implements OnInit {
   mostrarModalError(mensaje: string, error?: any) {
     let errorMsg = mensaje;
     if (error) {
-      if (error.status === 400) {
-        errorMsg = error.error?.message || 'Solicitud inválida. Verifique los datos ingresados.';
+      if (error.error && typeof error.error === 'string') {
+        errorMsg = error.error;
+      } else if (error.error?.message) {
+        errorMsg = error.error.message;
+      } else if (error.message) {
+        errorMsg = error.message;
+      } else if (error.body?.message) {
+        errorMsg = error.body.message;
+      } else if (error.status === 400) {
+        errorMsg = mensaje || 'Solicitud inválida. Verifique los datos ingresados.';
       } else if (error.status === 404) {
         errorMsg = 'No se encontró el recurso solicitado.';
       } else if (error.status === 409) {
-        // Mejorar mensajes de conflicto
-        if (error.error?.message) {
-          errorMsg = error.error.message;
-        } else {
-          errorMsg = 'El registro ya existe o está en uso.';
-        }
+        errorMsg = 'El registro ya existe o está en uso.';
       } else if (error.status === 500) {
-        // Mensajes más específicos para errores 500
-        if (error.error?.message && error.error.message.toLowerCase().includes('duplicate')) {
-          errorMsg = 'Ya existe un registro con ese nombre.';
-        } else if (error.error?.message && error.error.message.toLowerCase().includes('already exists')) {
-          errorMsg = 'Ya existe un registro con ese nombre.';
-        } else if (error.error?.message) {
-          errorMsg = error.error.message;
-        } else {
-          errorMsg = 'Error al procesar la solicitud. Por favor, intente nuevamente.';
-        }
-      } else if (error.error?.message) {
-        errorMsg = error.error.message;
+        errorMsg = 'Error al procesar la solicitud. Por favor, intente nuevamente.';
       }
     }
     this.mostrarModalSuccess(errorMsg, 'Cerrar');
@@ -252,7 +244,7 @@ export class Administration implements OnInit {
           this.typologyService.getById(typology.idTipologia!).subscribe({
             next: () => {
               // Si aún existe, error real
-              this.mostrarModalError('Error al eliminar la tipología. Es posible que esté en uso.', error);
+              this.mostrarModalError('La Tipología no puede eliminarse porque tiene solicitudes asociadas.', error);
             },
             error: () => {
               // Si ya no existe, se asume borrada
@@ -374,7 +366,7 @@ export class Administration implements OnInit {
         error: (error) => {
           this.departmentService.getById(departmentId).subscribe({
             next: () => {
-              this.mostrarModalError('Error al eliminar el departamento. Es posible que esté en uso.', error);
+              this.mostrarModalError('El Departamento no puede eliminarse porque tiene solicitudes asociadas.', error);
             },
             error: () => {
               this.loadDepartments();
@@ -465,7 +457,7 @@ export class Administration implements OnInit {
         error: (error) => {
           this.areaService.getById(areaId).subscribe({
             next: () => {
-              this.mostrarModalError('Error al eliminar el área. Es posible que esté en uso.', error);
+              this.mostrarModalError('El Área no puede eliminarse porque tiene solicitudes asociadas.', error);
             },
             error: () => {
               this.loadAreas();
@@ -554,7 +546,7 @@ export class Administration implements OnInit {
         error: (error) => {
           this.positionService.getById(positionId).subscribe({
             next: () => {
-              this.mostrarModalError('Error al eliminar el cargo. Es posible que esté en uso.', error);
+              this.mostrarModalError('El Cargo no puede eliminarse porque tiene solicitudes asociadas.', error);
             },
             error: () => {
               this.loadPositions();
