@@ -95,18 +95,18 @@
 
           <div class="row mb-3">
             <div class="col-md-6">
-              <label class="form-label" for="correoEmpresarial">Correo empresarial</label>
-              <input 
+              <label class="form-label" for="correoEmpresarial">Correo empresarial <span class="text-danger">*</span></label>
+              <input
                 id="correoEmpresarial"
-                type="email" 
-                class="form-control" 
+                type="email"
+                class="form-control"
                 formControlName="correoEmpresarial"
                 placeholder=" nombre1.apellido1@empresa.com"
                 [class.is-invalid]="form.get('correoEmpresarial')?.invalid && form.get('correoEmpresarial')?.touched"
                 aria-describedby="correoEmpresarial-error"
                 aria-invalid="form.get('correoEmpresarial')?.invalid">
-              <div 
-                *ngIf="getErrorMessage('correoEmpresarial')" 
+              <div
+                *ngIf="getErrorMessage('correoEmpresarial')"
                 id="correoEmpresarial-error"
                 class="invalid-feedback">
                 {{ getErrorMessage('correoEmpresarial') }}
@@ -134,36 +134,36 @@
 
           <div class="row mb-3">
             <div class="col-md-6">
-              <label class="form-label" for="telefono1">Teléfono 1</label>
-              <input 
+              <label class="form-label" for="telefono1">Celular <span class="text-danger">*</span></label>
+              <input
                 id="telefono1"
-                type="text" 
-                class="form-control" 
+                type="text"
+                class="form-control"
                 formControlName="telefono1"
                 placeholder=" 3001234567"
                 [class.is-invalid]="form.get('telefono1')?.invalid && form.get('telefono1')?.touched"
                 aria-describedby="telefono1-error"
                 aria-invalid="form.get('telefono1')?.invalid">
-              <div 
-                *ngIf="getErrorMessage('telefono1')" 
+              <div
+                *ngIf="getErrorMessage('telefono1')"
                 id="telefono1-error"
                 class="invalid-feedback">
                 {{ getErrorMessage('telefono1') }}
               </div>
             </div>
             <div class="col-md-6">
-              <label class="form-label" for="telefono2">Teléfono 2</label>
-              <input 
+              <label class="form-label" for="telefono2">Teléfono</label>
+              <input
                 id="telefono2"
-                type="text" 
-                class="form-control" 
+                type="text"
+                class="form-control"
                 formControlName="telefono2"
                 placeholder=" 6012345678"
                 [class.is-invalid]="form.get('telefono2')?.invalid && form.get('telefono2')?.touched"
                 aria-describedby="telefono2-error"
                 aria-invalid="form.get('telefono2')?.invalid">
-              <div 
-                *ngIf="getErrorMessage('telefono2')" 
+              <div
+                *ngIf="getErrorMessage('telefono2')"
                 id="telefono2-error"
                 class="invalid-feedback">
                 {{ getErrorMessage('telefono2') }}

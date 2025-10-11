@@ -1,3 +1,25 @@
+<!-- Contenedor de alertas externas -->
+<div class="external-alerts-container">
+  <div *ngFor="let alert of externalAlerts; let i = index"
+       class="external-alert"
+       [ngClass]="'alert-' + alert.type">
+    <i class="external-alert-icon"
+       [ngClass]="{
+         'bi bi-check-circle-fill': alert.type === 'success',
+         'bi bi-exclamation-triangle-fill': alert.type === 'danger',
+         'bi bi-info-circle-fill': alert.type === 'info',
+         'bi bi-exclamation-circle-fill': alert.type === 'warning'
+       }"></i>
+    <div class="external-alert-content">
+      <div class="external-alert-title">{{ alert.title }}</div>
+      <p class="external-alert-message">{{ alert.message }}</p>
+    </div>
+    <button class="external-alert-close" (click)="closeExternalAlert(i)">
+      <i class="bi bi-x"></i>
+    </button>
+  </div>
+</div>
+
 <div class="principal-wrapper">
   <div class="container-fluid p-4">
 
@@ -100,7 +122,9 @@
   [isEditMode]="currentAction === 'editar'"
   [user]="currentUser"
   (close)="closeUserFormModal()"
-  (save)="saveUser($event)">
+  (save)="saveUser($event)"
+  (navigateToUsers)="handleNavigateToUsers()"
+  (showAlert)="showExternalAlert($event.type, $event.title, $event.message)">
 </app-user-form-modal>
 
 <app-password-modal

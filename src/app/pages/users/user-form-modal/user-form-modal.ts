@@ -33,6 +33,8 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   @Output() save = new EventEmitter<Usuario>();
   @Output() userCreated = new EventEmitter<Usuario>();
   @Output() userUpdated = new EventEmitter<Usuario>();
+  @Output() navigateToUsers = new EventEmitter<void>();
+  @Output() showAlert = new EventEmitter<{type: 'success' | 'danger' | 'info' | 'warning', title: string, message: string}>();
 
   userForm!: FormGroup;
   cargosDisponibles: Position[] = [];
@@ -150,12 +152,13 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     if (this.isEditMode && this.user) {
       let cargoValue = '';
 
+      // Solo asignar cargo si el usuario realmente tiene uno válido
       if (this.user.cargo) {
         if (typeof this.user.cargo === 'number' || !isNaN(Number(this.user.cargo))) {
           cargoValue = this.user.cargo.toString();
         } else if (typeof this.user.cargo === 'object' && this.user.cargo.idCargo) {
           cargoValue = this.user.cargo.idCargo.toString();
-        } else {
+        } else if (typeof this.user.cargo === 'object' && this.user.cargo.descripcion) {
           const cargoEncontrado = this.cargosDisponibles.find(
             c => c.descripcion === this.user?.cargo?.descripcion
           );
@@ -163,6 +166,11 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
             ? cargoEncontrado.idCargo.toString()
             : '';
         }
+      }
+      
+      // Si no hay cargo válido, limpiar la selección
+      if (!cargoValue) {
+        this.selectedCargoInfo = null;
       }
 
       let perfilActivo = 'funcionarios';
@@ -226,9 +234,14 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       // Guardar el valor original para detectar cambios
       this.originalDobleAutenticacion = dobleAutenticacionValue;
 
-      if (this.user.cargo) {
+      // Solo establecer selectedCargoInfo si hay un cargo válido
+      if (cargoValue) {
         this.setSelectedCargoFromValue(cargoValue);
+      } else {
+        // Limpiar la selección si no hay cargo
+        this.selectedCargoInfo = null;
       }
+      
       this.userForm.get('identificacion')?.disable();
     } else {
       this.userForm.get('identificacion')?.enable();
@@ -546,15 +559,17 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         next: (response) => {
           console.log('=== RESPUESTA EXITOSA ===');
           this.isLoading = false;
-
-          // NO intentar cambiar el método 2FA aquí
-          // Ese cambio se hace desde el botón específico en users.ts
           
-          this.modalSuccessMessage = this.isEditMode
+          // Emitir alerta externa en lugar de mostrar modal interno
+          const message = this.isEditMode
             ? 'Usuario actualizado correctamente'
             : 'Usuario creado correctamente';
           
-          this.modalSuccessVisible = true;
+          this.showAlert.emit({
+            type: 'success',
+            title: '¡Éxito!',
+            message: message
+          });
           
           if (this.isEditMode) {
             this.userUpdated.emit(this.pendingUserData!);
@@ -562,24 +577,37 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
             this.userCreated.emit(this.pendingUserData!);
           }
           this.save.emit(this.pendingUserData!);
+          
+          // Cerrar el modal después de un breve delay
+          setTimeout(() => {
+            this.onClose();
+          }, 500);
         },
         error: (error) => {
           console.error('=== ERROR EN SERVIDOR ===');
           this.isLoading = false;
 
+          let errorMsg = '';
           if (error.error && error.error.mensaje) {
-            this.errorMessage = error.error.mensaje;
+            errorMsg = error.error.mensaje;
           } else if (error.error && typeof error.error === 'string') {
-            this.errorMessage = error.error;
+            errorMsg = error.error;
           } else if (error.message) {
-            this.errorMessage = error.message;
+            errorMsg = error.message;
           } else {
-            this.errorMessage = 'Error inesperado al procesar la solicitud';
+            errorMsg = 'Error inesperado al procesar la solicitud';
           }
 
           if (error.error && error.error.details && Array.isArray(error.error.details)) {
-            this.errorMessage += ':\n• ' + error.error.details.join('\n• ');
+            errorMsg += ':\n• ' + error.error.details.join('\n• ');
           }
+
+          // Emitir alerta externa en lugar de mostrar error interno
+          this.showAlert.emit({
+            type: 'danger',
+            title: 'Error',
+            message: errorMsg
+          });
 
           this.pendingUserData = null;
           this.confirmModalVisible = false;
@@ -596,6 +624,11 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   cerrarModalSuccess(): void {
     this.modalSuccessVisible = false;
     this.pendingUserData = null;
+    
+    if (!this.isEditMode) {
+      this.navigateToUsers.emit();
+    }
+    
     setTimeout(() => {
       this.onClose();
     }, 500);
@@ -660,7 +693,14 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     if (this.userForm.invalid) {
       console.error('Formulario inválido:', this.userForm.errors);
       this.markFormGroupTouched();
-      this.errorMessage = 'Por favor, corrige los errores en el formulario.';
+      
+      // Emitir alerta externa para errores de validación
+      this.showAlert.emit({
+        type: 'warning',
+        title: 'Formulario incompleto',
+        message: 'Por favor, corrige los errores en el formulario antes de continuar.'
+      });
+      
       if (wasDisabled) {
         identificacionControl?.disable();
       }
@@ -670,10 +710,26 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     const formValue = this.userForm.getRawValue();
 
     // CRÍTICO: Obtener el cargo completo con toda su estructura
-    const cargoCompleto = this.getCargoConTodasLasRelaciones(formValue.cargo);
-    
-    if (!cargoCompleto) {
-      this.errorMessage = 'Error: No se pudo obtener la información completa del cargo';
+    // Solo validar cargo si existe un valor
+    let cargoCompleto = null;
+    if (formValue.cargo) {
+      cargoCompleto = this.getCargoConTodasLasRelaciones(formValue.cargo);
+      
+      if (!cargoCompleto) {
+        this.showAlert.emit({
+          type: 'danger',
+          title: 'Error',
+          message: 'No se pudo obtener la información completa del cargo seleccionado'
+        });
+        return;
+      }
+    } else if (!this.isEditMode) {
+      // Solo requerir cargo en modo creación
+      this.showAlert.emit({
+        type: 'warning',
+        title: 'Campo requerido',
+        message: 'Debe seleccionar un cargo para el usuario'
+      });
       return;
     }
 
@@ -696,8 +752,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
     console.log('DEBUG: Rol completo:', rolCompleto);
 
-    // Estado con estructura completa
-    // Al crear: PENDIENTE (id: 1), Al editar: mantener el estado actual
     const estadoCompleto = this.isEditMode
       ? (this.user?.estado || { idEstado: 5, descripcion: 'ACTIVO' })
       : { idEstado: 1, descripcion: 'PENDIENTE' };
@@ -707,16 +761,14 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       nombres: formValue.nombres,
       apellidos: formValue.apellidos,
       usuario: formValue.usuario,
-      cargo: cargoCompleto,  // Objeto completo con área y departamento
+      cargo: cargoCompleto,
       estado: estadoCompleto,
-      rol: rolCompleto,  // Objeto completo con idRol y descripcion
+      rol: rolCompleto,
       correoEmpresarial: formValue.correoEmpresarial || '',
       correoPersonal: formValue.correoPersonal || '',
       telefono1: formValue.celular || '',
       telefono2: formValue.telefono || '',
       direccion: formValue.direccion || '',
-      // Enviar dobleAutenticacion solo en modo creación
-      // En modo edición, el cambio se hace con el botón "Cambiar método 2FA" en users.ts
       dobleAutenticacion: this.isEditMode ? this.user?.dobleAutenticacion : formValue.dobleAutenticacion,
       activo: this.isEditMode ? (this.user?.activo !== false) : true
     } as Usuario;
@@ -728,8 +780,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         this.pendingUserData.idUsuario = userId;
       }
     }
-
-    console.log('DEBUG: pendingUserData completo:', JSON.stringify(this.pendingUserData, null, 2));
 
     if (wasDisabled) {
       identificacionControl?.disable();
@@ -748,9 +798,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       return null;
     }
 
-    // Si selectedCargoInfo ya tiene toda la estructura, usarla
     if (this.selectedCargoInfo && this.selectedCargoInfo.idCargo) {
-      // Buscar el cargo completo en cargosDisponibles para asegurar estructura completa
       const cargoConRelaciones = this.cargosDisponibles.find(
         c => c.idCargo === this.selectedCargoInfo!.idCargo
       );
@@ -859,6 +907,9 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   getErrorMessage(controlName: string): string {
     const control = this.userForm.get(controlName);
     if (!control?.errors) return '';
+    
+    // No mostrar error si el campo no ha sido tocado
+    if (!control.touched && !control.dirty) return '';
 
     const errors = control.errors;
     const errorMessages: { [key: string]: { [key: string]: string } } = {
@@ -867,7 +918,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         pattern: 'Ingresa un número de celular válido'
       },
       telefono: {
-        pattern: 'Ingresa el indicativo + un número de teléfono válido'
+        pattern: 'Agrega el indicativo y un N° teléfono válido.'
       },
       direccion: {
         maxlength: 'La dirección no puede exceder 200 caracteres'
@@ -877,6 +928,9 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       },
       perfil: {
         required: 'Debe seleccionar un perfil'
+      },
+      cargo: {
+        required: 'Debe seleccionar un cargo'
       }
     };
 
