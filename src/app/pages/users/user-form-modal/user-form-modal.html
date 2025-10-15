@@ -15,20 +15,7 @@
       <!-- Body -->
       <div class="modal-body" [formGroup]="userForm">
 
-        <!-- ALERTAS DE ÉXITO Y ERROR DEL SERVIDOR -->
-        <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show mb-3" role="alert">
-          <i class="fas fa-check-circle me-2"></i>
-          <strong>¡Éxito!</strong> {{ successMessage }}
-          <button type="button" class="btn-close" (click)="successMessage = ''" aria-label="Close"></button>
-        </div>
-
-        <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          <strong>Error:</strong>
-          <div style="white-space: pre-line;">{{ errorMessage }}</div>
-          <button type="button" class="btn-close" (click)="errorMessage = ''" aria-label="Close"></button>
-        </div>
-
+        <!-- Alerta de validación (se mantiene dentro porque es temporal) -->
         <div *ngIf="validatingUser" class="alert alert-info mb-3" role="alert">
           <i class="fas fa-spinner fa-spin me-2"></i>
           Validando identificación...
@@ -76,7 +63,7 @@
             <label class="form-label">Cargo <span class="text-danger">*</span></label>
 
             <!-- Dropdown jerárquico personalizado -->
-            <div class="hierarchical-dropdown" [class.is-invalid]="userForm.get('cargo')?.invalid && userForm.get('cargo')?.touched">
+            <div class="hierarchical-dropdown" [class.is-invalid]="userForm.get('cargo')?.invalid && (userForm.get('cargo')?.touched || userForm.get('cargo')?.dirty)">
               <div class="dropdown-display"
                    (click)="toggleDropdown()"
                    [class.open]="isDropdownOpen">
@@ -177,7 +164,7 @@
               </div>
             </div>
 
-            <div *ngIf="getErrorMessage('cargo')" class="invalid-feedback d-block">
+            <div *ngIf="getErrorMessage('cargo') && (userForm.get('cargo')?.touched || userForm.get('cargo')?.dirty)" class="invalid-feedback d-block">
               {{ getErrorMessage('cargo') }}
             </div>
           </div>
@@ -269,9 +256,6 @@
             <div *ngIf="getErrorMessage('dobleAutenticacion') && !isEditMode" class="invalid-feedback">
               {{ getErrorMessage('dobleAutenticacion') }}
             </div>
-            <small *ngIf="isEditMode" class="form-text text-muted">
-              <i class="fas fa-info-circle"></i> Para cambiar el método de autenticación, usa el botón "Cambiar método 2FA" en la tabla de usuarios.
-            </small>
           </div>
         </div>
 

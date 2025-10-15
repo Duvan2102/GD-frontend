@@ -118,6 +118,9 @@ export class LoginComponent implements OnInit {
         case 'USUARIO_BLOQUEADO':
           this.errorMessage = 'Usuario bloqueado. Intenta más tarde';
           break;
+        case 'USUARIO_INACTIVO':
+          this.errorMessage = 'Su cuenta se encuentra inactiva. Por favor, contacte al administrador del sistema.';
+          break;
         case '2FA_DISABLED':
           this.errorMessage = 'La doble autenticación no está configurada correctamente. Contacta al administrador.';
           break;
