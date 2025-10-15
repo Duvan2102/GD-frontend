@@ -7,6 +7,8 @@
 
     <app-controls
       [labelAprobados]="'CANCELADAS/RECHAZADAS'"
+      [labelAprobadosInactivo]="'APROBADOS'"
+      [toggleApproved]="showOnlyManaged"
       (quantityChange)="onQuantityChange($event)"
       (toggleApprovedChange)="onToggleManaged($event)"
       (searchChange)="onSearchChange($event)">
@@ -37,6 +39,7 @@
   [isVisible]="isDetailModalVisible"
   [data]="successModalData"
   [usuariosDisponibles]="allUsers"
+  [currentUser]="currentUser"
   [isApprovalFlow]="true"
   [hideManageButton]="true"
   (close)="closeDetailModal()"

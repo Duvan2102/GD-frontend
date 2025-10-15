@@ -12,6 +12,8 @@
 
     <app-controls
       [labelAprobados]="'GESTIONADOS'"
+      [labelAprobadosInactivo]="'PENDIENTES'"
+      [toggleApproved]="showOnlyManaged"
       (quantityChange)="onQuantityChange($event)"
       (toggleApprovedChange)="onToggleManaged($event)"
       (searchChange)="onSearchChange($event)">
@@ -40,6 +42,8 @@
 <app-create-form
     [isVisible]="isCreateModalVisible"
     [currentUser]="currentUser"
+    [tipologias]="tipologias"
+    [allUsers]="allUsers"
     (close)="closeCreateModal()"
     (onSaved)="handleSaveRequest($event)"
     (deleteRequest)="handleDeleteRequest($event)">

@@ -46,7 +46,12 @@
           </div>
           
           <div *ngIf="pdfSrc && !isLoading && !error" class="bottom-controls">
-            <button type="button" class="btn-approval btn-reject" [disabled]="!isScrolledToEnd" (click)="onReject()">
+            <button type="button" 
+                    class="btn-approval btn-reject" 
+                    [disabled]="!isScrolledToEnd" 
+                    [class.disabled]="!isScrolledToEnd"
+                    [title]="!isScrolledToEnd ? 'Debe visualizar todo el documento para poder rechazar' : 'Rechazar solicitud'"
+                    (click)="onReject()">
               <i class="bi bi-x-circle"></i> Rechazar
             </button>
             
@@ -66,9 +71,20 @@
                 <button type="button" class="btn-zoom" (click)="onZoomIn()" title="Acercar"><i class="bi bi-plus"></i></button>
               </div>
             </div>
-            <button type="button" class="btn-approval btn-approve" [disabled]="!isScrolledToEnd" (click)="onApprove()">
+            <button type="button" 
+                    class="btn-approval btn-approve" 
+                    [disabled]="!isScrolledToEnd" 
+                    [class.disabled]="!isScrolledToEnd"
+                    [title]="!isScrolledToEnd ? 'Debe visualizar todo el documento para poder aprobar' : 'Aprobar solicitud'"
+                    (click)="onApprove()">
               <i class="bi bi-check-circle"></i> Aprobar
             </button>
+          </div>
+          
+          <!-- Indicador de scroll para documentos multi-página -->
+          <div *ngIf="pdfSrc && !isLoading && !error && !isScrolledToEnd && totalPages > 1" class="scroll-indicator">
+            <i class="bi bi-arrow-down-circle-fill"></i>
+            <span>Debe visualizar todas las páginas del documento</span>
           </div>
 
         </div>

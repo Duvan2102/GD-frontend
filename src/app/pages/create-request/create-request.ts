@@ -14,6 +14,7 @@ import { TypologyService, Typology } from '../../services/typology.service';
 import { ApprovalService } from '../../services/approval.service';
 import { SuccessModalService } from '../../services/success-modal.service';
 import { Observable, of, Subscription, combineLatest } from 'rxjs';
+import { distinctUntilChanged, shareReplay } from 'rxjs/operators';
 import { Approval } from '../approvals/approvals';
 import { AuthService } from '../../services/auth.service';
 import { applyViewLogic } from '../../utils/view.utils';
@@ -74,19 +75,29 @@ export class CreateRequest implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.authService.getCurrentUser().subscribe(user => {
-      this.currentUser = user;
-      this.loadInitialData();
-    });
-
+    this.authService.getCurrentUser()
+      .pipe(distinctUntilChanged((prev, curr) => prev?.idUsuario === curr?.idUsuario))
+      .subscribe(user => {
+        this.currentUser = user;
+        if (user) {
+          this.loadInitialData();
+        }
+      });
   }
 
   loadInitialData(): void {
     this.isLoading = true;
     combineLatest([
-      this.userService.obtenerUsuarios(),
-      this.typologyService.getAll()
-    ]).subscribe(([users, typologies]) => {
+      this.userService.obtenerUsuarios().pipe(shareReplay(1)),
+      this.typologyService.getAll().pipe(shareReplay(1))
+    ]).pipe(
+      distinctUntilChanged((prev, curr) => {
+        const [prevUsers, prevTypologies] = prev;
+        const [currUsers, currTypologies] = curr;
+        return prevUsers.length === currUsers.length && 
+               prevTypologies.length === currTypologies.length;
+      })
+    ).subscribe(([users, typologies]) => {
       this.allUsers = users;
       this.tipologias = typologies;
       this.subscribeToApprovals();
@@ -147,14 +158,10 @@ export class CreateRequest implements OnInit, OnDestroy {
     }).subscribe(appr => {
       if (appr) {
         this.wasRequestCreatedSuccessfully = true; // Marcar que se creó exitosamente
-        // Preparar datos para la success-modal
-        const ensureUsers$ = this.allUsers.length > 0 ? of(this.allUsers) : this.userService.obtenerUsuarios();
-        ensureUsers$.subscribe((users: Usuario[]) => {
-          this.allUsers = users;
-          this.successModalData = this.approvalService.mapToSuccessData(appr.fullData, this.allUsers);
-          this.isCreateModalVisible = false;
-          this.isDetailModalVisible = true;
-        });
+        // Preparar datos para la success-modal - ya tenemos usuarios cargados
+        this.successModalData = this.approvalService.mapToSuccessData(appr.fullData, this.allUsers);
+        this.isCreateModalVisible = false;
+        this.isDetailModalVisible = true;
       }
     });
   }
@@ -174,57 +181,50 @@ export class CreateRequest implements OnInit, OnDestroy {
   }
 
   handleViewApprovedDocument(data: SuccessModalData): void {
-    // Priorizar documento principal sobre anexos
+    this.hideSendButtonInDocumentView = true;
+
+    // Verificar si tenemos un File object en memoria (para solicitudes recién creadas)
     const mainDocumentFile = data?.documentoAprobacion ||
                             (data as any)?.documento ||
                             (data as any)?.archivo ||
                             (data as any)?.file;
 
-    const mainDocumentUrl = data?.documentoUrl ||
-                           (data as any)?.url ||
-                           (data as any)?.documentUrl;
-
-    this.hideSendButtonInDocumentView = true;
-
-    // Si hay documento principal, usarlo
-    if (mainDocumentFile || mainDocumentUrl) {
-      // Si tenemos un File object, crear una URL temporal para mejor compatibilidad
-      let documentUrl = mainDocumentUrl;
-      if (mainDocumentFile && !mainDocumentUrl) {
-        try {
-          documentUrl = URL.createObjectURL(mainDocumentFile);
-        } catch (error) {
-          console.error('Error creating object URL:', error);
-        }
+    // Si tenemos el archivo en memoria (solicitud recién creada), usarlo directamente
+    if (mainDocumentFile && mainDocumentFile instanceof File) {
+      try {
+        const documentUrl = URL.createObjectURL(mainDocumentFile);
+        this.documentViewData = {
+          id: data.id!,
+          file: mainDocumentFile,
+          url: documentUrl,
+          title: data.nombreSolicitud,
+          fileName: data.documentoFileName || data.pdfOriginalName || mainDocumentFile.name || 'Documento Principal'
+        };
+        this.isDetailModalVisible = false;
+        this.isDocumentViewVisible = true;
+        return;
+      } catch (error) {
+        console.error('Error creating object URL:', error);
       }
-
-      this.documentViewData = {
-        id: data.id!,
-        file: mainDocumentFile,
-        url: documentUrl,
-        title: data.nombreSolicitud,
-        fileName: data.documentoFileName || data.pdfOriginalName || mainDocumentFile?.name || 'Documento Principal'
-      };
-      this.isDetailModalVisible = false;
-      this.isDocumentViewVisible = true;
-      return;
     }
 
-    // Si no hay documento principal pero hay metadatos PDF, intentar descargarlo
-    if (data?.pdfOriginalName && this.currentUser?.idUsuario) {
+    // Para todas las demás solicitudes, obtener el PDF del servidor
+    if (data.id && this.currentUser?.idUsuario) {
       this.isLoadingDetails = true;
 
-      this.approvalService.getDocumentPdf(data.id!, this.currentUser.idUsuario).subscribe({
+      this.approvalService.getDocumentPdf(data.id, this.currentUser.idUsuario).subscribe({
         next: (pdfBlob: Blob) => {
           const pdfUrl = URL.createObjectURL(pdfBlob);
+          const fileName = data.pdfOriginalName || data.documentoFileName || `documento_${data.id}.pdf`;
+          
           this.documentViewData = {
             id: data.id!,
             file: undefined,
             url: pdfUrl,
             title: data.nombreSolicitud,
-            fileName: data.pdfOriginalName,
+            fileName: fileName,
             metadata: {
-              pdfOriginalName: data.pdfOriginalName,
+              pdfOriginalName: fileName,
               pdfSizeBytes: data.pdfSizeBytes,
               isPdfMetadata: false,
               isPdfFromService: true
@@ -235,18 +235,20 @@ export class CreateRequest implements OnInit, OnDestroy {
           this.isLoadingDetails = false;
         },
         error: (error) => {
+          console.error('Error al cargar el documento desde el servidor:', error);
           this.isLoadingDetails = false;
+          
           this.documentViewData = {
             id: data.id!,
             file: undefined,
             url: undefined,
             title: data.nombreSolicitud,
-            fileName: data.pdfOriginalName,
+            fileName: data.pdfOriginalName || data.documentoFileName || 'Documento no disponible',
             metadata: {
-              pdfOriginalName: data.pdfOriginalName,
+              pdfOriginalName: data.pdfOriginalName || data.documentoFileName,
               pdfSizeBytes: data.pdfSizeBytes,
               isPdfMetadata: true,
-              error: 'Error al cargar el documento. Por favor, inténtelo de nuevo.'
+              error: 'Error al cargar el documento desde el servidor. Verifique que el archivo existe.'
             }
           };
           this.isDetailModalVisible = false;
@@ -254,7 +256,7 @@ export class CreateRequest implements OnInit, OnDestroy {
         }
       });
     } else {
-      // Si no hay documento principal ni metadatos, mostrar error
+      // Si no hay ID o usuario, mostrar error
       this.documentViewData = {
         id: data.id!,
         file: undefined,
@@ -262,7 +264,7 @@ export class CreateRequest implements OnInit, OnDestroy {
         title: data.nombreSolicitud,
         fileName: 'Documento no disponible',
         metadata: {
-          error: 'No se encontró un documento principal para visualizar.'
+          error: 'No se pudo obtener la información del documento.'
         }
       };
       this.isDetailModalVisible = false;

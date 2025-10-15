@@ -22,11 +22,7 @@ export class AuthService {
   private twoFAUserSubject = new BehaviorSubject<string>('');
   private twoFAStateSubject = new BehaviorSubject<TwoFAState | null>(null);
 
-  // Datos mock para desarrollo (se mantienen como respaldo)
-
-
   constructor(private http: HttpClient) {
-    // Verificar si hay un token guardado al inicializar el servicio
     this.initializeAuth();
   }
 
@@ -34,21 +30,14 @@ export class AuthService {
     const token = localStorage.getItem(this.tokenKey);
 
     if (token) {
-      // En un caso real, aquí se validaría el token con el backend
-      // Por ahora, solo verificamos que existe
       this.loadUserFromToken();
     }
   }
 
   private loadUserFromToken(): void {
-    // Validar el token con el backend y recuperar la información del usuario
-
-    // Si ya hay un usuario cargado, no hacer nada
     if (this.currentUser) {
       return;
     }
-
-    // Validar el token con el backend para recuperar la información del usuario
     this.validateTokenAndLoadUser().subscribe({
       next: (user) => {
         if (user) {
@@ -58,13 +47,11 @@ export class AuthService {
       },
       error: (error) => {
         console.error('🔐 Error validando token:', error);
-        // Si el token es inválido, limpiar los datos de autenticación
         this.clearAuthData();
       }
     });
   }
 
-  // Método síncrono para verificar si hay datos de usuario almacenados
   private hasStoredUserData(): boolean {
     const storedUser = localStorage.getItem('current_user_data');
     return storedUser !== null;
@@ -76,7 +63,6 @@ export class AuthService {
       return of(null);
     }
 
-    // Intentar recuperar la información del usuario desde localStorage primero
     const storedUser = localStorage.getItem('current_user_data');
     if (storedUser) {
       try {

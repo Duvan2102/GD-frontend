@@ -35,6 +35,8 @@ export class CreateForm implements OnInit, OnChanges {
   @ViewChild('docView') docView!: DocumentView;
   @Input() isVisible: boolean = false;
   @Input() currentUser: UsuarioData | null = null;
+  @Input() tipologias: Typology[] = []; // Recibir tipologías del componente padre
+  @Input() allUsers: Usuario[] = []; // Recibir usuarios del componente padre
   @Output() onSaved = new EventEmitter<SolicitudData>();
   @Output() close = new EventEmitter<void>();
   @Output() deleteRequest = new EventEmitter<string | number>();
@@ -70,10 +72,10 @@ export class CreateForm implements OnInit, OnChanges {
   documentoAprobacion: File | null = null;
   anexos: File[] = [];
   destinatarios: Destinatario[] = [{ orden: 1, usuario: null, searchTerm: '' }];
-  tipologias: Typology[] = [];
+  // tipologias: Typology[] = []; // REMOVIDO - ahora se recibe del componente padre
   successMessage = '';
   errorMessage = '';
-  allUsers: Usuario[] = [];
+  // allUsers: Usuario[] = []; // REMOVIDO - ahora se recibe del componente padre
   filteredUsers: Usuario[] = [];
   activeRecipientIndex: number | null = null;
   showDocumentView: boolean = false;
@@ -99,8 +101,9 @@ export class CreateForm implements OnInit, OnChanges {
   }
 
   ngOnInit(): void {
-    this.loadTypologies();
-    this.loadUsers();
+    // Las tipologías y usuarios se reciben del componente padre para evitar duplicación
+    // this.loadTypologies(); // REMOVIDO para evitar duplicación
+    // this.loadUsers(); // REMOVIDO para evitar duplicación
   }
 
   ngOnDestroy(): void {

@@ -33,6 +33,7 @@ export class PositionsCreation implements OnChanges {
   @Output() cancel = new EventEmitter<void>();
 
   position: Position = this.getInitialPositionState();
+  errorMessage = '';
 
   // Estados de los desplegables
   showDepartmentDropdown = false;
@@ -48,6 +49,41 @@ export class PositionsCreation implements OnChanges {
 
   get modalTitle(): string {
     return this.mode === 'update' ? 'Actualización del Cargo' : 'Crear Cargo';
+  }
+
+  get isFormValid(): boolean {
+    const trimmed = this.position.descripcion.trim();
+    return trimmed.length > 0 && this.validateName(trimmed) && !!this.selectedArea;
+  }
+
+  private validateName(name: string): boolean {
+    // Contar cuántas letras tiene el nombre
+    const letterCount = (name.match(/[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/g) || []).length;
+    
+    // Verificar si es solo numérico
+    const isOnlyNumeric = /^[\d\s]+$/.test(name);
+    
+    if (isOnlyNumeric) {
+      this.errorMessage = 'El nombre no puede contener solo números';
+      return false;
+    }
+    
+    if (letterCount < 3) {
+      this.errorMessage = 'El nombre debe contener al menos 3 letras';
+      return false;
+    }
+    
+    this.errorMessage = '';
+    return true;
+  }
+
+  validateOnChange(): void {
+    const trimmed = this.position.descripcion.trim();
+    if (trimmed.length > 0) {
+      this.validateName(trimmed);
+    } else {
+      this.errorMessage = '';
+    }
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -74,7 +110,8 @@ export class PositionsCreation implements OnChanges {
   }
 
   onSubmit() {
-    if (!this.position.descripcion.trim() || !this.selectedArea) {
+    const trimmed = this.position.descripcion.trim();
+    if (!trimmed || !this.validateName(trimmed) || !this.selectedArea) {
       return;
     }
     
@@ -110,6 +147,7 @@ export class PositionsCreation implements OnChanges {
     this.selectedArea = undefined;
     this.showDepartmentDropdown = false;
     this.showAreaDropdown = false;
+    this.errorMessage = '';
   }
 
   private initializeExpandedArrays(): void {

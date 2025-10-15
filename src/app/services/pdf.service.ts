@@ -1,10 +1,14 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { AuthService } from './auth.service';
+import { Router } from '@angular/router';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PdfService {
   private isConfigured = false;
+  private authService = inject(AuthService);
+  private router = inject(Router);
 
   constructor() {
     this.configurePdfJs();
@@ -13,7 +17,6 @@ export class PdfService {
   private configurePdfJs(): void {
     if (this.isConfigured) return;
     
-    // Suprimir warnings de PDF.js
     const originalWarn = console.warn;
     const originalError = console.error;
     
@@ -27,7 +30,7 @@ export class PdfService {
            message.includes('TT: invalid function id') ||
            message.includes('CMYK fallback') ||
            message.includes('ICCBased color space'))) {
-        return; // Suprimir estos warnings específicos
+        return;
       }
       originalWarn.apply(console, args);
     };
@@ -39,24 +42,26 @@ export class PdfService {
            message.includes('startCleanup: Page') ||
            message.includes('scrollPageIntoView') ||
            message.includes('Cannot read properties of undefined'))) {
-        return; // Suprimir estos errores específicos de PDF.js
+        return;
       }
+      
+      if (typeof message === 'string' && message.toLowerCase().includes('token expirado')) {
+        console.warn('🔐 Token expirado detectado en PDF - Cerrando sesión y redirigiendo al login');
+        this.authService.logoutSync();
+        this.router.navigate(['/login'], { queryParams: { expired: 'true' } });
+        return;
+      }
+      
       originalError.apply(console, args);
     };
 
     this.isConfigured = true;
   }
 
-  /**
-   * Convierte un archivo a ArrayBuffer para su uso en PDF.js
-   */
   async fileToArrayBuffer(file: File): Promise<ArrayBuffer> {
     return await file.arrayBuffer();
   }
 
-  /**
-   * Crea un blob para descarga de PDF
-   */
   createDownloadBlob(pdfSrc: string | ArrayBuffer, filename: string = 'documento.pdf'): void {
     if (!pdfSrc) return;
     
@@ -72,16 +77,10 @@ export class PdfService {
     a.remove();
   }
 
-  /**
-   * Valida si un archivo es un PDF válido
-   */
   isValidPdfFile(file: File): boolean {
     return file.type === 'application/pdf';
   }
 
-  /**
-   * Obtiene el nombre del archivo de manera segura
-   */
   getFileName(documentData: any): string {
     if (documentData?.fileName) {
       return documentData.fileName;
