@@ -47,7 +47,6 @@ export class Users implements OnInit, OnDestroy {
   isPasswordModalVisible = false;
   isChangePasswordModalVisible = false;
   isChange2FAMethodModalVisible = false;
-  isRegisterUserModalVisible = false;
   selected2FAMethod: 'GOOGLE_AUTH' | 'EMAIL' = 'GOOGLE_AUTH';
   currentUser: Usuario | null = null;
   currentAction = '';

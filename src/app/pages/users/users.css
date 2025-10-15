@@ -9,6 +9,7 @@
   z-index: 2000;
   max-width: 400px;
   width: 90%;
+  
 }
 
 .external-alert {
@@ -208,9 +209,6 @@
 .acciones-usuario a:hover {
   text-decoration: underline;
 }
-
-/* Importar variables CSS */
-@import '../../styles/variables.css';
 
 /* Estilos unificados para el modal de cambio de método 2FA */
 .modal-overlay {
