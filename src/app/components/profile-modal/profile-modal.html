@@ -18,11 +18,6 @@
 
        <!-- Body del modal -->
        <div class="modal-body" *ngIf="editedUser">
-         <!-- Mensajes de estado -->
-         <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
-           {{ errorMessage }}
-         </div>
-         
          <div class="profile-form">
            <div class="form-row">
              <!-- Columna izquierda -->
@@ -35,10 +30,11 @@
                  <label class="form-label">Correo empresarial</label>
                  <input type="email" class="form-control" [(ngModel)]="editedUser.correoEmpresarial" readonly />
                </div>
-               <div class="form-group">
-                 <label class="form-label">Teléfono movil</label>
-                 <input type="tel" class="form-control" [(ngModel)]="editedUser.telefono1" />
-               </div>
+              <div class="form-group">
+                <label class="form-label">Teléfono movil</label>
+                <input type="tel" class="form-control" [(ngModel)]="editedUser.telefono1" 
+                       (keypress)="onlyNumbers($event)" />
+              </div>
                <div class="form-group">
                  <label class="form-label">Dirección</label>
                  <input type="text" class="form-control" [(ngModel)]="editedUser.direccion" />
@@ -55,10 +51,11 @@
                  <label class="form-label">Correo personal</label>
                  <input type="email" class="form-control" [(ngModel)]="editedUser.correoPersonal" />
                </div>
-               <div class="form-group">
-                 <label class="form-label">Teléfono</label>
-                 <input type="tel" class="form-control" [(ngModel)]="editedUser.telefono2" />
-               </div>
+              <div class="form-group">
+                <label class="form-label">Teléfono</label>
+                <input type="tel" class="form-control" [(ngModel)]="editedUser.telefono2" 
+                       (keypress)="onlyNumbers($event)" />
+              </div>
                <div class="form-group">
                  <label class="form-label">Cargo</label>
                  <input type="text" class="form-control" [(ngModel)]="editedUser.cargo.descripcion" readonly />

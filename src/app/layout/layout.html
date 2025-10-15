@@ -1,3 +1,25 @@
+<!-- Contenedor de alertas externas -->
+<div class="external-alerts-container">
+  <div *ngFor="let alert of externalAlerts; let i = index"
+       class="external-alert"
+       [ngClass]="'alert-' + alert.type">
+    <i class="external-alert-icon"
+       [ngClass]="{
+         'bi bi-check-circle-fill': alert.type === 'success',
+         'bi bi-exclamation-triangle-fill': alert.type === 'danger',
+         'bi bi-info-circle-fill': alert.type === 'info',
+         'bi bi-exclamation-circle-fill': alert.type === 'warning'
+       }"></i>
+    <div class="external-alert-content">
+      <div class="external-alert-title">{{ alert.title }}</div>
+      <p class="external-alert-message">{{ alert.message }}</p>
+    </div>
+    <button class="external-alert-close" (click)="closeExternalAlert(i)">
+      <i class="bi bi-x"></i>
+    </button>
+  </div>
+</div>
+
 <div class="d-flex flex-column vh-100">
   <header class="d-flex justify-content-between align-items-center bg-light px-3 py-2">
     <div class="header-left">
@@ -40,5 +62,6 @@
   [isVisible]="isProfileModalVisible" 
   [user]="currentUser" 
   (close)="closeProfileModal()"
-  (save)="onSaveProfile($event)">
+  (save)="onSaveProfile($event)"
+  (showAlert)="showExternalAlert($event.type, $event.title, $event.message)">
 </app-profile-modal>

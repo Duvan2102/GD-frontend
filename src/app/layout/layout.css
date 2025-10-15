@@ -1,3 +1,120 @@
+/* External alerts (outside of modals) */
+.external-alerts-container {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  z-index: 2000;
+  max-width: 400px;
+  width: 90%;
+}
+
+.external-alert {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  animation: slideInRight 0.3s ease-out;
+  border-left: 4px solid;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.external-alert.alert-success {
+  border-left-color: #28a745;
+  background: #d4edda;
+}
+
+.external-alert.alert-danger {
+  border-left-color: #dc3545;
+  background: #f8d7da;
+}
+
+.external-alert.alert-info {
+  border-left-color: #17a2b8;
+  background: #d1ecf1;
+}
+
+.external-alert.alert-warning {
+  border-left-color: #ffc107;
+  background: #fff3cd;
+}
+
+.external-alert-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.external-alert.alert-success .external-alert-icon {
+  color: #28a745;
+}
+
+.external-alert.alert-danger .external-alert-icon {
+  color: #dc3545;
+}
+
+.external-alert.alert-info .external-alert-icon {
+  color: #17a2b8;
+}
+
+.external-alert.alert-warning .external-alert-icon {
+  color: #ffc107;
+}
+
+.external-alert-content {
+  flex: 1;
+}
+
+.external-alert-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+.external-alert-message {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #666;
+  margin: 0;
+  white-space: pre-line;
+}
+
+.external-alert-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  font-size: 18px;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.external-alert-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
 .modal-content {
   border-radius: 12px;
   border: none;

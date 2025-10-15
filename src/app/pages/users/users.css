@@ -1,7 +1,5 @@
-/* Importar variables CSS */
-@import '../../styles/variables.css';
-
-/* Alertas externas (fuera de modales) */
+/* cSpell:words usuarios desplegable contenido acciones usuario */
+/* External alerts (outside of modals) */
 .external-alerts-container {
   position: fixed;
   top: 80px;
@@ -119,7 +117,7 @@
   color: var(--color-text-primary);
 }
 
-/* Tabla de usuarios */
+/* Users table */
 .usuarios-tabla {
   width: 100%;
   border-collapse: collapse;
@@ -210,7 +208,6 @@
   text-decoration: underline;
 }
 
-/* Estilos unificados para el modal de cambio de método 2FA */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -388,7 +385,6 @@
   box-shadow: var(--shadow-md);
 }
 
-/* Estilos responsive */
 @media (max-width: 1200px) {
   .usuarios-tabla {
     font-size: 10px;
@@ -465,7 +461,6 @@
   }
 }
 
-/* Scroll horizontal en pantallas pequeñas */
 .panel-tabla-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;

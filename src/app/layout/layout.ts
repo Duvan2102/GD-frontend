@@ -23,6 +23,13 @@ export class Layout implements OnInit, OnDestroy {
   private userSubscription?: Subscription;
   isProfileModalVisible = false;
 
+  // Sistema de alertas externas
+  externalAlerts: Array<{
+    type: 'success' | 'danger' | 'info' | 'warning';
+    title: string;
+    message: string;
+  }> = [];
+
   constructor(
     private authService: AuthService,
     private router: Router
@@ -78,5 +85,25 @@ export class Layout implements OnInit, OnDestroy {
         this.closeProfileModal();
       }
     });
+  }
+
+  // Métodos para alertas externas
+  showExternalAlert(type: 'success' | 'danger' | 'info' | 'warning', title: string, message: string, duration: number = 5000): void {
+    const alertItem = { type, title, message };
+    this.externalAlerts.push(alertItem);
+
+    // Auto-cerrar después de la duración especificada
+    if (duration > 0) {
+      setTimeout(() => {
+        const index = this.externalAlerts.indexOf(alertItem);
+        if (index > -1) {
+          this.closeExternalAlert(index);
+        }
+      }, duration);
+    }
+  }
+
+  closeExternalAlert(index: number): void {
+    this.externalAlerts.splice(index, 1);
   }
 }
