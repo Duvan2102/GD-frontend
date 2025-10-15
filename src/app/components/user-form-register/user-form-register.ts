@@ -36,9 +36,9 @@ export class UserFormRegister implements OnInit {
       nombres: ['', [Validators.required]],
       apellidos: ['', [Validators.required]],
       usuario: [{value: '', disabled: true}],
-      correoEmpresarial: ['', [Validators.email]],
+      correoEmpresarial: ['', [Validators.required, Validators.email]],
       correoPersonal: ['', [Validators.email]],
-      telefono1: ['', [Validators.pattern(/^[\d\s\+]+$/)]],
+      telefono1: ['', [Validators.required, Validators.pattern(/^[\d\s\+]+$/)]],
       telefono2: ['', [Validators.pattern(/^[\d\s\+]+$/)]],
       direccion: ['']
     });

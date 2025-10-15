@@ -103,7 +103,37 @@ export class ApprovalService {
     const id = item?.id ?? item?.numeroRadicado ?? item?.solicitudId ?? `temp-${Date.now()}`;
     const estado = (item?.estado || 'PENDIENTE').toUpperCase();
     const createdAt = item?.createdAt || item?.fechaCreacion || new Date().toISOString();
-    const updatedAt = item?.updatedAt || item?.fechaActualizacion || createdAt;
+    
+    // Obtener la fecha de última actualización real del historial de gestiones
+    let updatedAt = null;
+    
+    // Buscar en el historial de acciones la fecha más reciente
+    if (item?.historialAcciones && Array.isArray(item.historialAcciones)) {
+      const historialOrdenado = item.historialAcciones
+        .filter((h: any) => h.fecha)
+        .sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+      
+      if (historialOrdenado.length > 0) {
+        updatedAt = historialOrdenado[0].fecha;
+      }
+    }
+    
+    // Si no hay historial de acciones, buscar en destinatarios con decisiones
+    if (!updatedAt && item?.destinatarios && Array.isArray(item.destinatarios)) {
+      const destinatariosConDecision = item.destinatarios
+        .filter((d: any) => d.fechaDecision)
+        .sort((a: any, b: any) => new Date(b.fechaDecision).getTime() - new Date(a.fechaDecision).getTime());
+      
+      if (destinatariosConDecision.length > 0) {
+        updatedAt = destinatariosConDecision[0].fechaDecision;
+      }
+    }
+    
+    // Si no se encuentra ninguna fecha en el historial, usar la fecha de creación
+    // ya que la creación es la primera gestión en el historial
+    if (!updatedAt) {
+      updatedAt = createdAt;
+    }
 
     // Extraer información de aprobadores únicamente del servidor
     const approvers = (item?.destinatarios || []).map((d: any) => {
@@ -803,15 +833,35 @@ export class ApprovalService {
 
   getApprovalDocument(approvalId: string | number, userId: number): Observable<{ url: string, fileName: string }> {
     const headers = this.headersForUser(userId);
-    return this.http.get<any>(`${this.baseUrl}/solicitudes/${approvalId}/documento`, { headers }).pipe(
+    
+    // Crear URL para el PDF directamente
+    const pdfUrl = `${this.baseUrl}/solicitudes/${approvalId}/pdf`;
+    
+    // Hacer una petición HEAD para obtener el nombre del archivo
+    return this.http.head(pdfUrl, { headers, observe: 'response' }).pipe(
       map(response => {
+        const contentDisposition = response.headers.get('content-disposition');
+        let fileName = `documento_${approvalId}.pdf`;
+        
+        if (contentDisposition) {
+          const matches = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (matches && matches[1]) {
+            fileName = matches[1].replace(/['"]/g, '');
+          }
+        }
+        
         return {
-          url: response.url || response.documentoUrl || response.pdfUrl || response.documentUrl,
-          fileName: response.fileName || response.documentoFileName || response.nombreArchivo || response.pdfFileName || `documento_${approvalId}.pdf`
+          url: pdfUrl,
+          fileName: fileName
         };
       }),
       catchError(error => {
-        throw error;
+        // Si falla el HEAD, devolver la URL con nombre por defecto
+        console.warn('No se pudo obtener metadata del PDF, usando valores por defecto:', error);
+        return of({
+          url: pdfUrl,
+          fileName: `documento_${approvalId}.pdf`
+        });
       })
     );
   }
@@ -1057,6 +1107,25 @@ export class ApprovalService {
    * Convierte SuccessModalData a Approval para mantener compatibilidad
    */
   private mapSuccessDataToApproval(successData: SuccessModalData): Approval {
+    // Buscar la fecha de última actualización real en el historial de gestiones
+    let lastUpdateDate: string | null = null;
+    
+    if (successData.historialGestiones && Array.isArray(successData.historialGestiones)) {
+      const historialOrdenado = successData.historialGestiones
+        .filter(gestion => gestion.fecha)
+        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+      
+      if (historialOrdenado.length > 0) {
+        lastUpdateDate = historialOrdenado[0].fecha.toISOString();
+      }
+    }
+    
+    // Si no se encuentra ninguna fecha en el historial, usar la fecha de creación
+    // ya que la creación es la primera gestión en el historial
+    if (!lastUpdateDate) {
+      lastUpdateDate = successData.fechaCreacion?.toISOString() || new Date().toISOString();
+    }
+    
     return {
       type: 'solicitud',
       id: String(successData.id || ''),
@@ -1064,7 +1133,7 @@ export class ApprovalService {
       creatorUser: successData.creador?.usuario || '',
       creatorFullName: successData.creador ? `${successData.creador.nombres} ${successData.creador.apellidos}`.trim() : '',
       position: this.extractAreaString(successData.creador || undefined) || '',
-      lastUpdate: successData.fechaCreacion?.toISOString() || new Date().toISOString(),
+      lastUpdate: lastUpdateDate,
       status: this.mapEstadoToStatus(successData.estado || 'Pendiente'),
       approvers: (successData.destinatarios || []).map(dest => ({
         initials: this.getInitials((dest as any).nombresApellidos || ''),

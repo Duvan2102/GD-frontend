@@ -19,9 +19,13 @@
               [(ngModel)]="position.descripcion"
               name="positionDescripcion"
               placeholder="Escribe el nombre del cargo"
+              (ngModelChange)="validateOnChange()"
               required
               autocomplete="off"
             />
+            <div *ngIf="errorMessage" class="text-danger mt-2 small">
+              {{ errorMessage }}
+            </div>
           </div>
 
           <!-- Selector de Área con Jerarquía -->
@@ -105,7 +109,7 @@
           <button
             type="submit"
             class="btn btn-primary"
-            [disabled]="!position.descripcion.trim() || !selectedArea"
+            [disabled]="!isFormValid"
           >
             {{ mode === 'update' ? 'Actualizar' : 'Crear' }}
           </button>

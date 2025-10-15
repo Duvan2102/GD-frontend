@@ -32,6 +32,7 @@ export class AreaCreation implements OnChanges {
   @Output() cancel = new EventEmitter<void>();
 
   area: Area = { descripcion: '', departamento: { idDepartamento: 0 } };
+  errorMessage = '';
 
   // Estados de los desplegables
   showDepartmentDropdown = false;
@@ -44,6 +45,41 @@ export class AreaCreation implements OnChanges {
 
   get modalTitle(): string {
     return this.mode === 'update' ? 'Actualización del Área' : 'Crear Área';
+  }
+
+  get isFormValid(): boolean {
+    const trimmed = this.area.descripcion.trim();
+    return trimmed.length > 0 && this.validateName(trimmed) && !!this.selectedDepartment;
+  }
+
+  private validateName(name: string): boolean {
+    // Contar cuántas letras tiene el nombre
+    const letterCount = (name.match(/[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/g) || []).length;
+    
+    // Verificar si es solo numérico
+    const isOnlyNumeric = /^[\d\s]+$/.test(name);
+    
+    if (isOnlyNumeric) {
+      this.errorMessage = 'El nombre no puede contener solo números';
+      return false;
+    }
+    
+    if (letterCount < 3) {
+      this.errorMessage = 'El nombre debe contener al menos 3 letras';
+      return false;
+    }
+    
+    this.errorMessage = '';
+    return true;
+  }
+
+  validateOnChange(): void {
+    const trimmed = this.area.descripcion.trim();
+    if (trimmed.length > 0) {
+      this.validateName(trimmed);
+    } else {
+      this.errorMessage = '';
+    }
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -64,7 +100,8 @@ export class AreaCreation implements OnChanges {
   }
 
   onSubmit() {
-    if (!this.area.descripcion.trim() || !this.selectedDepartment) {
+    const trimmed = this.area.descripcion.trim();
+    if (!trimmed || !this.validateName(trimmed) || !this.selectedDepartment) {
       return;
     }
     
@@ -90,6 +127,7 @@ export class AreaCreation implements OnChanges {
     this.area = { descripcion: '', departamento: { idDepartamento: 0 } };
     this.selectedDepartment = undefined;
     this.showDepartmentDropdown = false;
+    this.errorMessage = '';
   }
 
   private initializeExpandedArrays(): void {

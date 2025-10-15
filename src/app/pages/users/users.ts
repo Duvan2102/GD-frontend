@@ -47,6 +47,7 @@ export class Users implements OnInit, OnDestroy {
   isPasswordModalVisible = false;
   isChangePasswordModalVisible = false;
   isChange2FAMethodModalVisible = false;
+  isRegisterUserModalVisible = false;
   selected2FAMethod: 'GOOGLE_AUTH' | 'EMAIL' = 'GOOGLE_AUTH';
   currentUser: Usuario | null = null;
   currentAction = '';
@@ -63,6 +64,13 @@ export class Users implements OnInit, OnDestroy {
   confirmModalVisible = false;
   confirmModalMessage = '';
   confirmModalAction: 'inactivar' | 'activar' | 'eliminarQR' | null = null;
+
+  // Sistema de alertas externas
+  externalAlerts: Array<{
+    type: 'success' | 'danger' | 'info' | 'warning';
+    title: string;
+    message: string;
+  }> = [];
 
   constructor(
     private userService: UserService,
@@ -239,18 +247,15 @@ export class Users implements OnInit, OnDestroy {
       return;
     }
     
-    // Determinar el método actual y establecerlo como seleccionado
+    // Usar exactamente el valor que viene del servidor
     const dobleAuth = usuario.dobleAutenticacion;
     if (dobleAuth === 'GOOGLE_AUTH') {
       this.selected2FAMethod = 'GOOGLE_AUTH';
     } else if (dobleAuth === 'EMAIL') {
       this.selected2FAMethod = 'EMAIL';
     } else if (typeof dobleAuth === 'boolean' && dobleAuth) {
-      // Por defecto, si es boolean true, asumir GOOGLE_AUTH
-      this.selected2FAMethod = 'GOOGLE_AUTH';
     } else {
-      // Por defecto GOOGLE_AUTH
-      this.selected2FAMethod = 'GOOGLE_AUTH';
+      return;
     }
     
     // Abrir el modal
@@ -347,6 +352,14 @@ export class Users implements OnInit, OnDestroy {
   saveUser(userData: Usuario): void {
     this.cargarUsuarios();
     this.isUserFormVisible = false;
+    this.currentUser = null;
+    this.currentAction = '';
+  }
+
+  handleNavigateToUsers(): void {
+    // Cerrar el modal y recargar usuarios
+    this.isUserFormVisible = false;
+    this.cargarUsuarios();
     this.currentUser = null;
     this.currentAction = '';
   }
@@ -598,6 +611,26 @@ export class Users implements OnInit, OnDestroy {
           }
         });
     }
+  }
+
+  // Métodos para alertas externas
+  showExternalAlert(type: 'success' | 'danger' | 'info' | 'warning', title: string, message: string, duration: number = 5000): void {
+    const alertItem = { type, title, message };
+    this.externalAlerts.push(alertItem);
+
+    // Auto-cerrar después de la duración especificada
+    if (duration > 0) {
+      setTimeout(() => {
+        const index = this.externalAlerts.indexOf(alertItem);
+        if (index > -1) {
+          this.closeExternalAlert(index);
+        }
+      }, duration);
+    }
+  }
+
+  closeExternalAlert(index: number): void {
+    this.externalAlerts.splice(index, 1);
   }
 
 }

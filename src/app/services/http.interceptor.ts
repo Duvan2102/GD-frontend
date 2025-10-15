@@ -1,6 +1,7 @@
-import { HttpEvent, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+import { HttpEvent, HttpInterceptorFn, HttpRequest, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, catchError, throwError } from 'rxjs';
+import { Router } from '@angular/router';
 import { environment } from '../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -8,10 +9,35 @@ function isFormData(body: any): boolean {
   return typeof FormData !== 'undefined' && body instanceof FormData;
 }
 
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const exp = payload.exp;
+    
+    if (!exp) {
+      return false;
+    }
+    
+    const currentTime = Math.floor(Date.now() / 1000);
+    return currentTime >= exp;
+  } catch (error) {
+    console.error('Error al verificar expiración del token:', error);
+    return true;
+  }
+}
+
 export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): Observable<HttpEvent<any>> => {
   const auth = inject(AuthService);
+  const router = inject(Router);
   const user = auth.getCurrentUserValue();
   const token = auth.getToken();
+
+  if (token && isTokenExpired(token)) {
+    console.warn('🔐 Token expirado - Redirigiendo al login');
+    auth.logoutSync();
+    router.navigate(['/login'], { queryParams: { expired: 'true' } });
+    return throwError(() => new Error('Token expirado'));
+  }
 
   const isLocalhost = req.url.includes('localhost:8080');
   const isApiPath = req.url.startsWith('/api');
@@ -30,17 +56,14 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
 
   let headers = req.headers;
 
-
-  // Agregar token de autenticación si existe, excepto cuando se valida con tempToken
   if (token && isApi && !(isTwoFAValidation && hasTempTokenInBody)) {
     headers = headers.set('Authorization', `Bearer ${token}`);
   }
 
-  // Agregar ID de usuario si existe (para compatibilidad con el sistema actual)
   if ((isApi || isSolicitudes) && user?.idUsuario) {
     headers = headers.set('X-User-Id', String(user.idUsuario));
   }
-  // Evitar forzar Content-Type cuando es FormData
+  
   if (!isFormData(req.body) && !headers.has('Content-Type')) {
     headers = headers.set('Content-Type', 'application/json');
   }
@@ -50,7 +73,6 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
 
   const cloned = req.clone({ headers });
 
-  // Log detallado para debugging de errores 400
   if (isSolicitudes && (req.method === 'POST' || req.method === 'PUT')) {
     const headersObj: { [key: string]: string } = {};
     cloned.headers.keys().forEach(key => {
@@ -58,16 +80,34 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
     });
   }
 
-  if (environment.enableLogging) {
-    // Log básico de solicitudes/respuestas para debug en dev
-    return next(cloned).pipe(
-      tap({
-        next: (event) => {
-        },
-        error: (err) => {
+  return next(cloned).pipe(
+    catchError((error: HttpErrorResponse) => {
+      if (error.status === 401 || error.status === 403) {
+        console.warn(`🔐 Error ${error.status} - Token inválido`);
+        
+        const errorMessage = error.error?.message || error.message || '';
+        const isTokenError = errorMessage.toLowerCase().includes('token') || 
+                           errorMessage.toLowerCase().includes('unauthorized') ||
+                           errorMessage.toLowerCase().includes('expired') ||
+                           errorMessage.toLowerCase().includes('invalid');
+        
+        if (isTokenError) {
+          auth.logoutSync();
+          router.navigate(['/login'], { queryParams: { expired: 'true' } });
         }
-      })
-    );
-  }
-  return next(cloned);
+      }
+      
+      return throwError(() => error);
+    }),
+    tap({
+      next: (event) => {
+        if (environment.enableLogging) {
+        }
+      },
+      error: (err) => {
+        if (environment.enableLogging) {
+        }
+      }
+    })
+  );
 };

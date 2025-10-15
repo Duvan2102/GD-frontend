@@ -18,6 +18,7 @@ export class Controls {
   @Input() labelMostrar: string = 'Mostrar';
   @Input() textoEntradas: string = 'Entradas';
   @Input() labelAprobados: string = 'APROBADOS';
+  @Input() labelAprobadosInactivo: string = '';
   @Input() labelBuscar: string = 'Buscar:';
   @Input() placeholderBuscar: string = 'Buscar...';
 

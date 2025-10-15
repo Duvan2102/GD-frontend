@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { UserFormRegister } from '../../components/user-form-register/user-form-register';
@@ -17,11 +17,13 @@ export class LoginComponent implements OnInit {
   errorMessage: string = '';
   isLoading: boolean = false;
   isRegisterModalVisible = false;
+  tokenExpiredMessage: string = '';
 
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {
     this.loginForm = this.fb.group({
       usuario: ['', [Validators.required]],
@@ -30,6 +32,17 @@ export class LoginComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      if (params['expired'] === 'true') {
+        this.tokenExpiredMessage = 'Su sesión ha expirado. Por favor, inicie sesión nuevamente.';
+        
+        setTimeout(() => {
+          this.tokenExpiredMessage = '';
+          this.router.navigate(['/login'], { replaceUrl: true });
+        }, 5000);
+      }
+    });
+
     if (this.authService.getCurrentUserValue()) {
       this.router.navigate(['/']);
     }
@@ -46,11 +59,9 @@ export class LoginComponent implements OnInit {
 
       const { usuario, password } = this.loginForm.value;
 
-      // Usar el método de login con 2FA OBLIGATORIO (actualizado)
       this.authService.loginWith2FA(usuario, password).subscribe({
         next: (response) => {
           if (response.success && response.requires2FA) {
-            // Siempre requiere 2FA - verificar estado para determinar el flujo
             this.router.navigate(['/two-fa-state']);
           } else {
             console.log('Unexpected response state:', response);
@@ -117,6 +128,9 @@ export class LoginComponent implements OnInit {
           break;
         case 'USUARIO_BLOQUEADO':
           this.errorMessage = 'Usuario bloqueado. Intenta más tarde';
+          break;
+        case 'USUARIO_INACTIVO':
+          this.errorMessage = 'Su cuenta se encuentra inactiva. Por favor, contacte al administrador del sistema.';
           break;
         case '2FA_DISABLED':
           this.errorMessage = 'La doble autenticación no está configurada correctamente. Contacta al administrador.';
