@@ -305,8 +305,22 @@ export class ApprovalDocumentView implements OnChanges, OnDestroy {
 
 
   onPrint(): void {
+    // 1. Imprimir el PDF
     this.pdfViewerService.print();
+    
+    // 2. Registrar como descarga del archivo principal
+    if (this.documentData?.id) {
+      this.authService.getCurrentUser().subscribe(user => {
+        if (user?.idUsuario) {
+          this.approvalService.registrarDescargaArchivoPrincipal(this.documentData!.id, user.idUsuario).subscribe({
+            next: () => console.log('✅ Impresión/Descarga del archivo principal registrada exitosamente'),
+            error: (err) => console.warn('⚠️ No se pudo registrar la impresión (no afecta al usuario):', err)
+          });
+        }
+      });
+    }
   }
+
 
   onPreviousPage() { if (this.currentPage > 1) this.goToPage(this.currentPage - 1); }
   onNextPage() { if (this.currentPage < this.totalPages) this.goToPage(this.currentPage + 1); }

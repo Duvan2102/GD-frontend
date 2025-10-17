@@ -74,6 +74,17 @@
                 <i class="bi bi-file-earmark-pdf"></i> Visualizar Documento
               </button>
 
+              <!-- Botón de descarga ZIP completo - Solo para solicitudes finalizadas -->
+              <button
+                *ngIf="canDownloadZip()"
+                class="btn-zip-download"
+                type="button"
+                (click)="downloadCompletoZip()"
+                title="Descargar todos los archivos de la solicitud en formato ZIP (documento principal + adjuntos)">
+                <i class="bi bi-file-earmark-zip-fill"></i>
+                Descargar Todo (ZIP)
+              </button>
+
               <!-- Adjuntos - recuadro rojo para adjuntos/anexos -->
               <div class="document-link" *ngIf="hasAttachments()" (click)="viewMainDocument()">
                 <i class="bi bi-file-earmark-pdf-fill pdf-icon" *ngIf="!isLoadingAttachments"></i>
@@ -239,9 +250,9 @@
                   
                   <div *ngIf="gestion.estadoAnterior && gestion.estadoNuevo" class="historial-status-change">
                     <span class="status-change">
-                      <span class="status-badge status-old">{{ gestion.estadoAnterior }}</span>
+                      <span class="status-badge" [ngClass]="getStatusBadgeClass(gestion.estadoAnterior)">{{ gestion.estadoAnterior }}</span>
                       <i class="bi bi-arrow-right"></i>
-                      <span class="status-badge status-new">{{ gestion.estadoNuevo }}</span>
+                      <span class="status-badge" [ngClass]="getStatusBadgeClass(gestion.estadoNuevo)">{{ gestion.estadoNuevo }}</span>
                     </span>
                   </div>
                 </div>
