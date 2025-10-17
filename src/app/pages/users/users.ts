@@ -42,6 +42,8 @@ export class Users implements OnInit, OnDestroy {
   itemsPerPage = 10;
   paginaActual = 1;
   filaDesplegada: number | null = null;
+  currentOrder: string = '';
+  ascendingOrder: boolean = true;
   isUserFormVisible = false;
   isRegisterUserModalVisible = false;
   isPasswordModalVisible = false;
@@ -108,7 +110,7 @@ export class Users implements OnInit, OnDestroy {
       }
     });
   }
-  mostrarModalConfirmacion(mensaje: string, textoBtn: string = 'Aceptar') {
+  mostrarModalConfirmation(mensaje: string, textoBtn: string = 'Aceptar') {
     this.modalSuccessMessage = mensaje;
     this.modalSuccessBtn = textoBtn;
     this.modalSuccessVisible = true;
@@ -142,16 +144,17 @@ export class Users implements OnInit, OnDestroy {
 
   filtrarUsuarios() {
     let filtrados = this.usuarios.filter(u => {
-      if (this.activos) {
-        // Verificar múltiples formas de saber si está activo o pendiente
-        const estadoDescripcion = typeof u.estado === 'object'
-          ? (u.estado.descripcion || '').toString().trim().toUpperCase()
-          : String(u.estado || '').trim().toUpperCase();
+      // Verificar múltiples formas de obtener el estado
+      const estadoDescription = typeof u.estado === 'object'
+        ? (u.estado.descripcion || '').toString().trim().toUpperCase()
+        : String(u.estado || '').trim().toUpperCase();
 
-        // Usar tanto la propiedad activo como el estado.descripcion para filtrar
-        return estadoDescripcion === 'ACTIVO' || estadoDescripcion === 'PENDIENTE' || u.activo === true;
+      if (this.activos) {
+        // Mostrar solo activos o pendientes
+        return estadoDescription === 'ACTIVO' || estadoDescription === 'PENDIENTE';
       } else {
-        return true;
+        // Mostrar solo inactivos
+        return estadoDescription === 'INACTIVO';
       }
     });
 
@@ -163,6 +166,43 @@ export class Users implements OnInit, OnDestroy {
         u.usuario.toLowerCase().includes(t) ||
         u.identificacion.toLowerCase().includes(t)
       );
+    }
+
+    // Aplicar ordenamiento
+    if (this.currentOrder) {
+      filtrados.sort((a, b) => {
+        let valA: any;
+        let valB: any;
+
+        switch (this.currentOrder) {
+          case 'idUsuario':
+            valA = a.idUsuario || 0;
+            valB = b.idUsuario || 0;
+            break;
+          case 'nombres':
+            valA = (a.nombres || '').toLowerCase();
+            valB = (b.nombres || '').toLowerCase();
+            break;
+          case 'apellidos':
+            valA = (a.apellidos || '').toLowerCase();
+            valB = (b.apellidos || '').toLowerCase();
+            break;
+          case 'estado':
+            valA = typeof a.estado === 'object'
+              ? (a.estado.descripcion || '').toLowerCase()
+              : String(a.estado || '').toLowerCase();
+            valB = typeof b.estado === 'object'
+              ? (b.estado.descripcion || '').toLowerCase()
+              : String(b.estado || '').toLowerCase();
+            break;
+          default:
+            return 0;
+        }
+
+        if (valA < valB) return this.ascendingOrder ? -1 : 1;
+        if (valA > valB) return this.ascendingOrder ? 1 : -1;
+        return 0;
+      });
     }
 
     this.usuariosFiltradosLength = filtrados.length;
@@ -209,7 +249,7 @@ export class Users implements OnInit, OnDestroy {
         break;
 
       case 'inactivar':
-        this.mostrarModalConfirmacion(
+        this.mostrarModalConfirmation(
           `¿Está seguro de inactivar al usuario ${u.nombres} ${u.apellidos}?`,
           'Sí, inactivar'
         );
@@ -630,6 +670,25 @@ export class Users implements OnInit, OnDestroy {
 
   closeExternalAlert(index: number): void {
     this.externalAlerts.splice(index, 1);
+  }
+
+  // Método para ordenar
+  sortBy(field: string): void {
+    if (this.currentOrder === field) {
+      this.ascendingOrder = !this.ascendingOrder;
+    } else {
+      this.currentOrder = field;
+      this.ascendingOrder = true;
+    }
+    this.filtrarUsuarios();
+  }
+
+  // Método para obtener el ícono de ordenamiento
+  getSortIcon(field: string): any {
+    if (this.currentOrder !== field) {
+      return { 'bi-arrow-down-up': true, 'text-muted': true };
+    }
+    return this.ascendingOrder ? { 'bi-arrow-down': true } : { 'bi-arrow-up': true };
   }
 
 }

@@ -37,7 +37,7 @@
     <!-- CONTROLES -->
     <app-controls
       [textoboton]="'Crear usuario'"
-      [labelAprobados]="activos ? 'ACTIVOS' : 'TODOS'"
+      [labelAprobados]="activos ? 'ACTIVOS' : 'INACTIVOS'"
       [quantity]="itemsPerPage"
       [toggleApproved]="!activos"
       [search]="searchTerm"
@@ -51,13 +51,13 @@
       <table class="usuarios-tabla">
         <thead>
           <tr>
-            <th>No Usuario</th>
-            <th>Identificación</th>
-            <th>Nombres</th>
-            <th>Apellidos</th>
-            <th>Usuario</th>
-            <th>Estado</th>
-            <th></th>
+            <th (click)="sortBy('idUsuario')" style="cursor: pointer; text-align: center;">NO USUARIO <i class="bi" [ngClass]="getSortIcon('idUsuario')"></i></th>
+            <th style="text-align: center;">IDENTIFICACIÓN</th>
+            <th (click)="sortBy('nombres')" style="cursor: pointer; text-align: center;">NOMBRES <i class="bi" [ngClass]="getSortIcon('nombres')"></i></th>
+            <th (click)="sortBy('apellidos')" style="cursor: pointer; text-align: center;">APELLIDOS <i class="bi" [ngClass]="getSortIcon('apellidos')"></i></th>
+            <th style="text-align: center; padding-right: 25px;">USUARIO</th>
+            <th (click)="sortBy('estado')" style="cursor: pointer; text-align: center; padding-right: 25px;">ESTADO <i class="bi" [ngClass]="getSortIcon('estado')"></i></th>
+            <th style="width: 50px; text-align: center;"></th>
           </tr>
         </thead>
       </table>
@@ -69,13 +69,13 @@
         <tbody>
           <ng-container *ngFor="let u of usuariosFiltrados; let i = index">
             <tr>
-              <td>{{ u.idUsuario }}</td>
-              <td>{{ u.identificacion }}</td>
-              <td>{{ u.nombres }}</td>
-              <td>{{ u.apellidos }}</td>
-              <td>{{ u.usuario }}</td>
-              <td>{{ u.estado.descripcion }}</td>
-              <td>
+              <td style="text-align: center;">{{ u.idUsuario }}</td>
+              <td style="text-align: center;">{{ u.identificacion }}</td>
+              <td style="text-align: center;">{{ u.nombres }}</td>
+              <td style="text-align: center; padding-left: 20px;">{{ u.apellidos }}</td>
+              <td style="text-align: center; padding-left: 20px;">{{ u.usuario }}</td>
+              <td style="text-align: center; padding-left: 20px;">{{ u.estado.descripcion }}</td>
+              <td style="width: 50px; text-align: center;">
                 <button class="usuarios-ver" (click)="toggleDesplegable(i)">
                   <i *ngIf="filaDesplegada === i; else right" class="bi bi-chevron-down"></i>
                   <ng-template #right><i class="bi bi-chevron-right"></i></ng-template>
