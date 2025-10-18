@@ -373,6 +373,7 @@ export class Approvals implements OnInit, OnDestroy {
     this.approvalService.getDocumentPdf(data.id!, this.currentUser!.idUsuario).subscribe({
       next: (pdfBlob: Blob) => {
         const pdfUrl = URL.createObjectURL(pdfBlob);
+        
         this.documentViewData = {
           id: data.id!,
           file: undefined,
@@ -563,6 +564,7 @@ export class Approvals implements OnInit, OnDestroy {
           this.approvalService.getDocumentPdf(data.id, userId).subscribe({
             next: (blob) => {
               const url = URL.createObjectURL(blob);
+              
               this.documentToApproveData = {
                 id: data.id!,
                 url: url,
