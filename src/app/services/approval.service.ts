@@ -323,18 +323,39 @@ export class ApprovalService {
     if (Array.isArray(gestiones) && gestiones.length > 0) {
       const gestionesHistorial = gestiones.map((gestion, index) => {
         const usuario = findUserById(gestion.actorUsuarioId);
+        const tipoGestion = this.mapearTipoGestion(gestion.accion);
+        
+        let estadoAnterior = null;
+        let estadoNuevo = gestion.accion;
+        
+        if (tipoGestion === 'APROBACION') {
+          estadoAnterior = 'PENDIENTE';
+          estadoNuevo = 'APROBADO';
+        } else if (tipoGestion === 'RECHAZO') {
+          estadoAnterior = 'PENDIENTE';
+          estadoNuevo = 'RECHAZADO';
+        } else if (tipoGestion === 'CANCELACION') {
+          estadoAnterior = 'PENDIENTE';
+          estadoNuevo = 'CANCELADO';
+        } else if (tipoGestion === 'ENVIO') {
+          estadoAnterior = null;
+          estadoNuevo = null;
+        } else if (tipoGestion === 'DESCARGA') {
+          estadoAnterior = null;
+          estadoNuevo = null;
+        }
         
         return {
           id: `historial-${gestion.id}`,
-          tipo: this.mapearTipoGestion(gestion.accion),
+          tipo: tipoGestion,
           usuarioId: String(gestion.actorUsuarioId || ''),
           usuarioNombre: usuario ? `${usuario.nombres} ${usuario.apellidos}`.trim() : 'Usuario desconocido',
           fecha: new Date(gestion.fecha),
           comentario: gestion.comentario || '',
           comentarioCompleto: gestion.comentario || '',
           orden: index + 1,
-          estadoAnterior: null,
-          estadoNuevo: gestion.accion,
+          estadoAnterior: estadoAnterior,
+          estadoNuevo: estadoNuevo,
           accionOriginal: gestion.accion,
           actorUsuarioId: gestion.actorUsuarioId,
           fuente: 'historial'
@@ -389,6 +410,17 @@ export class ApprovalService {
             }
           }
           
+          let estadoAnterior = 'PENDIENTE';
+          let estadoNuevo = dest.decision;
+          
+          if (tipoDestinatario === 'APROBACION') {
+            estadoNuevo = 'APROBADO';
+          } else if (tipoDestinatario === 'RECHAZO') {
+            estadoNuevo = 'RECHAZADO';
+          } else if (tipoDestinatario === 'CANCELACION') {
+            estadoNuevo = 'CANCELADO';
+          }
+          
           return {
             id: `destinatario-${dest.usuarioId}-${index}`,
             tipo: tipoDestinatario,
@@ -398,8 +430,8 @@ export class ApprovalService {
             comentario: dest.comentario || '',
             comentarioCompleto: dest.comentario || '',
             orden: dest.ordenIndex !== undefined ? dest.ordenIndex + 1 : (index + 1),
-            estadoAnterior: 'PENDIENTE',
-            estadoNuevo: dest.decision,
+            estadoAnterior: estadoAnterior,
+            estadoNuevo: estadoNuevo,
             accionOriginal: dest.decision,
             actorUsuarioId: dest.usuarioId,
             fuente: 'destinatarios'
@@ -415,7 +447,7 @@ export class ApprovalService {
     return result;
   }
 
-  private mapearTipoGestion(tipo: string): 'ENVIO' | 'APROBACION' | 'RECHAZO' | 'CANCELACION' {
+  private mapearTipoGestion(tipo: string): 'ENVIO' | 'APROBACION' | 'RECHAZO' | 'CANCELACION' | 'DESCARGA' {
     if (!tipo) return 'ENVIO';
     
     const tipoUpper = tipo.toUpperCase();
@@ -425,11 +457,13 @@ export class ApprovalService {
     if (tipoUpper === 'CANCELAR' || tipoUpper === 'CANCEL') return 'CANCELACION';
     if (tipoUpper === 'APROBAR' || tipoUpper === 'APPROVE') return 'APROBACION';
     if (tipoUpper === 'RECHAZAR' || tipoUpper === 'REJECT') return 'RECHAZO';
+    if (tipoUpper === 'DESCARGA' || tipoUpper === 'DESCARGAR' || tipoUpper === 'DOWNLOAD') return 'DESCARGA';
     
     // Mapeos genéricos como fallback
     if (tipoUpper.includes('APROB') || tipoUpper === 'APPROVED') return 'APROBACION';
     if (tipoUpper.includes('RECHAZ') || tipoUpper === 'REJECTED') return 'RECHAZO';
     if (tipoUpper.includes('CANCEL') || tipoUpper === 'CANCELLED') return 'CANCELACION';
+    if (tipoUpper.includes('DESCARG') || tipoUpper.includes('DOWNLOAD')) return 'DESCARGA';
     if (tipoUpper.includes('ENVI') || tipoUpper === 'SEND') return 'ENVIO';
     
     // Por defecto, si no se reconoce, mantener como ENVIO
@@ -829,6 +863,74 @@ export class ApprovalService {
       headers, 
       responseType: 'blob' 
     });
+  }
+
+  /**
+   * Descarga el archivo ZIP completo de una solicitud
+   */
+  downloadCompletoZip(solicitudId: string | number, userId: number): Observable<Blob> {
+    const headers = this.headersForUser(userId);
+    return this.http.get(`${this.baseUrl}/solicitudes/${solicitudId}/descargar-todo`, { 
+      headers, 
+      responseType: 'blob' 
+    });
+  }
+
+  /**
+   * Registra la descarga del archivo principal de una solicitud
+   */
+  registrarDescargaArchivoPrincipal(solicitudId: string | number, userId: number): Observable<any> {
+    const headers = this.headersForUser(userId);
+    
+    return this.http.post(
+      `${this.baseUrl}/solicitudes/${solicitudId}/descargas?usuarioId=${userId}&tipoDescarga=DESCARGAR_ARCHIVO_PRINCIPAL`, 
+      null,
+      { headers }
+    ).pipe(
+      tap(() => console.log(`Descarga del archivo principal registrada para solicitud ${solicitudId} por usuario ${userId}`)),
+      catchError(error => {
+        console.warn('Error al registrar la descarga del archivo principal (no crítico):', error);
+        return of(null);
+      })
+    );
+  }
+
+  /**
+   * Registra la descarga de adjuntos de una solicitud
+   */
+  registrarDescargaAdjuntos(solicitudId: string | number, userId: number): Observable<any> {
+    const headers = this.headersForUser(userId);
+    
+    return this.http.post(
+      `${this.baseUrl}/solicitudes/${solicitudId}/descargas?usuarioId=${userId}&tipoDescarga=DESCARGAR_ADJUNTOS`, 
+      null,
+      { headers }
+    ).pipe(
+      tap(() => console.log(`Descarga de adjuntos registrada para solicitud ${solicitudId} por usuario ${userId}`)),
+      catchError(error => {
+        console.warn('Error al registrar la descarga de adjuntos (no crítico):', error);
+        return of(null);
+      })
+    );
+  }
+
+  /**
+   * Registra la descarga completa (ZIP) de una solicitud
+   */
+  registrarDescargaCompleta(solicitudId: string | number, userId: number): Observable<any> {
+    const headers = this.headersForUser(userId);
+    
+    return this.http.post(
+      `${this.baseUrl}/solicitudes/${solicitudId}/descargas?usuarioId=${userId}&tipoDescarga=DESCARGAR_COMPLETA`, 
+      null,
+      { headers }
+    ).pipe(
+      tap(() => console.log(`Descarga completa (ZIP) registrada para solicitud ${solicitudId} por usuario ${userId}`)),
+      catchError(error => {
+        console.warn('Error al registrar la descarga completa (no crítico):', error);
+        return of(null);
+      })
+    );
   }
 
   getApprovalDocument(approvalId: string | number, userId: number): Observable<{ url: string, fileName: string }> {
