@@ -1,8 +1,8 @@
 <div class="two-fa-management">
   <div class="header">
-    <h2>Gestión de Doble Autenticación</h2>
+    <h2>Gestión de Autenticación de Dos Factores</h2>
     <p class="description">
-      Administra la configuración de seguridad de tu cuenta
+      La autenticación de dos factores (2FA) es obligatoria para todos los usuarios. Puedes cambiar entre métodos disponibles.
     </p>
   </div>
 
@@ -18,52 +18,35 @@
           </svg>
         </div>
         <div class="status-info">
-          <h3>Estado Actual</h3>
-          <div class="status-badge" [ngClass]="get2FAStatusClass()">
-            {{ get2FAStatusText() }}
+          <h3>Método Actual de 2FA</h3>
+          <div class="status-badge" [ngClass]="{
+            'status-enabled': twoFAState?.metodoActual !== 'PENDING',
+            'status-pending': twoFAState?.metodoActual === 'PENDING'
+          }">
+            {{ currentMethodText }}
           </div>
         </div>
       </div>
 
       <div class="status-description">
-        <p *ngIf="is2FAEnabled()">
-          La doble autenticación está activa en tu cuenta. Esto proporciona una capa adicional de seguridad.
+        <p *ngIf="twoFAState?.metodoActual !== 'PENDING'">
+          Tu cuenta está protegida con autenticación de dos factores. 
+          <strong>Este sistema es obligatorio y no puede ser deshabilitado.</strong>
         </p>
-        <p *ngIf="!is2FAEnabled()">
-          La doble autenticación está deshabilitada. Te recomendamos activarla para mayor seguridad.
+        <p *ngIf="twoFAState?.metodoActual === 'PENDING'" class="warning-text">
+          <strong>⚠️ Configuración Pendiente:</strong> Debes escanear el nuevo código QR en tu próximo inicio de sesión para completar la configuración de Google Authenticator.
         </p>
       </div>
     </div>
 
-    <!-- Estadísticas de login -->
-    <div class="stats-card" *ngIf="loginStats">
-      <div class="stats-header">
-        <h3>Estadísticas de Login</h3>
-        <button
-          type="button"
-          class="btn btn-icon"
-          (click)="onRefreshStats()"
-          [disabled]="isLoading"
-          title="Actualizar estadísticas"
-        >
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <polyline points="1 20 1 14 7 14"></polyline>
-            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-          </svg>
-        </button>
-      </div>
-      <div class="stats-content">
-        <p>{{ loginStats }}</p>
-      </div>
-    </div>
-
-    <!-- Acciones disponibles -->
+    <!-- Cambiar método 2FA -->
     <div class="actions-section">
-      <!-- Configurar Google Authenticator -->
-      <div class="action-card" *ngIf="!is2FAEnabled()">
+      <h3 class="section-title">Cambiar Método de Autenticación</h3>
+      
+      <!-- Opción Google Authenticator -->
+      <div class="action-card">
         <div class="action-header">
-          <div class="action-icon">
+          <div class="action-icon" [ngClass]="{'active': isGoogleAuth}">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="3" width="5" height="5"></rect>
               <rect x="3" y="16" width="5" height="5"></rect>
@@ -73,90 +56,48 @@
             </svg>
           </div>
           <div class="action-info">
-            <h3>Configurar Google Authenticator</h3>
-            <p>Activa la doble autenticación usando Google Authenticator</p>
+            <h3>Google Authenticator</h3>
+            <p>Recibe códigos de verificación a través de la aplicación Google Authenticator</p>
+            <span class="badge-active" *ngIf="isGoogleAuth">Método Activo</span>
           </div>
         </div>
         <div class="action-actions">
           <button
             type="button"
-            class="btn btn-primary"
-            (click)="onSetupGoogleAuth()"
+            class="btn btn-outline"
+            (click)="onChangeToGoogleAuth()"
+            [disabled]="isLoading || isGoogleAuth"
           >
-            Configurar
+            <span *ngIf="isLoading" class="spinner"></span>
+            {{ isGoogleAuth ? 'Método Activo' : 'Cambiar a Google Auth' }}
           </button>
         </div>
       </div>
 
-      <!-- Deshabilitar 2FA -->
-      <div class="action-card" *ngIf="is2FAEnabled()">
-        <div class="action-header">
-          <div class="action-icon warning">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-              <line x1="12" y1="9" x2="12" y2="13"></line>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
-            </svg>
-          </div>
-          <div class="action-info">
-            <h3>Deshabilitar Doble Autenticación</h3>
-            <p>Desactiva la doble autenticación de tu cuenta (no recomendado)</p>
-          </div>
-        </div>
-
-        <form [formGroup]="disableForm" (ngSubmit)="onDisable2FA()" class="disable-form">
-          <div class="form-group">
-            <label for="password" class="form-label">Confirmar Contraseña</label>
-            <input
-              type="password"
-              id="password"
-              formControlName="password"
-              class="form-input"
-              placeholder="Ingresa tu contraseña actual"
-              [class.error]="getFieldError('password')"
-            />
-            <div class="error-message" *ngIf="getFieldError('password')">
-              {{ getFieldError('password') }}
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button
-              type="submit"
-              class="btn btn-danger"
-              [disabled]="!disableForm.valid || isLoading"
-            >
-              <span *ngIf="isLoading" class="spinner"></span>
-              {{ isLoading ? 'Deshabilitando...' : 'Deshabilitar 2FA' }}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <!-- Desbloquear usuario -->
+      <!-- Opción Email -->
       <div class="action-card">
         <div class="action-header">
-          <div class="action-icon info">
+          <div class="action-icon" [ngClass]="{'active': isEmail}">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <circle cx="12" cy="16" r="1"></circle>
-              <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
             </svg>
           </div>
           <div class="action-info">
-            <h3>Desbloquear Usuario</h3>
-            <p>Desbloquea tu cuenta si ha sido bloqueada por intentos fallidos</p>
+            <h3>Código por Email</h3>
+            <p>Recibe códigos de verificación en tu correo electrónico empresarial</p>
+            <span class="badge-active" *ngIf="isEmail">Método Activo</span>
           </div>
         </div>
         <div class="action-actions">
           <button
             type="button"
-            class="btn btn-warning"
-            (click)="onUnlockUser()"
-            [disabled]="isLoading"
+            class="btn btn-outline"
+            (click)="onChangeToEmail()"
+            [disabled]="isLoading || isEmail"
           >
             <span *ngIf="isLoading" class="spinner"></span>
-            {{ isLoading ? 'Desbloqueando...' : 'Desbloquear' }}
+            {{ isEmail ? 'Método Activo' : 'Cambiar a Email' }}
           </button>
         </div>
       </div>

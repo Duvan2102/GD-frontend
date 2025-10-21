@@ -63,8 +63,6 @@ export class LoginComponent implements OnInit {
         next: (response) => {
           if (response.success && response.requires2FA) {
             this.router.navigate(['/two-fa-state']);
-          } else {
-            console.log('Unexpected response state:', response);
           }
           this.isLoading = false;
         },
@@ -113,10 +111,8 @@ export class LoginComponent implements OnInit {
   }
 
   handleUserRegistered(event: { idUsuario: number }): void {
-    console.log('Usuario registrado exitosamente con ID:', event.idUsuario);
     this.closeRegisterModal();
     
-    // Mostrar mensaje de éxito
     alert(`¡Usuario registrado exitosamente! ID: ${event.idUsuario}\n\nEl usuario ha sido registrado y está pendiente de activación por un administrador.`);
   }
 
@@ -130,7 +126,7 @@ export class LoginComponent implements OnInit {
           this.errorMessage = 'Usuario bloqueado. Intenta más tarde';
           break;
         case 'USUARIO_INACTIVO':
-          this.errorMessage = 'Su cuenta se encuentra inactiva. Por favor, contacte al administrador del sistema.';
+          this.errorMessage = 'Cuenta inactiva. Contacte al administrador para reactivarla.';
           break;
         case '2FA_DISABLED':
           this.errorMessage = 'La doble autenticación no está configurada correctamente. Contacta al administrador.';

@@ -16,7 +16,6 @@ export class AuthService {
   private currentUserSubject = new BehaviorSubject<UsuarioData | null>(null);
   private currentUser: UsuarioData | null = null;
 
-  // Propiedades para 2FA OBLIGATORIO
   private tempTokenKey = 'temp_token';
   private twoFARequiredSubject = new BehaviorSubject<boolean>(false);
   private twoFAUserSubject = new BehaviorSubject<string>('');
@@ -45,8 +44,7 @@ export class AuthService {
           this.currentUserSubject.next(user);
         }
       },
-      error: (error) => {
-        console.error('🔐 Error validando token:', error);
+      error: () => {
         this.clearAuthData();
       }
     });
@@ -68,8 +66,7 @@ export class AuthService {
       try {
         const userData = JSON.parse(storedUser);
         return of(userData);
-      } catch (error) {
-        console.error('Error parsing stored user data:', error);
+      } catch {
         this.clearAuthData();
         return of(null);
       }
@@ -175,7 +172,6 @@ export class AuthService {
           return true;
         }),
         catchError((error: any) => {
-          console.error('Error en logout:', error);
           this.clearAuthData();
           return throwError(() => error);
         })
@@ -195,12 +191,10 @@ export class AuthService {
     this.currentUserSubject.next(null);
   }
 
-  // Método de logout síncrono para compatibilidad
   logoutSync(): void {
     this.clearAuthData();
   }
 
-  // Verificar si el usuario está autenticado
   isAuthenticated(): boolean {
     const hasUser = this.currentUser !== null;
     const hasToken = this.getToken() !== null;
@@ -212,12 +206,10 @@ export class AuthService {
     return result;
   }
 
-  // Obtener el token actual
   getToken(): string | null {
     return localStorage.getItem(this.tokenKey);
   }
 
-  // Validar contraseña del usuario autenticado
   validatePassword(password: string): Observable<PasswordValidationResponse> {
     const token = this.getToken();
     if (!token) {
@@ -233,7 +225,6 @@ export class AuthService {
       }
     }).pipe(
       catchError((error: any) => {
-        console.error('Error validando contraseña:', error);
         if (error.status === 401) {
           return of({
             valid: false,
@@ -245,9 +236,6 @@ export class AuthService {
     );
   }
 
-  // ==================== MÉTODOS PARA 2FA OBLIGATORIO ====================
-
-  // Getters para observables de 2FA
   getTwoFARequired(): Observable<boolean> {
     return this.twoFARequiredSubject.asObservable();
   }
@@ -260,29 +248,22 @@ export class AuthService {
     return this.twoFAStateSubject.asObservable();
   }
 
-  // Verificar si se requiere 2FA
   isTwoFARequired(): boolean {
     return this.twoFARequiredSubject.value;
   }
 
-  // Obtener el token temporal
   getTempToken(): string | null {
     return localStorage.getItem(this.tempTokenKey);
   }
 
-  // Guardar token temporal
   private setTempToken(token: string): void {
     localStorage.setItem(this.tempTokenKey, token);
   }
 
-  // Limpiar token temporal
   private clearTempToken(): void {
     localStorage.removeItem(this.tempTokenKey);
   }
 
-  // ==================== FLUJO PRINCIPAL DE 2FA ====================
-
-  // 1. Login que maneja diferentes tipos de respuesta según el estado de 2FA (actualizado)
   loginWith2FA(username: string, password: string): Observable<{ success: boolean; requires2FA: boolean; tempToken: string; user: string; qrCodeUrl?: string; secret?: string; requiereConfiguracion?: boolean; dobleAutenticacion?: boolean }> {
     const loginRequest: LoginRequest = {
       usuario: username,
@@ -304,14 +285,10 @@ export class AuthService {
             dobleAutenticacion: response.dobleAutenticacion
           };
         }),
-        catchError((error: any) => {
-          console.error('Error en login:', error);
-          return throwError(() => error);
-        })
+        catchError((error: any) => throwError(() => error))
       );
   }
 
-  // 2. Verificar estado de configuración 2FA (actualizado)
   check2FAStatus(): Observable<TwoFAStatusResponse> {
     const currentUser = this.twoFAUserSubject.value;
 
@@ -321,25 +298,34 @@ export class AuthService {
 
     return this.http.get<TwoFAStatusResponse>(`${this.apiUrl}/auth/2fa-status/${currentUser}`).pipe(
       map((response: TwoFAStatusResponse) => {
+        let metodoActual: 'GOOGLE_AUTH' | 'EMAIL' | 'PENDING';
+        
+        if (response.hasEmailBackup) {
+          metodoActual = 'EMAIL';
+        } else if (response.hasGoogleAuth) {
+          metodoActual = 'GOOGLE_AUTH';
+        } else if (response.googleAuthPending) {
+          metodoActual = 'PENDING';
+        } else {
+          metodoActual = 'GOOGLE_AUTH';
+        }
+        
         const state: TwoFAState = {
           hasGoogleAuth: response.hasGoogleAuth,
           hasEmailBackup: response.hasEmailBackup,
           googleAuthPending: response.googleAuthPending,
           isConfigured: response.hasGoogleAuth || response.hasEmailBackup,
           needsSetup: response.googleAuthPending || (!response.hasGoogleAuth && !response.hasEmailBackup),
-          metodoActual: response.hasGoogleAuth ? 'GOOGLE_AUTH' : 'EMAIL'
+          metodoActual: metodoActual
         };
+        
         this.twoFAStateSubject.next(state);
         return response;
       }),
-      catchError((error: any) => {
-        console.error('Error verificando estado 2FA:', error);
-        return throwError(() => error);
-      })
+      catchError((error: any) => throwError(() => error))
     );
   }
 
-  // 3. Obtener/Regenerar código QR
   getQRCode(): Observable<QRSetupData> {
     const currentUser = this.twoFAUserSubject.value;
 
@@ -362,15 +348,11 @@ export class AuthService {
           message: response.message
         };
       }),
-      catchError((error: any) => {
-        console.error('Error obteniendo código QR:', error);
-        return throwError(() => error);
-      })
+      catchError((error: any) => throwError(() => error))
     );
   }
 
-  // 4. Validar código de 2FA (Google Authenticator o Email) - actualizado
-  validate2FACode(codigo: string): Observable<{ success: boolean; qrCodeUrl?: string; secret?: string; message?: string }> {
+  validate2FACode(codigo: string): Observable<{ success: boolean; qrCodeUrl?: string; secret?: string; message?: string; errorCode?: string; errorType?: 'GOOGLE_AUTH' | 'EMAIL' | 'METHOD_INCORRECT' | 'PENDING_SETUP' }> {
     const tempToken = this.getTempToken();
     if (!tempToken) {
       return throwError(() => new Error('Token temporal no encontrado'));
@@ -382,24 +364,29 @@ export class AuthService {
     };
 
     return this.http.post<any>(`${this.apiUrl}/auth/validate-2fa`, request, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: {'Content-Type': 'application/json'},
+      observe: 'response'
     }).pipe(
         map((response: any) => {
-          // Si la respuesta contiene token y usuario, el código fue válido
-          if (response.token && response.usuario) {
-            // Guardar el token final
-            localStorage.setItem(this.tokenKey, response.token);
-
-            // Actualizar el usuario actual
-            this.currentUser = response.usuario;
+          const body = response.body;
+          const status = response.status;
+          
+          if (status === 202 && body.qrCodeUrl && body.secret) {
+            return {
+              success: false,
+              qrCodeUrl: body.qrCodeUrl,
+              secret: body.secret,
+              message: body.message || 'Debes configurar Google Authenticator',
+              errorType: 'PENDING_SETUP' as const
+            };
+          }
+          
+          if (status === 200 && body.token && body.usuario) {
+            localStorage.setItem(this.tokenKey, body.token);
+            this.currentUser = body.usuario;
             this.currentUserSubject.next(this.currentUser);
-
-            // Guardar la información del usuario en localStorage para persistencia
             localStorage.setItem('current_user_data', JSON.stringify(this.currentUser));
 
-            // Persistir el método 2FA usado en localStorage
             const current2FAState = this.twoFAStateSubject.value;
             if (current2FAState) {
               localStorage.setItem('user_2fa_method', JSON.stringify({
@@ -416,27 +403,53 @@ export class AuthService {
             return { success: true };
           }
 
-          // Si la respuesta contiene QR, significa que Google Auth está pendiente
-          if (response.qrCodeUrl && response.secret) {
+          if (body.qrCodeUrl && body.secret) {
             return {
               success: false,
-              qrCodeUrl: response.qrCodeUrl,
-              secret: response.secret,
-              message: response.message
+              qrCodeUrl: body.qrCodeUrl,
+              secret: body.secret,
+              message: body.message
             };
           }
 
-          // Si no es ninguno de los casos anteriores, asumir error
           return { success: false, message: 'Respuesta inesperada del servidor' };
         }),
         catchError((error: any) => {
-          console.error('🔐 ❌ Error validando código 2FA:', error);
+          if (error.error) {
+            const errorMessage = error.error.message || '';
+            const errorCode = error.error.code || '';
+            
+            if (errorCode === 'CODIGO_2FA_INVALIDO') {
+              if (errorMessage.includes('Google Authenticator')) {
+                error.errorType = 'GOOGLE_AUTH';
+                error.userMessage = 'Código de Google Authenticator incorrecto. Verifica el código de 6 dígitos en tu aplicación.';
+              } else if (errorMessage.includes('email')) {
+                error.errorType = 'EMAIL';
+                error.userMessage = 'Código de email incorrecto. Revisa tu correo e ingresa el código correcto.';
+              } else {
+                error.userMessage = 'Código de verificación incorrecto';
+              }
+            } else if (errorCode === '2FA_METHOD_INCORRECT') {
+              error.errorType = 'METHOD_INCORRECT';
+              if (errorMessage.includes('Google Authenticator')) {
+                error.userMessage = 'Tu método activo es Google Authenticator. Usa el código de tu aplicación, no el código de email.';
+              } else if (errorMessage.includes('email')) {
+                error.userMessage = 'Tu método activo es Email. Solicita un código por correo, no uses Google Authenticator.';
+              } else {
+                error.userMessage = errorMessage;
+              }
+            } else if (errorCode === 'TOKEN_INVALIDO') {
+              error.userMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+            } else if (errorMessage) {
+              error.userMessage = errorMessage;
+            }
+          }
+          
           return throwError(() => error);
         })
       );
   }
 
-  // 5. Enviar código por email (respaldo)
   sendEmailCode(): Observable<EmailCodeResponse> {
     const currentUser = this.twoFAUserSubject.value;
     if (!currentUser) {
@@ -446,23 +459,36 @@ export class AuthService {
     const request = { usuario: currentUser };
 
     return this.http.post<EmailCodeResponse>(`${this.apiUrl}/auth/send-email-code`, request, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: {'Content-Type': 'application/json'}
     }).pipe(
         catchError((error: any) => {
-          console.error('Error enviando código por email:', error);
+          const errorCode = error.error?.code || '';
+          const errorMessage = error.error?.message || '';
           
-          // Mejorar el mensaje de error según el código de respuesta
-          if (error.error?.code === '2FA_DISABLED') {
-            error.error.message = 'La doble autenticación no está habilitada para este usuario.';
-          } else if (error.error?.code === 'EMAIL_NOT_CONFIGURED') {
-            error.error.message = 'El correo electrónico no está configurado correctamente. Contacta al administrador.';
-          } else if (error.status === 400 && !error.error?.message) {
-            error.error = {
-              code: 'EMAIL_SEND_ERROR',
-              message: 'No se pudo enviar el código por correo. Verifica tu configuración de correo o contacta al administrador.'
-            };
+          if (errorCode === '2FA_METHOD_INCORRECT') {
+            error.errorType = 'METHOD_INCORRECT';
+            error.userMessage = 'Tu método activo es Google Authenticator. Usa el código de tu aplicación, no solicites código por email.';
+            error.correctMethod = 'GOOGLE_AUTH';
+          } else if (errorCode === 'CODIGO_EXISTENTE') {
+            error.errorType = 'CODE_EXISTS';
+            error.userMessage = errorMessage || 'Ya existe un código válido. Revisa tu correo o espera a que expire.';
+            error.rateLimited = true;
+          } else if (errorCode === 'LIMITE_EXCEDIDO') {
+            error.errorType = 'RATE_LIMITED';
+            error.userMessage = errorMessage || 'Has excedido el límite de intentos. Por favor, intenta más tarde.';
+            error.rateLimited = true;
+          } else if (errorCode === '2FA_DISABLED') {
+            error.userMessage = 'La autenticación de dos factores no está habilitada para este usuario.';
+          } else if (errorCode === 'EMAIL_NOT_CONFIGURED') {
+            error.userMessage = 'El correo electrónico no está configurado. Contacta al administrador.';
+          } else if (error.status === 400 && !errorMessage) {
+            error.userMessage = 'No se pudo enviar el código por correo. Verifica tu configuración.';
+          } else if (error.status === 429) {
+            error.errorType = 'RATE_LIMITED';
+            error.userMessage = errorMessage || 'Demasiados intentos. Por favor, espera unos minutos.';
+            error.rateLimited = true;
+          } else {
+            error.userMessage = errorMessage || 'Error enviando código por email';
           }
           
           return throwError(() => error);
@@ -470,9 +496,6 @@ export class AuthService {
       );
   }
 
-  // ==================== GESTIÓN DE GOOGLE AUTHENTICATOR ====================
-
-  // Configurar Google Authenticator (primera vez)
   setupGoogleAuthenticator(): Observable<GoogleAuthSetupResponse> {
     const currentUser = this.twoFAUserSubject.value;
 
@@ -487,14 +510,10 @@ export class AuthService {
         'Content-Type': 'application/json'
       }
     }).pipe(
-      catchError((error: any) => {
-        console.error('Error configurando Google Authenticator:', error);
-        return throwError(() => error);
-      })
+      catchError((error: any) => throwError(() => error))
     );
   }
 
-  // Confirmar configuración de Google Authenticator
   confirmGoogleAuthenticator(codigo: string, secret: string): Observable<GoogleAuthConfirmResponse> {
     const currentUser = this.twoFAUserSubject.value;
 
@@ -509,23 +528,30 @@ export class AuthService {
     };
 
     return this.http.post<GoogleAuthConfirmResponse>(`${this.apiUrl}/auth/confirm-google-auth`, request, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: {'Content-Type': 'application/json'}
     }).pipe(
       map((response: GoogleAuthConfirmResponse) => {
-        // Actualizar estado después de confirmar
         this.check2FAStatus().subscribe();
         return response;
       }),
       catchError((error: any) => {
-        console.error('Error confirmando Google Authenticator:', error);
+        const errorCode = error.error?.code || '';
+        const errorMessage = error.error?.message || '';
+        
+        if (errorCode === '2FA_METHOD_INCORRECT') {
+          error.errorType = 'METHOD_INCORRECT';
+          error.userMessage = 'Google Authenticator no está configurado como tu método activo. Cambia tu método 2FA primero.';
+        } else if (errorCode === 'CODIGO_INVALIDO') {
+          error.userMessage = 'Código de Google Authenticator incorrecto. Verifica el código de 6 dígitos en tu aplicación.';
+        } else {
+          error.userMessage = errorMessage || 'Error confirmando Google Authenticator';
+        }
+        
         return throwError(() => error);
       })
     );
   }
 
-  // Desvincular Google Authenticator
   unlinkGoogleAuthenticator(password: string): Observable<UnlinkGoogleAuthResponse> {
     const currentUser = this.twoFAUserSubject.value;
 
@@ -547,36 +573,24 @@ export class AuthService {
         this.check2FAStatus().subscribe();
         return response;
       }),
-      catchError((error: any) => {
-        console.error('Error desvinculando Google Authenticator:', error);
-        return throwError(() => error);
-      })
+      catchError((error: any) => throwError(() => error))
     );
   }
 
-  // ==================== UTILIDADES ====================
-
-  // Limpiar estado de 2FA
   clear2FAState(): void {
     this.twoFARequiredSubject.next(false);
     this.twoFAUserSubject.next('');
     this.twoFAStateSubject.next(null);
   }
 
-  // Limpiar tempToken solo cuando sea necesario (ej: logout)
   clearTempTokenOnly(): void {
     this.clearTempToken();
   }
 
-  // Obtener estado actual de 2FA
   getCurrent2FAState(): TwoFAState | null {
     return this.twoFAStateSubject.value;
   }
 
-
-  // ==================== MÉTODOS ADICIONALES PARA GESTIÓN ====================
-
-  // Obtener estadísticas de login
   getLoginStats(): Observable<{ message: string }> {
     const tempToken = this.getTempToken();
     if (!tempToken) {
@@ -588,36 +602,10 @@ export class AuthService {
         'Authorization': `Bearer ${tempToken}`
       }
     }).pipe(
-      catchError((error: any) => {
-        console.error('Error obteniendo estadísticas de login:', error);
-        return throwError(() => error);
-      })
+      catchError((error: any) => throwError(() => error))
     );
   }
 
-  // Deshabilitar doble autenticación
-  disable2FA(password: string): Observable<{ message: string }> {
-    const tempToken = this.getTempToken();
-    if (!tempToken) {
-      return throwError(() => new Error('Token temporal no encontrado'));
-    }
-
-    const request = { password: password };
-
-    return this.http.post<{ message: string }>(`${this.apiUrl}/auth/disable-2fa`, request, {
-      headers: {
-        'Authorization': `Bearer ${tempToken}`,
-        'Content-Type': 'application/json'
-      }
-    }).pipe(
-      catchError((error: any) => {
-        console.error('Error deshabilitando 2FA:', error);
-        return throwError(() => error);
-      })
-    );
-  }
-
-  // Desbloquear usuario
   unlockUser(): Observable<{ message: string }> {
     const tempToken = this.getTempToken();
     if (!tempToken) {
@@ -629,16 +617,10 @@ export class AuthService {
         'Authorization': `Bearer ${tempToken}`
       }
     }).pipe(
-      catchError((error: any) => {
-        console.error('Error desbloqueando usuario:', error);
-        return throwError(() => error);
-      })
+      catchError((error: any) => throwError(() => error))
     );
   }
 
-  // ==================== ADMINISTRACIÓN DE USUARIOS ====================
-
-  // Eliminar QR de un usuario (para administradores)
   removeUserQR(usuario: string, password: string): Observable<{ message: string }> {
     const token = this.getToken();
     if (!token) {
@@ -656,14 +638,10 @@ export class AuthService {
         'Content-Type': 'application/json'
       }
     }).pipe(
-      catchError((error: any) => {
-        console.error('Error eliminando QR del usuario:', error);
-        return throwError(() => error);
-      })
+      catchError((error: any) => throwError(() => error))
     );
   }
 
-  // Cambiar método de 2FA de un usuario (para administradores) - actualizado
   change2FAMethod(idUsuario: number, nuevoMetodo: 'EMAIL' | 'GOOGLE_AUTH'): Observable<Change2FAMethodResponse> {
     const token = this.getToken();
     if (!token) {
@@ -681,26 +659,28 @@ export class AuthService {
         'Content-Type': 'application/json'
       }
     }).pipe(
-      catchError((error: any) => {
-        console.error('Error cambiando método 2FA:', error);
-        return throwError(() => error);
-      })
+      map((response: Change2FAMethodResponse) => {
+        // Si el método cambió exitosamente, actualizar el usuario actual
+        if (this.currentUser) {
+          this.currentUser.tokenQr = nuevoMetodo === 'GOOGLE_AUTH';
+          this.currentUser.tokenCorreo = nuevoMetodo === 'EMAIL';
+          this.currentUser.dobleAutenticacion = nuevoMetodo;
+          this.currentUserSubject.next(this.currentUser);
+          localStorage.setItem('current_user_data', JSON.stringify(this.currentUser));
+        }
+        return response;
+      }),
+      catchError((error: any) => throwError(() => error))
     );
   }
 
-  // ==================== REGISTRO DE USUARIOS ====================
-
-  // Registrar nuevo usuario
   register(body: RegisterRequest): Observable<RegisterResponse> {
     return this.http.post<RegisterResponse>(`${this.apiUrl}/auth/register`, body, {
       headers: {
         'Content-Type': 'application/json'
       }
     }).pipe(
-      catchError((error: any) => {
-        console.error('Error registrando usuario:', error);
-        return throwError(() => error);
-      })
+      catchError((error: any) => throwError(() => error))
     );
   }
 }

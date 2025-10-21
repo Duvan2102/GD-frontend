@@ -16,7 +16,7 @@ describe('TwoFAManagementComponent', () => {
     const authServiceSpy = jasmine.createSpyObj('AuthService', [
       'getCurrentUser',
       'getLoginStats',
-      'disable2FA',
+      'change2FAMethod',
       'unlockUser'
     ]);
     const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
@@ -35,11 +35,12 @@ describe('TwoFAManagementComponent', () => {
     mockAuthService = TestBed.inject(AuthService) as jasmine.SpyObj<AuthService>;
     mockRouter = TestBed.inject(Router) as jasmine.SpyObj<Router>;
 
-    // Configurar valores por defecto para los mocks
     mockAuthService.getCurrentUser.and.returnValue(of({
       idUsuario: 1,
       usuario: 'test.user',
-      dobleAutenticacion: false
+      dobleAutenticacion: 'GOOGLE_AUTH',
+      tokenQr: true,
+      tokenCorreo: false
     }));
     mockAuthService.getLoginStats.and.returnValue(of({ message: 'Intentos: 0/5' }));
   });
@@ -61,24 +62,24 @@ describe('TwoFAManagementComponent', () => {
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/google-auth-setup']);
   });
 
-  it('should disable 2FA successfully', () => {
-    mockAuthService.disable2FA.and.returnValue(of({ message: '2FA disabled' }));
-    component.disableForm.patchValue({ password: 'test123' });
+  it('should change 2FA method to EMAIL successfully', () => {
+    mockAuthService.change2FAMethod.and.returnValue(of({ message: 'Método cambiado a EMAIL' }));
+    component.currentUser = { idUsuario: 1, tokenQr: true, tokenCorreo: false };
 
-    component.onDisable2FA();
+    component.onChangeToEmail();
 
-    expect(mockAuthService.disable2FA).toHaveBeenCalledWith('test123');
-    expect(component.successMessage).toBe('2FA disabled');
+    expect(mockAuthService.change2FAMethod).toHaveBeenCalledWith(1, 'EMAIL');
+    expect(component.successMessage).toContain('EMAIL');
   });
 
-  it('should handle disable 2FA error', () => {
-    const error = { error: { code: 'PASSWORD_INCORRECT', message: 'Wrong password' } };
-    mockAuthService.disable2FA.and.returnValue(throwError(() => error));
-    component.disableForm.patchValue({ password: 'wrong' });
+  it('should change 2FA method to GOOGLE_AUTH successfully', () => {
+    mockAuthService.change2FAMethod.and.returnValue(of({ message: 'Método cambiado a GOOGLE_AUTH' }));
+    component.currentUser = { idUsuario: 1, tokenQr: false, tokenCorreo: true };
 
-    component.onDisable2FA();
+    component.onChangeToGoogleAuth();
 
-    expect(component.errorMessage).toBe('Contraseña incorrecta');
+    expect(mockAuthService.change2FAMethod).toHaveBeenCalledWith(1, 'GOOGLE_AUTH');
+    expect(component.successMessage).toContain('GOOGLE_AUTH');
   });
 
   it('should unlock user successfully', () => {
@@ -105,32 +106,18 @@ describe('TwoFAManagementComponent', () => {
     expect(mockAuthService.getLoginStats).toHaveBeenCalledTimes(2); // Once in init, once in refresh
   });
 
-  it('should validate form fields', () => {
-    const passwordControl = component.disableForm.get('password');
-
-    // Test required validation
-    passwordControl?.setValue('');
-    expect(passwordControl?.hasError('required')).toBeTruthy();
-
-    // Test minlength validation
-    passwordControl?.setValue('123');
-    expect(passwordControl?.hasError('minlength')).toBeTruthy();
-
-    // Test valid value
-    passwordControl?.setValue('1234');
-    expect(passwordControl?.valid).toBeTruthy();
+  it('should detect Google Authenticator as current method', () => {
+    component.currentUser = { dobleAutenticacion: 'GOOGLE_AUTH', tokenQr: true, tokenCorreo: false };
+    expect(component.isGoogleAuth).toBeTrue();
+    expect(component.isEmail).toBeFalse();
+    expect(component.currentMethodText).toBe('Google Authenticator');
   });
 
-  it('should check 2FA status correctly', () => {
-    component.currentUser = { dobleAutenticacion: true };
-    expect(component.is2FAEnabled()).toBeTrue();
-    expect(component.get2FAStatusText()).toBe('Habilitado');
-    expect(component.get2FAStatusClass()).toBe('status-enabled');
-
-    component.currentUser = { dobleAutenticacion: false };
-    expect(component.is2FAEnabled()).toBeFalse();
-    expect(component.get2FAStatusText()).toBe('Deshabilitado');
-    expect(component.get2FAStatusClass()).toBe('status-disabled');
+  it('should detect Email as current method', () => {
+    component.currentUser = { dobleAutenticacion: 'EMAIL', tokenQr: false, tokenCorreo: true };
+    expect(component.isEmail).toBeTrue();
+    expect(component.isGoogleAuth).toBeFalse();
+    expect(component.currentMethodText).toBe('Código por Email');
   });
 });
 
