@@ -754,7 +754,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
     const estadoCompleto = this.isEditMode
       ? (this.user?.estado || { idEstado: 5, descripcion: 'ACTIVO' })
-      : { idEstado: 1, descripcion: 'PENDIENTE' };
+      : { idEstado: 5, descripcion: 'ACTIVO' };
 
     this.pendingUserData = {
       identificacion: formValue.identificacion,

@@ -470,6 +470,7 @@ export interface RegisterResponse {
 }
 
 export interface RegisterErrorResponse {
+  details: boolean;
   code: 'USUARIO_EXISTE' | 'IDENTIFICACION_EXISTE' | 'CORREO_EXISTE';
   message: string;
 }

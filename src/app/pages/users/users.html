@@ -88,8 +88,9 @@
                   <!-- Perfil y acciones desplegables -->
                   <div><b>Perfil</b><br> Funcionario</div>
                   <div class="acciones-usuario">
-                    <a href="#" *ngIf="u.activo && !(u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE')" (click)="abrirConfirmModal('inactivar', u); $event.preventDefault()"> ㊀ Inactivar usuario</a>
-                    <a href="#" *ngIf="!u.activo || (u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE')" (click)="abrirConfirmModal('activar', u); $event.preventDefault()"> 🗹 Activar usuario</a>
+                    <!-- Botones de activar/inactivar solo si NO está en estado PENDIENTE -->
+                    <a href="#" *ngIf="u.activo && u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() !== 'PENDIENTE'" (click)="abrirConfirmModal('inactivar', u); $event.preventDefault()"> ㊀ Inactivar usuario</a>
+                    <a href="#" *ngIf="!u.activo && u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() !== 'PENDIENTE'" (click)="abrirConfirmModal('activar', u); $event.preventDefault()"> 🗹 Activar usuario</a>
                     <a href="#" (click)="accion('editar', u, $event); $event.preventDefault()"> ✎ Editar usuario</a>
                     <a href="#" (click)="accion('cambiarContraseña', u, $event); $event.preventDefault()"> ⚷ Cambiar contraseña</a>
                     <a href="#" (click)="accion('cambiar2FA', u, $event); $event.preventDefault()"> ⚠ Cambiar método 2FA</a>
