@@ -17,6 +17,7 @@ export class ProfileModal implements OnChanges {
   @Input() user: UsuarioData | null = null;
   @Output() close = new EventEmitter<void>();
   @Output() save = new EventEmitter<UsuarioData>();
+  @Output() showAlert = new EventEmitter<{type: 'success' | 'danger' | 'info' | 'warning', title: string, message: string}>();
 
   editedUser: UsuarioData | null = null;
   isLoading = false;
@@ -51,8 +52,14 @@ export class ProfileModal implements OnChanges {
   onSave(): void {
     if (!this.editedUser) return;
 
-    if (!this.isFormValid()) {
-      this.errorMessage = 'Por favor complete todos los campos requeridos correctamente.';
+    const validationResult = this.validateForm();
+    if (!validationResult.isValid) {
+      // Emitir alerta externa en lugar de mostrar mensaje interno
+      this.showAlert.emit({
+        type: 'warning',
+        title: 'Error de validación',
+        message: validationResult.errorMessage
+      });
       return;
     }
 
@@ -88,15 +95,40 @@ export class ProfileModal implements OnChanges {
         this.isLoading = false;
         
         if (response && (response.success === true || (response as any).idUsuario)) {
-          this.mostrarModalSuccess('Usuario registrado correctamente. Quedará pendiente de activación por el administrador.');
-          this.save.emit(this.editedUser!);
+          // Emitir alerta externa de éxito
+          this.showAlert.emit({
+            type: 'success',
+            title: '¡Éxito!',
+            message: 'Perfil actualizado correctamente'
+          });
+          
+          // Emitir los datos limpios actualizados
+          const cleanedData = this.cleanUserData(this.editedUser!);
+          this.save.emit(cleanedData);
+          
+          // Cerrar el modal después de un breve delay
+          setTimeout(() => {
+            this.onClose();
+          }, 500);
         } else {
-          this.errorMessage = response?.message || 'Error al registrar el usuario.';
+          // Emitir alerta externa de error
+          this.showAlert.emit({
+            type: 'danger',
+            title: 'Error',
+            message: response?.message || 'Error al actualizar el perfil.'
+          });
         }
       },
       error: (error) => {
         this.isLoading = false;
-        this.errorMessage = 'Error al registrar el usuario. Inténtelo de nuevo.';
+        
+        // Emitir alerta externa de error
+        this.showAlert.emit({
+          type: 'danger',
+          title: 'Error',
+          message: 'Error al actualizar el perfil. Inténtelo de nuevo.'
+        });
+        console.error('Error actualizando usuario:', error);
       }
     });
   }
@@ -129,28 +161,63 @@ export class ProfileModal implements OnChanges {
   }
 
   private isFormValid(): boolean {
-    if (!this.editedUser) return false;
+    return this.validateForm().isValid;
+  }
+
+  private validateForm(): { isValid: boolean, errorMessage: string } {
+    if (!this.editedUser) {
+      return { isValid: false, errorMessage: 'No hay datos de usuario para validar.' };
+    }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     
+    // Validar correo personal
     if (this.editedUser.correoPersonal && this.editedUser.correoPersonal.trim() !== '' && !emailRegex.test(this.editedUser.correoPersonal)) {
-      return false;
+      return { isValid: false, errorMessage: 'El formato del correo personal es inválido. Por favor, ingrese un correo válido.' };
     }
     
+    // Validar teléfono móvil (telefono1)
     if (this.editedUser.telefono1 && this.editedUser.telefono1.trim() !== '') {
       const phoneRegex = /^\d{7,}$/;
-      if (!phoneRegex.test(this.editedUser.telefono1.replace(/\s/g, ''))) {
-        return false;
+      const cleanPhone = this.editedUser.telefono1.replace(/\s/g, '');
+      
+      if (!/^\d+$/.test(cleanPhone)) {
+        return { isValid: false, errorMessage: 'El teléfono móvil solo debe contener números.' };
+      }
+      
+      if (!phoneRegex.test(cleanPhone)) {
+        return { isValid: false, errorMessage: 'El teléfono móvil debe tener al menos 7 dígitos.' };
       }
     }
     
+    // Validar teléfono (telefono2)
     if (this.editedUser.telefono2 && this.editedUser.telefono2.trim() !== '') {
       const phoneRegex = /^\d{7,}$/;
-      if (!phoneRegex.test(this.editedUser.telefono2.replace(/\s/g, ''))) {
-        return false;
+      const cleanPhone = this.editedUser.telefono2.replace(/\s/g, '');
+      
+      if (!/^\d+$/.test(cleanPhone)) {
+        return { isValid: false, errorMessage: 'El teléfono solo debe contener números.' };
+      }
+      
+      if (!phoneRegex.test(cleanPhone)) {
+        return { isValid: false, errorMessage: 'El teléfono debe tener al menos 7 dígitos.' };
       }
     }
     
+    return { isValid: true, errorMessage: '' };
+  }
+
+  onlyNumbers(event: KeyboardEvent): boolean {
+    const charCode = event.which ? event.which : event.keyCode;
+    // Permitir: backspace, delete, tab, escape, enter
+    if ([8, 9, 27, 13, 46].indexOf(charCode) !== -1) {
+      return true;
+    }
+    // Permitir solo números (0-9)
+    if (charCode < 48 || charCode > 57) {
+      event.preventDefault();
+      return false;
+    }
     return true;
   }
 }

@@ -13,13 +13,15 @@
         <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
 
           <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show mb-3" role="alert">
-            <i class="fas fa-check-circle me-2"></i>
-            <strong>¡Éxito!</strong> {{ successMessage }}
+            <i class="fas fa-check-circle"></i>
+            <span><strong>¡Éxito!</strong> {{ successMessage }}</span>
+            <button type="button" class="btn-close" (click)="clearSuccessMessage()" aria-label="Cerrar">×</button>
           </div>
 
           <div *ngIf="apiError" class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <strong>Error:</strong> {{ apiError }}
+            <i class="fas fa-exclamation-triangle"></i>
+            <span><strong>Error:</strong> {{ apiError }}</span>
+            <button type="button" class="btn-close" (click)="clearErrorMessage()" aria-label="Cerrar">×</button>
           </div>
 
           <div class="row mb-3">
@@ -29,16 +31,16 @@
                 id="identificacion"
                 type="text" 
                 class="form-control" 
-                formControlName="identificacion"
+                formControlName="identification"
                 placeholder=" 12345678"
-                [class.is-invalid]="form.get('identificacion')?.invalid && form.get('identificacion')?.touched"
+                [class.is-invalid]="form.get('identification')?.invalid && form.get('identification')?.touched"
                 aria-describedby="identificacion-error"
-                aria-invalid="form.get('identificacion')?.invalid">
+                aria-invalid="form.get('identification')?.invalid">
               <div 
-                *ngIf="getErrorMessage('identificacion')" 
+                *ngIf="getErrorMessage('identification')" 
                 id="identificacion-error"
                 class="invalid-feedback">
-                {{ getErrorMessage('identificacion') }}
+                {{ getErrorMessage('identification') }}
               </div>
             </div>
             <div class="col-md-4">
@@ -80,7 +82,7 @@
           </div>
 
           <div class="row mb-3">
-            <div class="col-md-6">
+            <div class="col-md-12">
               <label class="form-label" for="usuario">Usuario</label>
               <input 
                 id="usuario"
@@ -90,104 +92,6 @@
                 readonly
                 style="background-color: #f8f9fa; cursor: not-allowed;"
                 placeholder="Se genera automáticamente">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Cargo <span class="text-danger">*</span></label>
-
-              <!-- Dropdown jerárquico personalizado -->
-              <div class="hierarchical-dropdown" [class.is-invalid]="form.get('cargo')?.invalid && (form.get('cargo')?.touched || form.get('cargo')?.dirty)">
-                <div class="dropdown-display"
-                     (click)="toggleDropdown()"
-                     [class.open]="isDropdownOpen">
-                  <span class="selected-text">{{ selectedCargoText }}</span>
-                  <i class="fas fa-chevron-down dropdown-arrow" [class.rotated]="isDropdownOpen"></i>
-                </div>
-
-                <!-- Panel desplegable -->
-                <div class="dropdown-panel" *ngIf="isDropdownOpen">
-                  <div class="dropdown-content"
-                       (click)="$event.stopPropagation()"
-                       style="position: relative; z-index: 1075;">
-
-                    <div *ngIf="isDataLoaded === false" class="text-center p-3">
-                      <i class="fas fa-spinner fa-spin"></i> Cargando...
-                    </div>
-
-                    <div *ngFor="let departamento of hierarchicalData.departamentos; trackBy: trackByDepartamento"
-                         class="dropdown-item"
-                         [attr.data-dept-id]="departamento.idDepartamento"
-                         style="position: relative;">
-                      <div class="department-header"
-                           (click)="toggleDepartment(departamento, $event)"
-                           (mousedown)="$event.stopPropagation()"
-                           [attr.title]="'Departamento: ' + departamento.descripcion"
-                           style="cursor: pointer; padding: 8px; user-select: none; position: relative; z-index: 10;">
-                        <i class="fas"
-                           [class.fa-chevron-down]="departamento.expanded"
-                           [class.fa-chevron-right]="!departamento.expanded"
-                           style="pointer-events: none;"></i>
-                        <span class="department-name" style="pointer-events: none;">{{ departamento.descripcion }}</span>
-                        <small class="text-muted ms-2" style="pointer-events: none;">({{ departamento.areas?.length || 0 }} áreas)</small>
-                      </div>
-
-                      <div *ngIf="departamento.expanded && departamento.areas && departamento.areas.length > 0"
-                           class="areas-container"
-                           style="position: relative;">
-                        <div *ngFor="let area of departamento.areas; trackBy: trackByArea"
-                             class="dropdown-item area-item"
-                             [attr.data-area-id]="area.idArea"
-                             style="position: relative;">
-                          <div class="area-header"
-                               (click)="toggleArea(area, $event)"
-                               (mousedown)="$event.stopPropagation()"
-                               [attr.title]="'Área: ' + area.descripcion"
-                               style="cursor: pointer; padding: 8px 8px 8px 24px; user-select: none; position: relative; z-index: 10;">
-                            <i class="fas"
-                               [class.fa-chevron-down]="area.expanded"
-                               [class.fa-chevron-right]="!area.expanded"
-                               style="pointer-events: none;"></i>
-                            <span class="area-name" style="pointer-events: none;">{{ area.descripcion }}</span>
-                            <small class="text-muted ms-2" style="pointer-events: none;">({{ area.cargos?.length || 0 }} cargos)</small>
-                          </div>
-
-                          <div *ngIf="area.expanded && area.cargos && area.cargos.length > 0"
-                               class="cargos-container"
-                               style="position: relative;">
-                            <div *ngFor="let cargo of area.cargos; trackBy: trackByCargo"
-                                 class="dropdown-item cargo-item"
-                                 [attr.data-cargo-id]="cargo.idCargo"
-                                 (click)="selectCargo(cargo, $event)"
-                                 (mousedown)="$event.stopPropagation()"
-                                 style="cursor: pointer; padding: 8px 8px 8px 40px; user-select: none; position: relative; z-index: 10;">
-                              <span class="cargo-bullet" style="pointer-events: none;">•</span>
-                              <span class="cargo-name" style="pointer-events: none;">{{ cargo.descripcion }}</span>
-                            </div>
-                          </div>
-
-                          <div *ngIf="area.expanded && (!area.cargos || area.cargos.length === 0)"
-                               class="no-cargos-message">
-                            <span class="text-muted ps-4">No hay cargos disponibles en esta área</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div *ngIf="departamento.expanded && (!departamento.areas || departamento.areas.length === 0)"
-                           class="no-areas-message">
-                        <span class="text-muted ps-4">No hay áreas disponibles en este departamento</span>
-                      </div>
-                    </div>
-
-                    <div *ngIf="isDataLoaded && (!hierarchicalData.departamentos || hierarchicalData.departamentos.length === 0)"
-                         class="no-data-message">
-                      No hay departamentos disponibles
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div *ngIf="getErrorMessage('cargo') && (form.get('cargo')?.touched || form.get('cargo')?.dirty)" class="invalid-feedback d-block">
-                {{ getErrorMessage('cargo') }}
-              </div>
             </div>
           </div>
 
@@ -276,16 +180,16 @@
                 id="direccion"
                 type="text" 
                 class="form-control" 
-                formControlName="direccion"
+                formControlName="direction"
                 placeholder=" Calle 123 #45-67, Bogotá"
-                [class.is-invalid]="form.get('direccion')?.invalid && form.get('direccion')?.touched"
+                [class.is-invalid]="form.get('direction')?.invalid && form.get('direction')?.touched"
                 aria-describedby="direccion-error"
-                aria-invalid="form.get('direccion')?.invalid">
+                aria-invalid="form.get('direction')?.invalid">
               <div 
-                *ngIf="getErrorMessage('direccion')" 
+                *ngIf="getErrorMessage('direction')" 
                 id="direccion-error"
                 class="invalid-feedback">
-                {{ getErrorMessage('direccion') }}
+                {{ getErrorMessage('direction') }}
               </div>
             </div>
           </div>

@@ -3,10 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { RegisterRequest, RegisterResponse, RegisterErrorResponse } from '../../interfaces/common.interfaces';
-import { PositionService, Position } from '../../services/positions.service';
-import { DepartmentService, Department } from '../../services/department.service';
-import { AreaService, Area } from '../../services/area.service';
-import { forkJoin, Subject, takeUntil } from 'rxjs';
+import { Subject } from 'rxjs';
 
 @Component({
   selector: 'app-user-form-register',
@@ -28,28 +25,18 @@ export class UserFormRegister implements OnInit, OnDestroy {
   apiError?: string;
   successMessage = '';
 
-  // Datos para selección de cargo
-  cargosDisponibles: Position[] = [];
-  departamentos: Department[] = [];
-  areas: Area[] = [];
-  hierarchicalData: any = { departamentos: [] };
-  isDropdownOpen = false;
-  selectedCargoInfo: Position | null = null;
-  isDataLoaded = false;
+  // Ya no se necesitan datos para selección de cargo
   private destroy$ = new Subject<void>();
 
   constructor(
     private fb: FormBuilder, 
     private authService: AuthService, 
-    private cdr: ChangeDetectorRef,
-    private positionService: PositionService,
-    private departmentService: DepartmentService,
-    private areaService: AreaService
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.form = this.fb.group({
-      identificacion: ['', [Validators.required]],
+      identification: ['', [Validators.required]],
       nombres: ['', [Validators.required]],
       apellidos: ['', [Validators.required]],
       usuario: [{value: '', disabled: true}],
@@ -57,8 +44,7 @@ export class UserFormRegister implements OnInit, OnDestroy {
       correoPersonal: ['', [Validators.email]],
       telefono1: ['', [Validators.required, Validators.pattern(/^[\d\s\+]+$/)]],
       telefono2: ['', [Validators.pattern(/^[\d\s\+]+$/)]],
-      direccion: [''],
-      cargo: ['', Validators.required]
+      direccion: ['']
     });
 
     this.form.get('nombres')?.valueChanges.subscribe(() => {
@@ -68,7 +54,7 @@ export class UserFormRegister implements OnInit, OnDestroy {
       this.generateUsuario();
     });
 
-    this.loadHierarchicalData();
+    // Ya no se cargan datos jerárquicos para cargo
   }
 
   ngOnDestroy(): void {
@@ -76,160 +62,7 @@ export class UserFormRegister implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private loadHierarchicalData(): void {
-    this.loading = true;
-
-    forkJoin({
-      departamentos: this.departmentService.getAll(),
-      areas: this.areaService.getAll(),
-      cargos: this.positionService.getAll()
-    }).pipe(
-      takeUntil(this.destroy$)
-    ).subscribe({
-      next: (data) => {
-        this.departamentos = data.departamentos || [];
-        this.areas = data.areas || [];
-        this.cargosDisponibles = data.cargos || [];
-
-        this.buildHierarchicalStructureComplete();
-        this.loading = false;
-        this.isDataLoaded = true;
-      },
-      error: (error) => {
-        console.error('Error cargando datos jerárquicos:', error);
-        this.loading = false;
-        this.isDataLoaded = true;
-      }
-    });
-  }
-
-  private buildHierarchicalStructureComplete(): void {
-    this.hierarchicalData = { departamentos: [] };
-
-    const departamentosMap = new Map();
-    this.departamentos.forEach(dept => {
-      departamentosMap.set(dept.idDepartamento, {
-        idDepartamento: dept.idDepartamento,
-        descripcion: dept.descripcion,
-        areas: [],
-        expanded: false
-      });
-    });
-
-    const areasMap = new Map();
-    this.areas.forEach(area => {
-      if (area.departamento && area.departamento.idDepartamento) {
-        const areaKey = `${area.departamento.idDepartamento}-${area.idArea}`;
-        const areaObj = {
-          idArea: area.idArea,
-          descripcion: area.descripcion,
-          departamentoId: area.departamento.idDepartamento,
-          cargos: [],
-          expanded: false
-        };
-        areasMap.set(areaKey, areaObj);
-
-        const departamento = departamentosMap.get(area.departamento.idDepartamento);
-        if (departamento) {
-          departamento.areas.push(areaObj);
-        }
-      }
-    });
-
-    this.cargosDisponibles.forEach(cargo => {
-      if (cargo.area && cargo.area.departamento) {
-        const areaKey = `${cargo.area.departamento.idDepartamento}-${cargo.area.idArea}`;
-        const areaObj = areasMap.get(areaKey);
-
-        if (areaObj) {
-          const cargoExists = areaObj.cargos.find((c: any) => c.idCargo === cargo.idCargo);
-          if (!cargoExists) {
-            areaObj.cargos.push({
-              idCargo: cargo.idCargo,
-              descripcion: cargo.descripcion
-            });
-          }
-        }
-      }
-    });
-
-    this.hierarchicalData.departamentos = Array.from(departamentosMap.values())
-      .sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
-
-    this.hierarchicalData.departamentos.forEach((dept: any) => {
-      dept.areas.sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
-      dept.areas.forEach((area: any) => {
-        area.cargos.sort((a: any, b: any) => a.descripcion.localeCompare(b.descripcion));
-      });
-    });
-  }
-
-  toggleDropdown(): void {
-    this.isDropdownOpen = !this.isDropdownOpen;
-  }
-
-  closeDropdown(): void {
-    this.isDropdownOpen = false;
-  }
-
-  toggleDepartment(departamento: any, event?: Event): void {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    departamento.expanded = !departamento.expanded;
-
-    if (!departamento.expanded) {
-      departamento.areas.forEach((area: any) => {
-        area.expanded = false;
-      });
-    }
-  }
-
-  toggleArea(area: any, event?: Event): void {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    area.expanded = !area.expanded;
-  }
-
-  selectCargo(cargo: any, event?: Event): void {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    if (!cargo || !cargo.idCargo) {
-      console.error('Cargo inválido:', cargo);
-      return;
-    }
-
-    this.selectedCargoInfo = cargo;
-    this.form.get('cargo')?.setValue(cargo.idCargo);
-    this.closeDropdown();
-  }
-
-  get selectedCargoText(): string {
-    if (this.selectedCargoInfo) {
-      return this.selectedCargoInfo.descripcion;
-    }
-    return 'Selecciona un cargo';
-  }
-
-  trackByDepartamento(index: number, item: any): any {
-    return item?.idDepartamento || index;
-  }
-
-  trackByArea(index: number, item: any): any {
-    return item?.idArea || index;
-  }
-
-  trackByCargo(index: number, item: any): any {
-    return item?.idCargo || index;
-  }
+  // Métodos relacionados con cargo eliminados
 
   generateUsuario(): void {
     const nombres = this.form.get('nombres')?.value?.trim() || '';
@@ -282,9 +115,7 @@ export class UserFormRegister implements OnInit, OnDestroy {
     if (errors['email']) {
       return 'Ingrese un correo electrónico válido';
     }
-    if (fieldName === 'cargo' && errors['required']) {
-      return 'Debe seleccionar un cargo';
-    }
+    // Validaciones de cargo eliminadas
 
     return '';
   }
@@ -321,14 +152,13 @@ export class UserFormRegister implements OnInit, OnDestroy {
       telefono1: formValue.telefono1,
       telefono2: formValue.telefono2 || '',
       direccion: formValue.direccion || '',
-      cargoId: formValue.cargo,
       dobleAutenticacion: 'GOOGLE_AUTH'
     };
 
     this.authService.register(registerPayload).subscribe({
       next: (res: RegisterResponse) => {
         this.loading = false;
-        this.successMessage = res.message;
+        this.successMessage = res.message || 'Usuario registrado exitosamente';
         
         this.registered.emit({ idUsuario: res.idUsuario });
         
@@ -340,23 +170,52 @@ export class UserFormRegister implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.loading = false;
+        
+        // Manejo detallado de errores similar a user-form-modal
+        let errorMsg = '';
         const errorResponse = err?.error as RegisterErrorResponse;
         const code = errorResponse?.code;
-        const msg = errorResponse?.message || 'Error de conexión. Intenta de nuevo.';
-        this.apiError = msg;
+        
+        if (errorResponse && errorResponse.message) {
+          errorMsg = errorResponse.message;
+        } else if (err.error && typeof err.error === 'string') {
+          errorMsg = err.error;
+        } else if (err.message) {
+          errorMsg = err.message;
+        } else {
+          errorMsg = 'Error de conexión. Intenta de nuevo.';
+        }
 
+        // Si hay detalles adicionales, agregarlos
+        if (errorResponse?.details && Array.isArray(errorResponse.details)) {
+          errorMsg += ':\n• ' + errorResponse.details.join('\n• ');
+        }
+        
+        this.apiError = errorMsg;
+
+        // Establecer errores específicos en campos si aplica
         if (code === 'USUARIO_EXISTE') {
-          this.form.get('usuario')?.setErrors({ server: msg });
+          this.form.get('usuario')?.setErrors({ server: errorMsg });
         } else if (code === 'IDENTIFICACION_EXISTE') {
-          this.form.get('identificacion')?.setErrors({ server: msg });
+          this.form.get('identification')?.setErrors({ server: errorMsg });
         } else if (code === 'CORREO_EXISTE') {
-          this.form.get('correoEmpresarial')?.setErrors({ server: msg });
+          this.form.get('correoEmpresarial')?.setErrors({ server: errorMsg });
         }
 
         this.focusFirstError();
         this.cdr.markForCheck();
       }
     });
+  }
+
+  clearSuccessMessage(): void {
+    this.successMessage = '';
+    this.cdr.markForCheck();
+  }
+
+  clearErrorMessage(): void {
+    this.apiError = undefined;
+    this.cdr.markForCheck();
   }
 
   closeModal(): void {

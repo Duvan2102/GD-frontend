@@ -117,7 +117,7 @@
   color: var(--color-text-primary);
 }
 
-/* Tabla de usuarios */
+/* Users table */
 .usuarios-tabla {
   width: 100%;
   border-collapse: collapse;

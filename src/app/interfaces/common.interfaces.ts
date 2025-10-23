@@ -466,7 +466,7 @@ export interface RegisterRequest {
   telefono1: string;
   telefono2?: string;
   direccion?: string;
-  cargoId: number;
+  cargoId?: number;
   dobleAutenticacion?: 'GOOGLE_AUTH' | 'EMAIL';
 }
 
@@ -476,6 +476,7 @@ export interface RegisterResponse {
 }
 
 export interface RegisterErrorResponse {
+  details: boolean;
   code: 'USUARIO_EXISTE' | 'IDENTIFICACION_EXISTE' | 'CORREO_EXISTE';
   message: string;
 }

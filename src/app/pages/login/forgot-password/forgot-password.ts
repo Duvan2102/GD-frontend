@@ -3,7 +3,6 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { PasswordResetService, RequestPasswordResetResponse } from '../../../services/password-reset.service';
-import { UserValidationService, UserValidationResult } from '../../../services/user-validation.service';
 
 @Component({
   selector: 'app-forgot-password',
@@ -18,15 +17,15 @@ export class ForgotPassword {
   errorMessage = '';
   successMessage = '';
   showSuccessMessage = false;
+  isEmailMode = false; // true para email, false para username
 
   constructor(
     private fb: FormBuilder,
     private passwordResetService: PasswordResetService,
-    private userValidationService: UserValidationService,
     private router: Router
   ) {
     this.userForm = this.fb.group({
-      usuario: ['', [Validators.required, Validators.minLength(3)]]
+      input: ['', [Validators.required, Validators.minLength(3)]]
     });
   }
 
@@ -34,7 +33,12 @@ export class ForgotPassword {
     const field = this.userForm.get(fieldName);
     if (field && field.errors && field.touched) {
       if (field.errors['required']) return 'Este campo es requerido';
-      if (field.errors['minlength']) return 'El nombre de usuario debe tener al menos 3 caracteres';
+      if (field.errors['minlength']) {
+        return this.isEmailMode 
+          ? 'El email debe tener al menos 3 caracteres'
+          : 'El nombre de usuario debe tener al menos 3 caracteres';
+      }
+      if (field.errors['email']) return 'Ingrese un email válido';
     }
     return '';
   }
@@ -47,39 +51,15 @@ export class ForgotPassword {
       this.showSuccessMessage = false;
 
       try {
-        const usuario = this.userForm.value.usuario;
+        const input = this.userForm.value.input;
         
-        // Primero validar si el usuario existe y está activo
-        const validationResult = await this.userValidationService.validateUserByUsername(usuario).toPromise();
-        
-        if (!validationResult) {
-          this.errorMessage = 'Error de conexión. Inténtalo de nuevo.';
-          return;
-        }
-
-        if (!validationResult.exists) {
-          this.errorMessage = validationResult.message || 'El usuario ingresado no está registrado en nuestro sistema.';
-          return;
-        }
-
-        if (!validationResult.isActive) {
-          this.errorMessage = validationResult.message || 'Su cuenta se encuentra inactiva. Por favor, contacte al administrador del sistema.';
-          return;
-        }
-
-        // Si el usuario existe y está activo, obtener su correo empresarial y proceder con el envío
-        const correoEmpresarial = validationResult.user?.correoEmpresarial;
-        
-        if (!correoEmpresarial) {
-          this.errorMessage = 'El usuario no tiene un correo empresarial registrado. Por favor, contacte al administrador del sistema.';
-          return;
-        }
-
-        // Enviar el correo al correo empresarial
-        const response = await this.passwordResetService.requestPasswordReset(correoEmpresarial).toPromise();
+        // Enviar email o username según el modo seleccionado
+        const response = this.isEmailMode 
+          ? await this.passwordResetService.requestPasswordReset(input, undefined).toPromise()
+          : await this.passwordResetService.requestPasswordReset(undefined, input).toPromise();
         
         // Mostrar mensaje de éxito
-        this.successMessage = `Se han enviado las instrucciones para restablecer su contraseña a su correo empresarial (${correoEmpresarial}). Si no recibes el correo en unos minutos, verifica tu carpeta de spam.`;
+        this.successMessage = `Se han enviado las instrucciones para restablecer su contraseña. Si no recibes el correo en unos minutos, verifica tu carpeta de spam.`;
         this.showSuccessMessage = true;
         
         // Limpiar el formulario después del envío exitoso
@@ -109,5 +89,36 @@ export class ForgotPassword {
     this.successMessage = '';
     this.errorMessage = '';
     this.userForm.reset();
+  }
+
+  toggleInputMode() {
+    this.isEmailMode = !this.isEmailMode;
+    this.userForm.reset();
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.showSuccessMessage = false;
+    
+    // Actualizar validaciones según el modo
+    const inputControl = this.userForm.get('input');
+    if (inputControl) {
+      if (this.isEmailMode) {
+        inputControl.setValidators([Validators.required, Validators.email]);
+      } else {
+        inputControl.setValidators([Validators.required, Validators.minLength(3)]);
+      }
+      inputControl.updateValueAndValidity();
+    }
+  }
+
+  getInputLabel(): string {
+    return this.isEmailMode ? 'Correo electrónico' : 'Nombre de usuario';
+  }
+
+  getInputPlaceholder(): string {
+    return this.isEmailMode ? 'Ingrese su correo electrónico' : 'Ingrese su nombre de usuario';
+  }
+
+  getToggleButtonText(): string {
+    return this.isEmailMode ? 'Usar nombre de usuario' : 'Usar correo electrónico';
   }
 }
