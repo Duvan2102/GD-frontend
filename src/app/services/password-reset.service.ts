@@ -4,7 +4,8 @@ import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
 
 export interface RequestPasswordResetRequest {
-  email: string;
+  email?: string;
+  username?: string;
 }
 
 export interface RequestPasswordResetResponse {
@@ -55,10 +56,23 @@ export class PasswordResetService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Solicitar restablecimiento de contraseña por email
+   * Solicitar restablecimiento de contraseña por email o username
+   * 
+   * Ejemplos de uso:
+   * - Por email: requestPasswordReset('usuario@empresa.com')
+   * - Por username: requestPasswordReset(undefined, 'usuario123')
+   * 
+   * Solo se debe proporcionar uno de los dos parámetros
    */
-  requestPasswordReset(email: string): Observable<RequestPasswordResetResponse> {
-    const request: RequestPasswordResetRequest = { email: email };
+  requestPasswordReset(email?: string, username?: string): Observable<RequestPasswordResetResponse> {
+    const request: RequestPasswordResetRequest = {};
+    
+    if (email) {
+      request.email = email;
+    } else if (username) {
+      request.username = username;
+    }
+    
     return this.http.post<RequestPasswordResetResponse>(`${this.API_BASE_URL}/auth/password/request-reset`, request);
   }
 

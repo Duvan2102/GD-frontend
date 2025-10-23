@@ -466,7 +466,7 @@ export interface RegisterRequest {
   telefono1: string;
   telefono2?: string;
   direccion?: string;
-  cargoId: number;
+  cargoId?: number;
   dobleAutenticacion?: 'GOOGLE_AUTH' | 'EMAIL';
 }
 
