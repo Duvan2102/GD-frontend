@@ -382,3 +382,42 @@ footer {
         gap: 10px;
     }
 }
+
+/* --- Estilos para el Toggle Email/Username --- */
+.toggle-container {
+    display: flex;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 20px;
+    border: 1px solid #e9ecef;
+}
+
+.toggle-button {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    background-color: transparent;
+    color: #6c757d;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.toggle-button:hover {
+    background-color: #e9ecef;
+    color: #495057;
+}
+
+.toggle-button.active {
+    background-color: #6c8382;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(108, 131, 130, 0.3);
+}
