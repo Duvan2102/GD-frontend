@@ -47,19 +47,15 @@ export class GoogleAuthSetupComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // Primero verificar el estado de 2FA
     this.authService.check2FAStatus().subscribe({
       next: (statusResponse) => {
-        if (statusResponse.hasGoogleAuth) {
-          // Usuario ya tiene Google Auth configurado, obtener QR existente
+        if (statusResponse.hasGoogleAuth && !statusResponse.googleAuthPending) {
           this.loadExistingQR();
         } else {
-          // Usuario no tiene Google Auth, configurar nuevo
           this.setupNewGoogleAuth();
         }
       },
       error: (error) => {
-        console.error('Error verificando estado 2FA:', error);
         this.handleError(error);
         this.isLoading = false;
       }
@@ -78,7 +74,6 @@ export class GoogleAuthSetupComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       },
       error: (error) => {
-        console.error('Error cargando QR existente:', error);
         this.handleError(error);
         this.isLoading = false;
       }
@@ -94,7 +89,6 @@ export class GoogleAuthSetupComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       },
       error: (error) => {
-        console.error('Error configurando Google Auth:', error);
         this.handleError(error);
         this.isLoading = false;
       }
@@ -111,8 +105,7 @@ export class GoogleAuthSetupComponent implements OnInit, OnDestroy {
       }
     }).then((dataUrl: string) => {
       this.qrCodeDataUrl = dataUrl;
-    }).catch((error: any) => {
-      console.error('Error generando código QR:', error);
+    }).catch(() => {
       this.errorMessage = 'Error generando código QR';
     });
   }
@@ -129,14 +122,11 @@ export class GoogleAuthSetupComponent implements OnInit, OnDestroy {
         next: (response) => {
           this.successMessage = response.message;
           this.isLoading = false;
-
-          // Redirigir después de un breve delay
           setTimeout(() => {
             this.router.navigate(['/']);
           }, 2000);
         },
         error: (error) => {
-          console.error('Error confirmando Google Authenticator:', error);
           this.handleError(error);
           this.isLoading = false;
         }
@@ -153,22 +143,23 @@ export class GoogleAuthSetupComponent implements OnInit, OnDestroy {
   onRegenerateQR(): void {
     this.isLoading = true;
     this.errorMessage = '';
+    this.successMessage = '';
 
-    this.authService.getQRCode().subscribe({
-      next: (qrData) => {
+    this.authService.setupGoogleAuthenticator().subscribe({
+      next: (response) => {
         this.setupData = {
-          qrCodeUrl: qrData.qrCodeUrl,
-          secret: qrData.secret,
-          message: qrData.message
+          qrCodeUrl: response.qrCodeUrl,
+          secret: response.secret,
+          message: response.message
         };
+        this.generateQRCode(response.qrCodeUrl);
         this.isLoading = false;
-        this.successMessage = 'Código QR regenerado exitosamente';
+        this.successMessage = 'Nuevo código QR generado exitosamente. El código anterior ha sido invalidado.';
         setTimeout(() => {
           this.successMessage = '';
-        }, 3000);
+        }, 5000);
       },
       error: (error) => {
-        console.error('Error regenerando QR:', error);
         this.handleError(error);
         this.isLoading = false;
       }
@@ -186,14 +177,11 @@ export class GoogleAuthSetupComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.successMessage = response.message;
         this.isLoading = false;
-
-        // Recargar datos después de desvincular
         setTimeout(() => {
           this.loadSetupData();
         }, 2000);
       },
       error: (error) => {
-        console.error('Error desvinculando Google Auth:', error);
         this.handleError(error);
         this.isLoading = false;
       }
@@ -215,7 +203,6 @@ export class GoogleAuthSetupComponent implements OnInit, OnDestroy {
 
   onDownloadQR(): void {
     if (this.setupData?.qrCodeUrl) {
-      // Crear un enlace temporal para descargar la imagen QR
       const link = document.createElement('a');
       link.href = this.setupData.qrCodeUrl;
       link.download = 'google-auth-qr.png';
@@ -263,20 +250,17 @@ export class GoogleAuthSetupComponent implements OnInit, OnDestroy {
     return '';
   }
 
-  // Auto-avanzar al siguiente campo cuando se completa un dígito
   onKeyUp(event: any): void {
     const input = event.target;
     const value = input.value;
 
     if (value.length === 6) {
-      // Si se completan 6 dígitos, intentar validar automáticamente
       if (this.setupForm.valid) {
         this.onSubmit();
       }
     }
   }
 
-  // Permitir solo números
   onKeyPress(event: any): boolean {
     const charCode = event.which ? event.which : event.keyCode;
     if (charCode > 31 && (charCode < 48 || charCode > 57)) {
@@ -285,4 +269,3 @@ export class GoogleAuthSetupComponent implements OnInit, OnDestroy {
     return true;
   }
 }
-

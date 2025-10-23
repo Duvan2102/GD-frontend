@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
-import { Subject, takeUntil, debounceTime, distinctUntilChanged, forkJoin } from 'rxjs';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged, forkJoin, switchMap } from 'rxjs';
 import { Usuario } from '../../../interfaces/common.interfaces';
 import { UserService } from '../../../services/user.service';
 import { AuthService } from '../../../services/auth.service';
@@ -33,6 +33,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   @Output() save = new EventEmitter<Usuario>();
   @Output() userCreated = new EventEmitter<Usuario>();
   @Output() userUpdated = new EventEmitter<Usuario>();
+  @Output() userRejected = new EventEmitter<Usuario>();
   @Output() navigateToUsers = new EventEmitter<void>();
   @Output() showAlert = new EventEmitter<{type: 'success' | 'danger' | 'info' | 'warning', title: string, message: string}>();
 
@@ -61,6 +62,8 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   modalSuccessBtn = 'Aceptar';
 
   pendingUserData: Usuario | null = null;
+  pendingPassword: string = '';
+  pendingAction: 'save' | 'reject' = 'save';
   isLoading = false;
   errorMessage = '';
   successMessage = '';
@@ -152,7 +155,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     if (this.isEditMode && this.user) {
       let cargoValue = '';
 
-      // Solo asignar cargo si el usuario realmente tiene uno válido
       if (this.user.cargo) {
         if (typeof this.user.cargo === 'number' || !isNaN(Number(this.user.cargo))) {
           cargoValue = this.user.cargo.toString();
@@ -174,8 +176,10 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       }
 
       let perfilActivo = 'funcionarios';
+      
       if (this.user.rol && this.user.rol.descripcion) {
         const rolDesc = this.user.rol.descripcion.toUpperCase();
+        
         if (rolDesc === 'ADMINISTRADOR' || rolDesc === 'ADMIN') {
           perfilActivo = 'administrador';
         } else if (rolDesc === 'AUDITOR' || rolDesc === 'FUNCIONARIO CREADOR') {
@@ -193,30 +197,18 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         }
       }
 
-      // Determinar el método de 2FA actual
-      console.log('=== DEBUG: Valor de dobleAutenticacion del servidor ===');
-      console.log('Valor raw:', this.user.dobleAutenticacion);
-      console.log('Tipo:', typeof this.user.dobleAutenticacion);
-      
       let dobleAutenticacionValue: 'GOOGLE_AUTH' | 'EMAIL' = 'GOOGLE_AUTH';
       
       if (this.user.dobleAutenticacion === 'GOOGLE_AUTH' || this.user.dobleAutenticacion === 'EMAIL') {
-        // Si ya viene como string 'GOOGLE_AUTH' o 'EMAIL', usarlo directamente
         dobleAutenticacionValue = this.user.dobleAutenticacion;
       } else if (typeof this.user.dobleAutenticacion === 'boolean') {
-        // INVERTIDO: Si es boolean: false = GOOGLE_AUTH, true = EMAIL
-        // Esto es porque el servidor parece enviar la lógica inversa
         dobleAutenticacionValue = this.user.dobleAutenticacion ? 'EMAIL' : 'GOOGLE_AUTH';
       } else if (this.user.dobleAutenticacion === null || this.user.dobleAutenticacion === undefined) {
-        // Si es null o undefined, usar GOOGLE_AUTH por defecto
         dobleAutenticacionValue = 'GOOGLE_AUTH';
       }
-      
-      console.log('Valor final asignado:', dobleAutenticacionValue);
-      console.log('=============================================');
 
       this.userForm.patchValue({
-        noUsuario: this.user.idUsuario,
+        noUsuario: this.user.idUsuario || this.user.noUsuario || 0,
         identificacion: this.user.identificacion || '',
         nombres: this.user.nombres || '',
         apellidos: this.user.apellidos || '',
@@ -500,91 +492,218 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     if (this.selectedCargoInfo) {
       return this.selectedCargoInfo.descripcion;
     }
-    return 'Selecciona un cargo';
+    return this.isEditMode ? 'Sin cargo asignado' : 'Selecciona un cargo';
   }
 
   closePasswordModal(): void {
     this.isPasswordModalVisible = false;
     this.pendingUserData = null;
+    this.pendingPassword = '';
   }
 
   handlePasswordValidationError(error: string): void {
   }
 
   handlePasswordValidation(password: string): void {
-    console.log('=== DEBUG: handlePasswordValidation INICIADO ===');
-    console.log('Password recibido:', password ? '***' : 'vacío');
-    console.log('pendingUserData existe:', !!this.pendingUserData);
-    
     if (!password.trim()) {
       alert('La contraseña no puede estar vacía');
       return;
     }
 
-    if (!this.pendingUserData) {
-      console.error('ERROR: pendingUserData es null en handlePasswordValidation');
+    if (!this.pendingUserData && this.pendingAction !== 'reject') {
       this.closePasswordModal();
       return;
     }
 
+    // Guardar el password para usarlo después en la activación o rechazo
+    this.pendingPassword = password;
+    
     this.isPasswordModalVisible = false;
 
-    this.confirmModalMessage = this.isEditMode
-      ? `¿Confirmas la actualización del usuario ${this.pendingUserData.nombres} ${this.pendingUserData.apellidos}?`
-      : `¿Confirmas la creación del usuario ${this.pendingUserData.nombres} ${this.pendingUserData.apellidos}?`;
+    if (this.pendingAction === 'reject') {
+      this.confirmModalMessage = `¿Confirmas el rechazo del usuario ${this.user?.nombres} ${this.user?.apellidos}? El usuario quedará en estado INACTIVO.`;
+    } else {
+      this.confirmModalMessage = this.isEditMode
+        ? `¿Confirmas la actualización del usuario ${this.pendingUserData!.nombres} ${this.pendingUserData!.apellidos}?`
+        : `¿Confirmas la creación del usuario ${this.pendingUserData!.nombres} ${this.pendingUserData!.apellidos}?`;
+    }
     
-    console.log('Abriendo modal de confirmación...');
     this.confirmModalVisible = true;
   }
 
   onAceptarConfirmacion(): void {
-    console.log('=== DEBUG: onAceptarConfirmacion INICIADO ===');
-    
     this.confirmModalVisible = false;
 
+    // Manejar el rechazo de usuario
+    if (this.pendingAction === 'reject') {
+      this.ejecutarRechazoUsuario();
+      return;
+    }
+
     if (!this.pendingUserData) {
-      console.error('ERROR: pendingUserData es null');
       return;
     }
 
     this.isLoading = true;
     
-    const operacion = this.isEditMode
-      ? this.userService.actualizarUsuario(this.pendingUserData)
-      : this.userService.crearUsuario(this.pendingUserData);
+    // Detectar si es un usuario pendiente que necesita ser activado
+    const isPendingUser = this.user?.estado && 
+      this.user.estado.descripcion && 
+      this.user.estado.descripcion.toUpperCase() === 'PENDIENTE';
+    
+    if (this.isEditMode && isPendingUser) {
+      // FLUJO PARA EDITAR Y ACTIVAR USUARIO PENDIENTE (2 pasos automáticos)
+      // PASO 1: Actualizar datos (cargo, rol, teléfonos, etc.) manteniendo estado PENDIENTE
+      // PASO 2: Activar usuario (cambiar estado a ACTIVO) con password del admin
+      
+      const datosParaActualizar = {
+        ...this.pendingUserData,
+        estado: this.user?.estado || { idEstado: 3, descripcion: 'PENDIENTE' }
+      };
+      
+      // ENDPOINT 1: PUT /usuarios/{id} - Actualizar datos del usuario
+      console.log('🔄 Iniciando actualización de usuario pendiente:', {
+        userId: this.user?.idUsuario || this.user?.noUsuario,
+        datosParaActualizar: datosParaActualizar
+      });
+      
+      this.userService.actualizarUsuario(datosParaActualizar)
+        .pipe(
+          takeUntil(this.destroy$),
+          // ENDPOINT 2: PUT /usuarios/{id}/activar - Activar usuario con password
+          switchMap((updateResponse) => {
+            console.log('✅ Usuario actualizado exitosamente:', updateResponse);
+            
+            // Validar que tenemos el ID del usuario para la activación
+            const userId = this.user?.idUsuario || this.user?.noUsuario;
+            if (!userId) {
+              console.error('❌ Error: ID de usuario no disponible para activación');
+              throw new Error('Error: ID de usuario no disponible para activación');
+            }
+            
+            console.log('🔄 Iniciando activación de usuario con ID:', userId);
+            
+            // Crear un objeto usuario mínimo para la activación
+            // Solo necesitamos el ID, el endpoint de activación solo requiere password
+            const usuarioParaActivar: Usuario = {
+              idUsuario: userId,
+              identificacion: this.user?.identificacion || '',
+              nombres: this.user?.nombres || '',
+              apellidos: this.user?.apellidos || '',
+              usuario: this.user?.usuario || '',
+              correoEmpresarial: this.user?.correoEmpresarial || '',
+              telefono1: this.user?.telefono1 || '',
+              telefono2: this.user?.telefono2 || '',
+              direccion: this.user?.direccion || '',
+              cargo: this.user?.cargo,
+              rol: this.user?.rol,
+              estado: this.user?.estado,
+              dobleAutenticacion: this.user?.dobleAutenticacion,
+              activo: true
+            } as Usuario;
+            
+            console.log('📤 Enviando usuario para activación:', usuarioParaActivar);
+            return this.userService.activarUsuario(usuarioParaActivar, this.pendingPassword);
+          })
+        )
+        .subscribe({
+          next: (activationResponse) => {
+            this.isLoading = false;
+            
+            this.showAlert.emit({
+              type: 'success',
+              title: '¡Éxito!',
+              message: 'Usuario actualizado y activado correctamente'
+            });
+            
+            // Actualizar el usuario con el estado ACTIVO
+            const usuarioActualizado = {
+              ...this.pendingUserData,
+              idUsuario: this.user?.idUsuario || this.user?.noUsuario || this.pendingUserData?.idUsuario || 0,
+              estado: { idEstado: 1, descripcion: 'ACTIVO' }
+            } as Usuario;
+            
+            this.userUpdated.emit(usuarioActualizado);
+            this.save.emit(usuarioActualizado);
+            
+            // Limpiar datos sensibles
+            this.pendingPassword = '';
+            
+            // Cerrar el modal después de un breve delay
+            setTimeout(() => {
+              this.onClose();
+            }, 500);
+          },
+          error: (error) => {
+            this.isLoading = false;
 
-    operacion
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          console.log('=== RESPUESTA EXITOSA ===');
-          this.isLoading = false;
-          
-          // Emitir alerta externa en lugar de mostrar modal interno
-          const message = this.isEditMode
-            ? 'Usuario actualizado correctamente'
-            : 'Usuario creado correctamente';
-          
-          this.showAlert.emit({
-            type: 'success',
-            title: '¡Éxito!',
-            message: message
-          });
-          
-          if (this.isEditMode) {
-            this.userUpdated.emit(this.pendingUserData!);
-          } else {
-            this.userCreated.emit(this.pendingUserData!);
+            let errorMsg = '';
+            if (error.error && error.error.mensaje) {
+              errorMsg = error.error.mensaje;
+            } else if (error.error && typeof error.error === 'string') {
+              errorMsg = error.error;
+            } else if (error.message) {
+              errorMsg = error.message;
+            } else {
+              errorMsg = 'Error inesperado al procesar la solicitud';
+            }
+
+            if (error.error && error.error.details && Array.isArray(error.error.details)) {
+              errorMsg += ':\n• ' + error.error.details.join('\n• ');
+            }
+
+            this.showAlert.emit({
+              type: 'danger',
+              title: 'Error',
+              message: errorMsg
+            });
+
+            this.pendingUserData = null;
+            this.pendingPassword = '';
+            this.confirmModalVisible = false;
+            this.isPasswordModalVisible = false;
           }
-          this.save.emit(this.pendingUserData!);
-          
-          // Cerrar el modal después de un breve delay
-          setTimeout(() => {
-            this.onClose();
-          }, 500);
-        },
+        });
+    } else {
+      // FLUJO PARA USUARIOS NORMALES O NUEVOS
+      // - Editar ACTIVO: Solo actualizar datos (1 endpoint)
+      // - Crear nuevo: Solo crear usuario (1 endpoint)
+      const operacion = this.isEditMode
+        ? this.userService.actualizarUsuario(this.pendingUserData)
+        : this.userService.crearUsuario(this.pendingUserData);
+
+      operacion
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response) => {
+            this.isLoading = false;
+            
+            const message = this.isEditMode
+              ? 'Usuario actualizado correctamente'
+              : 'Usuario creado correctamente';
+            
+            this.showAlert.emit({
+              type: 'success',
+              title: '¡Éxito!',
+              message: message
+            });
+            
+            if (this.isEditMode) {
+              this.userUpdated.emit(this.pendingUserData!);
+            } else {
+              this.userCreated.emit(this.pendingUserData!);
+            }
+            this.save.emit(this.pendingUserData!);
+            
+            // Limpiar datos sensibles
+            this.pendingPassword = '';
+            
+            // Cerrar el modal después de un breve delay
+            setTimeout(() => {
+              this.onClose();
+            }, 500);
+          },
         error: (error) => {
-          console.error('=== ERROR EN SERVIDOR ===');
           this.isLoading = false;
 
           let errorMsg = '';
@@ -610,15 +729,94 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
           });
 
           this.pendingUserData = null;
+          this.pendingPassword = '';
           this.confirmModalVisible = false;
           this.isPasswordModalVisible = false;
         }
       });
+    }
   }
 
   onCancelarConfirmacion(): void {
     this.confirmModalVisible = false;
     this.pendingUserData = null;
+    this.pendingPassword = '';
+    this.pendingAction = 'save';
+  }
+
+  onRechazar(): void {
+    this.resetMessages();
+    this.pendingAction = 'reject';
+    this.mensajePasswordModal = 'Ingrese su contraseña para rechazar la solicitud. El usuario quedará INACTIVO.';
+    this.isPasswordModalVisible = true;
+  }
+
+  private ejecutarRechazoUsuario(): void {
+    if (!this.user || !this.pendingPassword) {
+      this.showAlert.emit({
+        type: 'danger',
+        title: 'Error',
+        message: 'No se pudo procesar el rechazo. Datos insuficientes.'
+      });
+      return;
+    }
+
+    this.isLoading = true;
+
+    // Rechazar = Desactivar (PENDIENTE -> INACTIVO)
+    this.userService.desactivarUsuario(this.user, this.pendingPassword)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.isLoading = false;
+          
+          this.showAlert.emit({
+            type: 'success',
+            title: '¡Éxito!',
+            message: 'Solicitud de usuario rechazada. El usuario ha sido marcado como INACTIVO.'
+          });
+          
+          this.userRejected.emit(this.user!);
+          
+          // Limpiar datos sensibles
+          this.pendingPassword = '';
+          this.pendingAction = 'save';
+          
+          // Cerrar el modal después de un breve delay
+          setTimeout(() => {
+            this.onClose();
+          }, 500);
+        },
+        error: (error) => {
+          this.isLoading = false;
+
+          let errorMsg = '';
+          if (error.error && error.error.mensaje) {
+            errorMsg = error.error.mensaje;
+          } else if (error.error && typeof error.error === 'string') {
+            errorMsg = error.error;
+          } else if (error.message) {
+            errorMsg = error.message;
+          } else {
+            errorMsg = 'Error inesperado al rechazar la solicitud';
+          }
+
+          if (error.error && error.error.details && Array.isArray(error.error.details)) {
+            errorMsg += ':\n• ' + error.error.details.join('\n• ');
+          }
+
+          this.showAlert.emit({
+            type: 'danger',
+            title: 'Error',
+            message: errorMsg
+          });
+
+          this.pendingPassword = '';
+          this.pendingAction = 'save';
+          this.confirmModalVisible = false;
+          this.isPasswordModalVisible = false;
+        }
+      });
   }
 
   cerrarModalSuccess(): void {
@@ -680,9 +878,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   }
 
   onSave(): void {
-    console.log('=== DEBUG: onSave INICIADO ===');
-    console.log('isEditMode:', this.isEditMode);
-    
     this.resetMessages();
     const identificacionControl = this.userForm.get('identificacion');
     const wasDisabled = identificacionControl?.disabled;
@@ -709,8 +904,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
     const formValue = this.userForm.getRawValue();
 
-    // CRÍTICO: Obtener el cargo completo con toda su estructura
-    // Solo validar cargo si existe un valor
     let cargoCompleto = null;
     if (formValue.cargo) {
       cargoCompleto = this.getCargoConTodasLasRelaciones(formValue.cargo);
@@ -724,7 +917,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         return;
       }
     } else if (!this.isEditMode) {
-      // Solo requerir cargo en modo creación
       this.showAlert.emit({
         type: 'warning',
         title: 'Campo requerido',
@@ -733,9 +925,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       return;
     }
 
-    console.log('DEBUG: Cargo completo:', JSON.stringify(cargoCompleto, null, 2));
-
-    // Convertir perfil a rol con estructura completa
     let rolCompleto: any;
     switch (formValue.perfil) {
       case 'administrador':
@@ -750,13 +939,23 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         break;
     }
 
-    console.log('DEBUG: Rol completo:', rolCompleto);
-
+    // Usuario creado por admin debe quedar ACTIVO (no PENDIENTE)
+    // Si se está editando un usuario PENDIENTE, también debe quedar ACTIVO
+    const isPendingUser = this.isEditMode && this.user?.estado && 
+      this.user.estado.descripcion && 
+      this.user.estado.descripcion.toUpperCase() === 'PENDIENTE';
+    
     const estadoCompleto = this.isEditMode
-      ? (this.user?.estado || { idEstado: 5, descripcion: 'ACTIVO' })
-      : { idEstado: 1, descripcion: 'PENDIENTE' };
+      ? (isPendingUser ? { idEstado: 5, descripcion: 'ACTIVO' } : (this.user?.estado || { idEstado: 5, descripcion: 'ACTIVO' }))
+      : { idEstado: 5, descripcion: 'ACTIVO' };
+
+    // Preparar idUsuario para modo edición
+    const userIdForOperation = this.isEditMode 
+      ? (this.user?.idUsuario || this.user?.noUsuario) 
+      : undefined;
 
     this.pendingUserData = {
+      idUsuario: userIdForOperation,
       identificacion: formValue.identificacion,
       nombres: formValue.nombres,
       apellidos: formValue.apellidos,
@@ -770,16 +969,8 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       telefono2: formValue.telefono || '',
       direccion: formValue.direccion || '',
       dobleAutenticacion: this.isEditMode ? this.user?.dobleAutenticacion : formValue.dobleAutenticacion,
-      activo: this.isEditMode ? (this.user?.activo !== false) : true
+      activo: true
     } as Usuario;
-
-    // Agregar idUsuario solo en modo edición
-    if (this.isEditMode) {
-      const userId = this.user?.idUsuario || this.user?.noUsuario;
-      if (userId) {
-        this.pendingUserData.idUsuario = userId;
-      }
-    }
 
     if (wasDisabled) {
       identificacionControl?.disable();
@@ -852,6 +1043,8 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     this.confirmModalVisible = false;
     this.modalSuccessVisible = false;
     this.pendingUserData = null;
+    this.pendingPassword = '';
+    this.pendingAction = 'save';
     this.close.emit();
   }
 
@@ -867,6 +1060,8 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     this.confirmModalVisible = false;
     this.modalSuccessVisible = false;
     this.pendingUserData = null;
+    this.pendingPassword = '';
+    this.pendingAction = 'save';
   }
 
   private resetMessages(): void {
@@ -897,6 +1092,12 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       return this.isEditMode ? 'Guardando...' : 'Creando...';
     }
     return this.isEditMode ? 'Guardar Cambios' : 'Crear Usuario';
+  }
+
+  get isPendingUser(): boolean {
+    return !!(this.isEditMode && this.user?.estado && 
+      this.user.estado.descripcion && 
+      this.user.estado.descripcion.toUpperCase() === 'PENDIENTE');
   }
 
   hasError(controlName: string, errorType: string): boolean {

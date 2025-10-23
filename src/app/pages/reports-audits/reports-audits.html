@@ -18,7 +18,15 @@
       (searchChange)="onSearchChange($event)">
     </app-controls>
 
-    <div class="panel-tabla-scroll">
+    <!-- Indicador de carga -->
+    <div *ngIf="isLoading" class="d-flex justify-content-center align-items-center" style="min-height: 300px;">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Cargando...</span>
+      </div>
+      <span class="ms-3">Cargando datos...</span>
+    </div>
+
+    <div *ngIf="!isLoading" class="panel-tabla-scroll">
       <table class="table table-borderless align-middle">
         <thead class="border-bottom">
           <tr>
@@ -35,6 +43,11 @@
           </tr>
         </thead>
         <tbody>
+          <tr *ngIf="displayedItems.length === 0">
+            <td colspan="10" class="text-center py-4 text-muted">
+              No se encontraron solicitudes
+            </td>
+          </tr>
           <tr *ngFor="let item of displayedItems">
             <td>
               <input
@@ -55,7 +68,8 @@
           <span *ngIf="item.estado" class="badge rounded-pill" [ngClass]="{
              'text-bg-success': item.estado === 'APROBADO',
              'text-bg-warning': item.estado === 'PENDIENTE',
-             'text-bg-danger': item.estado === 'RECHAZADO'
+             'text-bg-danger': item.estado === 'RECHAZADO',
+             'text-bg-secondary': item.estado === 'CANCELADA'
            }">{{ item.estado }}</span>
         </td>
           </tr>

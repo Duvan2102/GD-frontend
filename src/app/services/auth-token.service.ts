@@ -54,28 +54,42 @@ export class AuthTokenService {
       });
     }
 
-    // Usar método 2FA persistido del login
     const persisted2FA = this.getPersisted2FAMethod();
     if (persisted2FA) {
+      let authType: DobleAutenticacionTipo;
+      
+      if (persisted2FA.hasEmailBackup) {
+        authType = DobleAutenticacionTipo.TOKEN_SEGURIDAD;
+      } else if (persisted2FA.hasGoogleAuth) {
+        authType = DobleAutenticacionTipo.GOOGLE_AUTHENTICATOR;
+      } else {
+        authType = DobleAutenticacionTipo.TOKEN_SEGURIDAD;
+      }
+      
       return of({
         hasGoogleAuth: persisted2FA.hasGoogleAuth || false,
         hasEmailBackup: persisted2FA.hasEmailBackup || true,
-        authType: persisted2FA.hasGoogleAuth ? 
-          DobleAutenticacionTipo.GOOGLE_AUTHENTICATOR : 
-          DobleAutenticacionTipo.TOKEN_SEGURIDAD
+        authType: authType
       });
     }
 
-    // Fallback al estado 2FA del login
     return this.authService.getTwoFAState().pipe(
       switchMap(twoFAState => {
         if (twoFAState) {
+          let authType: DobleAutenticacionTipo;
+          
+          if (twoFAState.hasEmailBackup) {
+            authType = DobleAutenticacionTipo.TOKEN_SEGURIDAD;
+          } else if (twoFAState.hasGoogleAuth) {
+            authType = DobleAutenticacionTipo.GOOGLE_AUTHENTICATOR;
+          } else {
+            authType = DobleAutenticacionTipo.TOKEN_SEGURIDAD;
+          }
+          
           return of({
             hasGoogleAuth: twoFAState.hasGoogleAuth || false,
             hasEmailBackup: twoFAState.hasEmailBackup || true,
-            authType: twoFAState.hasGoogleAuth ? 
-              DobleAutenticacionTipo.GOOGLE_AUTHENTICATOR : 
-              DobleAutenticacionTipo.TOKEN_SEGURIDAD
+            authType: authType
           });
         }
         return this.getUserAuthTypeFromBackend();
@@ -100,7 +114,6 @@ export class AuthTokenService {
         }
       }
     } catch (error) {
-      console.error('🔐 ❌ Error leyendo método 2FA persistido:', error);
       localStorage.removeItem('user_2fa_method');
     }
     return null;
@@ -125,15 +138,21 @@ export class AuthTokenService {
       }
     }).pipe(
       map(response => {
-        const result = {
+        let authType: DobleAutenticacionTipo;
+        
+        if (response.hasEmailBackup) {
+          authType = DobleAutenticacionTipo.TOKEN_SEGURIDAD;
+        } else if (response.hasGoogleAuth) {
+          authType = DobleAutenticacionTipo.GOOGLE_AUTHENTICATOR;
+        } else {
+          authType = DobleAutenticacionTipo.TOKEN_SEGURIDAD;
+        }
+
+        return {
           hasGoogleAuth: response.hasGoogleAuth || false,
           hasEmailBackup: response.hasEmailBackup || true,
-          authType: response.hasGoogleAuth ?
-            DobleAutenticacionTipo.GOOGLE_AUTHENTICATOR :
-            DobleAutenticacionTipo.TOKEN_SEGURIDAD
+          authType: authType
         };
-
-        return result;
       }),
       catchError((error) => {
         return of({
@@ -276,8 +295,7 @@ export class AuthTokenService {
         if (response?.token && response?.usuario) {
           try {
             localStorage.setItem('auth_token', response.token);
-          } catch (error) {
-          }
+          } catch {}
           return {
             success: true,
             valid: true,

@@ -61,21 +61,24 @@ Métodos agregados:
 - **Propósito**: Configuración y gestión de Google Authenticator
 - **Características**:
   - Detección automática de QR existente vs nuevo
+  - Generación de QR nuevo cuando el estado es PENDING
   - Visualización de código QR
   - Configuración manual con clave secreta
-  - **Gestión de códigos QR**: Regenerar, descargar, desvincular
+  - **Gestión de códigos QR**: Regenerar (invalida anterior), descargar, desvincular
   - Verificación de código de 6 dígitos
   - Instrucciones paso a paso
+  - Invalidación automática de QR obsoletos
 
 #### TwoFAManagementComponent
 - **Ruta**: `/two-fa-management`
 - **Propósito**: Gestión de configuración 2FA del usuario
 - **Características**:
-  - Estado actual de 2FA
-  - Estadísticas de login
-  - Configuración de Google Authenticator
-  - Deshabilitación de 2FA
-  - Desbloqueo de usuario
+  - Estado actual de 2FA con indicador visual
+  - Cambio entre Google Auth y Email
+  - Invalidación automática de QR al cambiar métodos
+  - Indicador de configuración pendiente (PENDING)
+  - Actualización en tiempo real del estado del usuario
+  - Mensajes informativos sobre cambios de método
 
 ### 4. Flujo de Login Actualizado
 El componente de login ahora:
@@ -111,6 +114,10 @@ El componente de login ahora:
 - **POST** `/api/auth/disable-2fa`
 - **GET** `/api/auth/login-stats`
 - **POST** `/api/auth/unlock-user`
+- **POST** `/api/auth/change-2fa-method` (NUEVO)
+  - Cambia entre métodos EMAIL y GOOGLE_AUTH
+  - Invalida el secreto anterior al cambiar
+  - Genera nuevo QR al cambiar a GOOGLE_AUTH
 
 ## Flujo de Usuario OBLIGATORIO
 
@@ -146,9 +153,31 @@ El componente de login ahora:
 
 ### Gestión de Códigos QR
 - **Obtener QR existente**: Si ya está configurado
-- **Regenerar QR**: Crear nuevo código QR
+- **Regenerar QR**: Crear nuevo código QR (invalida el anterior)
 - **Desvincular**: Eliminar configuración de Google Auth
 - **Descargar QR**: Guardar imagen del código QR
+
+### Cambio de Métodos 2FA (NUEVO)
+El sistema ahora soporta cambio entre métodos de autenticación con invalidación automática:
+
+#### Cambio de Google Auth a Email:
+1. Usuario selecciona "Cambiar a Email" en gestión 2FA
+2. Sistema invalida el secreto de Google Auth actual
+3. Backend elimina la configuración de Google Auth
+4. Usuario puede usar códigos por email en próximos inicios de sesión
+
+#### Cambio de Email a Google Auth:
+1. Usuario selecciona "Cambiar a Google Auth" en gestión 2FA
+2. Backend genera un **nuevo** secreto y código QR
+3. El código QR anterior queda completamente invalidado
+4. Usuario debe escanear el nuevo QR en próximo inicio de sesión
+5. Estado se marca como "PENDING" hasta completar configuración
+
+**Beneficios**:
+- Evita errores de autenticación por códigos QR obsoletos
+- Garantiza que solo un método esté activo a la vez
+- Mejora la seguridad al invalidar secretos anteriores
+- Experiencia de usuario clara con mensajes informativos
 
 ## Características Técnicas
 

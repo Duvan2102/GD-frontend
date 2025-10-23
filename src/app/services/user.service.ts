@@ -139,11 +139,6 @@ export class UserService {
 
   crearUsuario(usuario: Usuario): Observable<ApiResponse> {
     const usuarioRequest: UsuarioRequest = this.transformarUsuarioParaApi(usuario);
-    console.log('=== CREAR USUARIO - DEBUG ===');
-    console.log('URL:', this.apiUrl);
-    console.log('Headers:', this.httpOptions.headers);
-    console.log('Datos enviados:', JSON.stringify(usuarioRequest, null, 2));
-    console.log('============================');
     return this.http.post<ApiResponse>(this.apiUrl, usuarioRequest, this.httpOptions).pipe(
       catchError(this.handleError)
     );
@@ -170,7 +165,6 @@ export class UserService {
 
     const url = `${this.apiUrl}/${userId}`;
     
-    // RECREAR headers cada vez para asegurar que se envíen correctamente
     const headers = new HttpHeaders({
       'Content-Type': 'application/json'
     });
@@ -179,20 +173,7 @@ export class UserService {
       headers: headers
     };
     
-    console.log('=== ACTUALIZAR USUARIO - DEBUG ===');
-    console.log('URL:', url);
-    console.log('Headers (keys):', headers.keys());
-    console.log('Content-Type:', headers.get('Content-Type'));
-    console.log('Datos enviados:', JSON.stringify(usuarioRequest, null, 2));
-    console.log('==================================');
-    
     return this.http.put<any>(url, usuarioRequest, options).pipe(
-      tap((response: any) => {
-        console.log('=== RESPUESTA DEL SERVIDOR (ACTUALIZAR) ===');
-        console.log('Status: SUCCESS');
-        console.log('Response:', JSON.stringify(response, null, 2));
-        console.log('===========================================');
-      }),
       map((response: any): ApiResponse => {
         if (response && response.idUsuario) {
           return {
@@ -213,12 +194,6 @@ export class UserService {
         };
       }),
       catchError((error: HttpErrorResponse) => {
-        console.error('=== ERROR DEL SERVIDOR (ACTUALIZAR) ===');
-        console.error('Status:', error.status);
-        console.error('StatusText:', error.statusText);
-        console.error('Error body:', error.error);
-        console.error('Full error:', error);
-        console.error('=======================================');
         return this.handleError(error);
       })
     );
@@ -231,53 +206,37 @@ export class UserService {
   }
 
   desactivarUsuario(usuario: Usuario, password: string): Observable<ApiResponse> {
+    if (!usuario) {
+      return throwError(() => new Error('Usuario no proporcionado para desactivación'));
+    }
+    
     const userId = usuario.idUsuario || usuario.noUsuario;
     if (!userId) {
-      return throwError(() => new Error('ID de usuario requerido'));
+      console.error('Error: Usuario sin ID válido para desactivación:', usuario);
+      return throwError(() => new Error('ID de usuario requerido para desactivación'));
     }
+    
     const usuarioRequest = { password };
     const url = `${this.apiUrl}/${userId}/desactivar`;
-    console.log('=== DESACTIVAR USUARIO - DEBUG ===');
-    console.log('URL:', url);
-    console.log('Headers:', this.httpOptions.headers);
-    console.log('Datos enviados:', JSON.stringify(usuarioRequest, null, 2));
-    console.log('==================================');
     return this.http.put<ApiResponse>(url, usuarioRequest, this.httpOptions)
-      .pipe(
-        map(response => {
-          console.log('✓ Desactivación exitosa:', response);
-          return response;
-        }),
-        catchError(error => {
-          console.error('✗ Error en desactivación:', error);
-          return this.handleError(error);
-        })
-      );
+      .pipe(catchError(this.handleError));
   }
 
   activarUsuario(usuario: Usuario, password: string): Observable<ApiResponse> {
+    if (!usuario) {
+      return throwError(() => new Error('Usuario no proporcionado para activación'));
+    }
+    
     const userId = usuario.idUsuario || usuario.noUsuario;
     if (!userId) {
-      return throwError(() => new Error('ID de usuario requerido'));
+      console.error('Error: Usuario sin ID válido para activación:', usuario);
+      return throwError(() => new Error('ID de usuario requerido para activación'));
     }
+    
     const usuarioRequest = { password };
     const url = `${this.apiUrl}/${userId}/activar`;
-    console.log('=== ACTIVAR USUARIO - DEBUG ===');
-    console.log('URL:', url);
-    console.log('Headers:', this.httpOptions.headers);
-    console.log('Datos enviados:', JSON.stringify(usuarioRequest, null, 2));
-    console.log('===============================');
     return this.http.put<ApiResponse>(url, usuarioRequest, this.httpOptions)
-      .pipe(
-        map(response => {
-          console.log('✓ Activación exitosa:', response);
-          return response;
-        }),
-        catchError(error => {
-          console.error('✗ Error en activación:', error);
-          return this.handleError(error);
-        })
-      );
+      .pipe(catchError(this.handleError));
   }
 
   validarPasswordActual(id: number, password: string): Observable<boolean> {
@@ -298,13 +257,31 @@ export class UserService {
   }
 
   private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest & { idUsuario?: number } {
-    // El cargo, rol y estado deben venir ya con toda su estructura del componente
-    if (!usuario.cargo) {
-      throw new Error('Cargo requerido');
+    // Validación de cargo según el estado del usuario:
+    // - ACTIVO: Cargo es OBLIGATORIO (validación estricta)
+    // - PENDIENTE con cargo: Permitido (admin activando usuario)
+    // - PENDIENTE sin cargo: Permitido (auto-registro desde profile-modal)
+    const isActiveUser = usuario.estado && usuario.estado.descripcion && 
+      usuario.estado.descripcion.toUpperCase() === 'ACTIVO';
+    
+    if (isActiveUser && !usuario.cargo) {
+      throw new Error('Cargo requerido para usuarios activos');
     }
 
     // Extraer solo el idRol del objeto rol
     const rolId = usuario.rol?.idRol || 2; // Default a FUNCIONARIO si no hay rol
+
+    let dobleAutenticacionParaEnviar: any;
+    
+    if (usuario.dobleAutenticacion === 'GOOGLE_AUTH') {
+      dobleAutenticacionParaEnviar = 'GOOGLE_AUTH';
+    } else if (usuario.dobleAutenticacion === 'EMAIL') {
+      dobleAutenticacionParaEnviar = 'EMAIL';
+    } else if (typeof usuario.dobleAutenticacion === 'boolean') {
+      dobleAutenticacionParaEnviar = usuario.dobleAutenticacion;
+    } else {
+      dobleAutenticacionParaEnviar = 'GOOGLE_AUTH';
+    }
 
     const result: any = {
       identificacion: usuario.identificacion?.trim() || '',
@@ -319,17 +296,12 @@ export class UserService {
       telefono1: this.cleanPhoneNumber(usuario.telefono1?.trim() || ''),
       telefono2: this.cleanPhoneNumber(usuario.telefono2?.trim() || ''),
       direccion: usuario.direccion?.trim() || '',
-      dobleAutenticacion: typeof usuario.dobleAutenticacion === 'boolean'
-        ? usuario.dobleAutenticacion
-        : usuario.dobleAutenticacion === 'GOOGLE_AUTH' || usuario.dobleAutenticacion === 'EMAIL'
+      dobleAutenticacion: dobleAutenticacionParaEnviar
     };
 
     if (usuario.idUsuario) {
       result.idUsuario = usuario.idUsuario;
     }
-
-    console.log('DEBUG: transformarUsuarioParaApi resultado:', JSON.stringify(result, null, 2));
-    console.log('DEBUG: Rol enviado - idRol:', rolId);
     
     return result;
   }
@@ -369,10 +341,32 @@ export class UserService {
       estadoActivo = true;
     }
 
+    let dobleAutenticacionValue: 'GOOGLE_AUTH' | 'EMAIL' | null = null;
+    
+    if ('tokenQr' in usuario || 'tokenCorreo' in usuario) {
+      if (usuario.tokenQr === true && usuario.tokenCorreo === true) {
+        dobleAutenticacionValue = 'GOOGLE_AUTH';
+      } else if (usuario.tokenQr === true) {
+        dobleAutenticacionValue = 'GOOGLE_AUTH';
+      } else if (usuario.tokenCorreo === true) {
+        dobleAutenticacionValue = 'EMAIL';
+      } else {
+        dobleAutenticacionValue = 'GOOGLE_AUTH';
+      }
+    } else if (typeof usuario.dobleAutenticacion === 'boolean') {
+      dobleAutenticacionValue = usuario.dobleAutenticacion ? 'EMAIL' : 'GOOGLE_AUTH';
+    } else if (usuario.dobleAutenticacion === 'GOOGLE_AUTH' || usuario.dobleAutenticacion === 'EMAIL') {
+      dobleAutenticacionValue = usuario.dobleAutenticacion;
+    } else {
+      dobleAutenticacionValue = 'GOOGLE_AUTH';
+    }
+
+    const idUsuarioFinal = usuario.idUsuario || usuario.noUsuario || (index !== undefined ? index + 1 : 0);
+    
     return {
       ...usuario,
-      idUsuario: usuario.idUsuario,
-      noUsuario: usuario.idUsuario || usuario.noUsuario || (index !== undefined ? index + 1 : 0),
+      idUsuario: idUsuarioFinal,
+      noUsuario: idUsuarioFinal,
       cargo: cargoId || cargoDescripcion,
       cargoDescripcion: cargoDescripcion,
       estado: typeof usuario.estado === 'object' ? usuario.estado : { descripcion: estadoDescripcion },
@@ -383,9 +377,9 @@ export class UserService {
       telefono: usuario.telefono2 || usuario.telefono || '',
       direccion: usuario.direccion || '',
       correoPersonal: usuario.correoPersonal || '',
-      dobleAutenticacion: typeof usuario.dobleAutenticacion === 'boolean'
-        ? (usuario.dobleAutenticacion ? 'GOOGLE_AUTH' : 'EMAIL')
-        : (usuario.dobleAutenticacion || null)
+      dobleAutenticacion: dobleAutenticacionValue,
+      tokenQr: usuario.tokenQr,
+      tokenCorreo: usuario.tokenCorreo
     };
   }
 
