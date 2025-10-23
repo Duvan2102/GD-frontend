@@ -116,7 +116,7 @@ export class Users implements OnInit, OnDestroy {
         }
       });
   }
-  mostrarModalConfirmacion(mensaje: string, textoBtn: string = 'Aceptar') {
+  mostrarModalConfirmation(mensaje: string, textoBtn: string = 'Aceptar') {
     this.modalSuccessMessage = mensaje;
     this.modalSuccessBtn = textoBtn;
     this.modalSuccessVisible = true;
@@ -226,7 +226,7 @@ export class Users implements OnInit, OnDestroy {
         break;
 
       case 'inactivar':
-        this.mostrarModalConfirmacion(
+        this.mostrarModalConfirmation(
           `¿Está seguro de inactivar al usuario ${u.nombres} ${u.apellidos}?`,
           'Sí, inactivar'
         );

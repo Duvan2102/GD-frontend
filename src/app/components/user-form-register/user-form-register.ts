@@ -49,7 +49,7 @@ export class UserFormRegister implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.form = this.fb.group({
-      identificacion: ['', [Validators.required]],
+      identification: ['', [Validators.required]],
       nombres: ['', [Validators.required]],
       apellidos: ['', [Validators.required]],
       usuario: [{value: '', disabled: true}],
@@ -328,7 +328,7 @@ export class UserFormRegister implements OnInit, OnDestroy {
     this.authService.register(registerPayload).subscribe({
       next: (res: RegisterResponse) => {
         this.loading = false;
-        this.successMessage = res.message;
+        this.successMessage = res.message || 'Usuario registrado exitosamente';
         
         this.registered.emit({ idUsuario: res.idUsuario });
         
@@ -340,23 +340,52 @@ export class UserFormRegister implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.loading = false;
+        
+        // Manejo detallado de errores similar a user-form-modal
+        let errorMsg = '';
         const errorResponse = err?.error as RegisterErrorResponse;
         const code = errorResponse?.code;
-        const msg = errorResponse?.message || 'Error de conexión. Intenta de nuevo.';
-        this.apiError = msg;
+        
+        if (errorResponse && errorResponse.message) {
+          errorMsg = errorResponse.message;
+        } else if (err.error && typeof err.error === 'string') {
+          errorMsg = err.error;
+        } else if (err.message) {
+          errorMsg = err.message;
+        } else {
+          errorMsg = 'Error de conexión. Intenta de nuevo.';
+        }
 
+        // Si hay detalles adicionales, agregarlos
+        if (errorResponse?.details && Array.isArray(errorResponse.details)) {
+          errorMsg += ':\n• ' + errorResponse.details.join('\n• ');
+        }
+        
+        this.apiError = errorMsg;
+
+        // Establecer errores específicos en campos si aplica
         if (code === 'USUARIO_EXISTE') {
-          this.form.get('usuario')?.setErrors({ server: msg });
+          this.form.get('usuario')?.setErrors({ server: errorMsg });
         } else if (code === 'IDENTIFICACION_EXISTE') {
-          this.form.get('identificacion')?.setErrors({ server: msg });
+          this.form.get('identification')?.setErrors({ server: errorMsg });
         } else if (code === 'CORREO_EXISTE') {
-          this.form.get('correoEmpresarial')?.setErrors({ server: msg });
+          this.form.get('correoEmpresarial')?.setErrors({ server: errorMsg });
         }
 
         this.focusFirstError();
         this.cdr.markForCheck();
       }
     });
+  }
+
+  clearSuccessMessage(): void {
+    this.successMessage = '';
+    this.cdr.markForCheck();
+  }
+
+  clearErrorMessage(): void {
+    this.apiError = undefined;
+    this.cdr.markForCheck();
   }
 
   closeModal(): void {

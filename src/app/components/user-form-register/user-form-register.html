@@ -13,13 +13,15 @@
         <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
 
           <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show mb-3" role="alert">
-            <i class="fas fa-check-circle me-2"></i>
-            <strong>¡Éxito!</strong> {{ successMessage }}
+            <i class="fas fa-check-circle"></i>
+            <span><strong>¡Éxito!</strong> {{ successMessage }}</span>
+            <button type="button" class="btn-close" (click)="clearSuccessMessage()" aria-label="Cerrar">×</button>
           </div>
 
           <div *ngIf="apiError" class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <strong>Error:</strong> {{ apiError }}
+            <i class="fas fa-exclamation-triangle"></i>
+            <span><strong>Error:</strong> {{ apiError }}</span>
+            <button type="button" class="btn-close" (click)="clearErrorMessage()" aria-label="Cerrar">×</button>
           </div>
 
           <div class="row mb-3">
@@ -29,16 +31,16 @@
                 id="identificacion"
                 type="text" 
                 class="form-control" 
-                formControlName="identificacion"
+                formControlName="identification"
                 placeholder=" 12345678"
-                [class.is-invalid]="form.get('identificacion')?.invalid && form.get('identificacion')?.touched"
+                [class.is-invalid]="form.get('identification')?.invalid && form.get('identification')?.touched"
                 aria-describedby="identificacion-error"
-                aria-invalid="form.get('identificacion')?.invalid">
+                aria-invalid="form.get('identification')?.invalid">
               <div 
-                *ngIf="getErrorMessage('identificacion')" 
+                *ngIf="getErrorMessage('identification')" 
                 id="identificacion-error"
                 class="invalid-feedback">
-                {{ getErrorMessage('identificacion') }}
+                {{ getErrorMessage('identification') }}
               </div>
             </div>
             <div class="col-md-4">
@@ -276,16 +278,16 @@
                 id="direccion"
                 type="text" 
                 class="form-control" 
-                formControlName="direccion"
+                formControlName="direction"
                 placeholder=" Calle 123 #45-67, Bogotá"
-                [class.is-invalid]="form.get('direccion')?.invalid && form.get('direccion')?.touched"
+                [class.is-invalid]="form.get('direction')?.invalid && form.get('direction')?.touched"
                 aria-describedby="direccion-error"
-                aria-invalid="form.get('direccion')?.invalid">
+                aria-invalid="form.get('direction')?.invalid">
               <div 
-                *ngIf="getErrorMessage('direccion')" 
+                *ngIf="getErrorMessage('direction')" 
                 id="direccion-error"
                 class="invalid-feedback">
-                {{ getErrorMessage('direccion') }}
+                {{ getErrorMessage('direction') }}
               </div>
             </div>
           </div>

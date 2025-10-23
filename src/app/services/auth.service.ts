@@ -110,6 +110,10 @@ export class AuthService {
   updateCurrentUser(updatedUserData: UsuarioData): Observable<UsuarioData> {
     this.currentUser = { ...this.currentUser, ...updatedUserData };
     this.currentUserSubject.next(this.currentUser);
+    
+    // Guardar en localStorage para persistencia
+    localStorage.setItem('current_user_data', JSON.stringify(this.currentUser));
+    
     return of(this.currentUser);
   }
 
