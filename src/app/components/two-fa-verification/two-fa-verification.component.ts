@@ -99,7 +99,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
   check2FAStatus(): void {
     this.authService.check2FAStatus().subscribe({
       next: (response) => {
-        console.log('Estado 2FA cargado en verificación:', response);
       },
       error: (error) => {
         console.error('Error verificando estado 2FA:', error);
@@ -179,8 +178,12 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
         console.error('Error enviando código por email automáticamente:', error);
         this.isLoading = false;
         
-        // Mostrar mensaje de error específico
-        if (error.status === 400) {
+        // Usar mensaje personalizado si está disponible
+        if (error.userMessage) {
+          this.errorMessage = error.userMessage;
+        } else if (error.error?.code === '2FA_METHOD_INCORRECT') {
+          this.errorMessage = 'Tu método de 2FA activo es Google Authenticator. Usa el código de tu aplicación.';
+        } else if (error.status === 400) {
           this.errorMessage = 'No se pudo enviar el código por email. Por favor, verifica que tu correo empresarial esté configurado correctamente o contacta al administrador.';
         } else {
           this.handleError(error);
@@ -202,7 +205,16 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Error enviando código por email:', error);
-        this.handleError(error);
+        
+        // Usar mensaje personalizado si está disponible
+        if (error.userMessage) {
+          this.errorMessage = error.userMessage;
+        } else if (error.error?.code === '2FA_METHOD_INCORRECT') {
+          this.errorMessage = 'Tu método de 2FA activo es Google Authenticator, no email. Usa el código de tu aplicación Google Authenticator.';
+        } else {
+          this.handleError(error);
+        }
+        
         this.isLoading = false;
       }
     });
@@ -328,10 +340,37 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
   }
 
   private handleError(error: any): void {
+    // Usar mensaje personalizado si está disponible
+    if (error.userMessage) {
+      this.errorMessage = error.userMessage;
+      return;
+    }
+    
+    // Detectar tipo de error específico
+    if (error.errorType) {
+      switch (error.errorType) {
+        case 'GOOGLE_AUTH':
+          this.errorMessage = 'Código de Google Authenticator incorrecto. Verifica el código en tu aplicación.';
+          break;
+        case 'EMAIL':
+          this.errorMessage = 'Código de email incorrecto. Revisa tu correo e ingresa el código correcto.';
+          break;
+        case 'METHOD_INCORRECT':
+          // El mensaje ya está en error.userMessage
+          this.errorMessage = error.userMessage || 'Método de autenticación incorrecto.';
+          break;
+      }
+      return;
+    }
+    
+    // Manejo de errores estándar
     if (error.error?.code) {
       switch (error.error.code) {
         case 'CODIGO_2FA_INVALIDO':
           this.errorMessage = 'Código de verificación incorrecto';
+          break;
+        case '2FA_METHOD_INCORRECT':
+          this.errorMessage = error.error.message || 'Estás usando el método de autenticación incorrecto.';
           break;
         case 'TOKEN_INVALIDO':
           this.errorMessage = 'Sesión expirada. Por favor, inicia sesión nuevamente';
@@ -423,6 +462,10 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
     
     // Usar el método actual del servidor si está disponible
     if (this.twoFAState?.metodoActual) {
+      // Mapear 'PENDING' a 'QR_SETUP' para compatibilidad
+      if (this.twoFAState.metodoActual === 'PENDING') {
+        return 'QR_SETUP';
+      }
       return this.twoFAState.metodoActual;
     }
     

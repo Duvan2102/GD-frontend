@@ -42,6 +42,8 @@ export class Users implements OnInit, OnDestroy {
   itemsPerPage = 10;
   paginaActual = 1;
   filaDesplegada: number | null = null;
+  currentOrder: string = '';
+  ascendingOrder: boolean = true;
   isUserFormVisible = false;
   isRegisterUserModalVisible = false;
   isPasswordModalVisible = false;
@@ -53,6 +55,8 @@ export class Users implements OnInit, OnDestroy {
   mensajePasswordModal: string = '';
 
   isLoading = false;
+  private isProcessing2FAChange = false; // Bandera adicional para prevenir llamadas duplicadas
+  private last2FAChangeTime = 0; // Timestamp del último cambio exitoso
   errorMessage = '';
   private destroy$ = new Subject<void>();
   modalSuccessVisible: boolean = false;
@@ -62,7 +66,7 @@ export class Users implements OnInit, OnDestroy {
 
   confirmModalVisible = false;
   confirmModalMessage = '';
-  confirmModalAction: 'inactivar' | 'activar' | 'eliminarQR' | null = null;
+  confirmModalAction: 'inactivar' | 'activar' | 'eliminarQR' | 'rechazar' | null = null;
 
   // Sistema de alertas externas
   externalAlerts: Array<{
@@ -88,25 +92,29 @@ export class Users implements OnInit, OnDestroy {
   }
 
   cargarUsuarios(): void {
-  this.isLoading = true;
-  this.errorMessage = '';
-  this.usuarios = [];
-  this.userService.obtenerUsuarios()
-    .pipe(takeUntil(this.destroy$))
-    .subscribe({
-      next: (usuarios) => {
-        this.usuarios = usuarios;
-        this.filtrarUsuarios();
-        this.isLoading = false;
-      },
-      error: (error) => {
-        console.error('Error cargando usuarios:', error);
-        this.errorMessage = 'No se pudo conectar con el servidor. Verifique la conexión.';
-        this.isLoading = false;
-        this.usuarios = [];
-        this.filtrarUsuarios();
-      }
-    });
+    this.isLoading = true;
+    this.errorMessage = '';
+    this.usuarios = [];
+    
+    // Limpiar cache antes de cargar usuarios para asegurar datos actualizados
+    this.userService.clearUsersCache();
+    
+    this.userService.obtenerUsuarios()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (usuarios) => {
+          this.usuarios = usuarios;
+          this.filtrarUsuarios();
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('Error cargando usuarios:', error);
+          this.errorMessage = 'No se pudo conectar con el servidor. Verifique la conexión.';
+          this.isLoading = false;
+          this.usuarios = [];
+          this.filtrarUsuarios();
+        }
+      });
   }
   mostrarModalConfirmacion(mensaje: string, textoBtn: string = 'Aceptar') {
     this.modalSuccessMessage = mensaje;
@@ -143,15 +151,19 @@ export class Users implements OnInit, OnDestroy {
   filtrarUsuarios() {
     let filtrados = this.usuarios.filter(u => {
       if (this.activos) {
-        // Verificar múltiples formas de saber si está activo o pendiente
+        // ACTIVOS incluye: PENDIENTE y ACTIVO
         const estadoDescripcion = typeof u.estado === 'object'
           ? (u.estado.descripcion || '').toString().trim().toUpperCase()
           : String(u.estado || '').trim().toUpperCase();
 
-        // Usar tanto la propiedad activo como el estado.descripcion para filtrar
-        return estadoDescripcion === 'ACTIVO' || estadoDescripcion === 'PENDIENTE' || u.activo === true;
+        return estadoDescripcion === 'ACTIVO' || estadoDescripcion === 'PENDIENTE';
       } else {
-        return true;
+        // INACTIVOS
+        const estadoDescripcion = typeof u.estado === 'object'
+          ? (u.estado.descripcion || '').toString().trim().toUpperCase()
+          : String(u.estado || '').trim().toUpperCase();
+
+        return estadoDescripcion === 'INACTIVO';
       }
     });
 
@@ -163,6 +175,11 @@ export class Users implements OnInit, OnDestroy {
         u.usuario.toLowerCase().includes(t) ||
         u.identificacion.toLowerCase().includes(t)
       );
+    }
+
+    // Aplicar ordenamiento si está configurado
+    if (this.currentOrder) {
+      filtrados = this.sortUsuarios(filtrados, this.currentOrder, this.ascendingOrder);
     }
 
     this.usuariosFiltradosLength = filtrados.length;
@@ -234,30 +251,26 @@ export class Users implements OnInit, OnDestroy {
   }
 
   abrirModal2FA(usuario: Usuario): void {
-    this.currentUser = { ...usuario };
-    this.currentAction = 'cambiar2FA';
-    
-    // Verificar si el usuario tiene 2FA habilitado
-    if (!usuario.dobleAutenticacion) {
-      this.mostrarModalSuccess(
-        'Este usuario no tiene la doble autenticación habilitada. Para habilitar 2FA, el usuario debe configurarlo desde su perfil al iniciar sesión.',
-        'Entendido'
-      );
+    const timeSinceLastChange = Date.now() - this.last2FAChangeTime;
+    if (this.last2FAChangeTime > 0 && timeSinceLastChange < 2000) {
       return;
     }
     
-    // Usar exactamente el valor que viene del servidor
+    this.currentUser = { ...usuario };
+    this.currentAction = 'cambiar2FA';
+    
     const dobleAuth = usuario.dobleAutenticacion;
+    
     if (dobleAuth === 'GOOGLE_AUTH') {
       this.selected2FAMethod = 'GOOGLE_AUTH';
     } else if (dobleAuth === 'EMAIL') {
       this.selected2FAMethod = 'EMAIL';
-    } else if (typeof dobleAuth === 'boolean' && dobleAuth) {
+    } else if (typeof dobleAuth === 'boolean') {
+      this.selected2FAMethod = dobleAuth ? 'EMAIL' : 'GOOGLE_AUTH';
     } else {
-      return;
+      this.selected2FAMethod = 'GOOGLE_AUTH';
     }
     
-    // Abrir el modal
     this.isChange2FAMethodModalVisible = true;
   }
 
@@ -265,20 +278,51 @@ export class Users implements OnInit, OnDestroy {
     this.isChange2FAMethodModalVisible = false;
     this.currentUser = null;
     this.currentAction = '';
+    this.isLoading = false;
+    this.isProcessing2FAChange = false;
   }
 
   on2FAMethodChange(): void {
+    if (this.isProcessing2FAChange || this.isLoading) {
+      return;
+    }
+    
     if (!this.currentUser || !this.currentUser.idUsuario) {
-      alert('Error: No se encontró la información del usuario');
+      this.mostrarModalSuccess('Error: No se encontró la información del usuario', 'Entendido');
       this.closeChange2FAMethodModal();
       return;
     }
 
     if (!this.selected2FAMethod) {
-      alert('Por favor selecciona un método de autenticación');
+      this.mostrarModalSuccess('Por favor selecciona un método de autenticación', 'Entendido');
       return;
     }
 
+    const dobleAuth = this.currentUser.dobleAutenticacion;
+    let metodoActual: 'GOOGLE_AUTH' | 'EMAIL' = 'GOOGLE_AUTH';
+    
+    if (dobleAuth === 'GOOGLE_AUTH') {
+      metodoActual = 'GOOGLE_AUTH';
+    } else if (dobleAuth === 'EMAIL') {
+      metodoActual = 'EMAIL';
+    } else if (typeof dobleAuth === 'boolean') {
+      metodoActual = dobleAuth ? 'EMAIL' : 'GOOGLE_AUTH';
+    } else if (dobleAuth === null || dobleAuth === undefined) {
+      metodoActual = 'GOOGLE_AUTH';
+    }
+
+    if (metodoActual === this.selected2FAMethod) {
+      this.mostrarModalSuccess(
+        `El usuario ya tiene configurado el método ${this.selected2FAMethod === 'GOOGLE_AUTH' ? 'Google Authenticator' : 'Correo Electrónico'}. No es necesario cambiarlo.`,
+        'Entendido'
+      );
+      this.closeChange2FAMethodModal();
+      return;
+    }
+
+    this.isLoading = true;
+    this.isProcessing2FAChange = true;
+    
     this.authService.change2FAMethod(this.currentUser.idUsuario, this.selected2FAMethod)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -287,21 +331,42 @@ export class Users implements OnInit, OnDestroy {
           if (response.qrCodeUrl) {
             mensaje += '\n\nSe ha generado un nuevo código QR. El usuario deberá escanearlo en su próximo login.';
           }
+          
+          if (this.selected2FAMethod === 'EMAIL') {
+            mensaje += '\n\nEl usuario recibirá códigos de verificación por email en el próximo inicio de sesión.';
+          }
+          
+          this.isLoading = false;
+          this.isProcessing2FAChange = false;
+          this.last2FAChangeTime = Date.now();
+          
           this.closeChange2FAMethodModal();
           this.mostrarModalSuccess(mensaje, 'Aceptar');
-          this.cargarUsuarios();
+          
+          this.userService.clearUsersCache();
+          setTimeout(() => this.cargarUsuarios(), 500);
         },
         error: (error: any) => {
-          console.error('Error cambiando método 2FA:', error);
           let mensajeError = 'Error al cambiar el método de autenticación';
           
-          if (error.error?.code === '2FA_DISABLED') {
-            mensajeError = 'La doble autenticación no está habilitada para este usuario. El usuario debe habilitarla desde su perfil.';
+          if (error.status === 0) {
+            mensajeError = 'Error de conexión con el servidor. Verifica tu conexión a internet.';
+          } else if (error.status === 401) {
+            mensajeError = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
+          } else if (error.status === 403) {
+            mensajeError = 'No tienes permisos para cambiar el método de autenticación.';
+          } else if (error.status === 404) {
+            mensajeError = 'Usuario no encontrado o endpoint no disponible.';
+          } else if (error.userMessage) {
+            mensajeError = error.userMessage;
           } else if (error.error?.message) {
             mensajeError = error.error.message;
           } else if (error.message) {
             mensajeError = error.message;
           }
+          
+          this.isLoading = false;
+          this.isProcessing2FAChange = false;
           
           this.closeChange2FAMethodModal();
           this.mostrarModalSuccess(mensajeError, 'Entendido');
@@ -325,15 +390,12 @@ export class Users implements OnInit, OnDestroy {
   }
 
   handleUserRegistered(event: { idUsuario: number }): void {
-    console.log('Usuario registrado con ID:', event.idUsuario);
     this.closeRegisterUserModal();
     
-    // Mostrar mensaje de éxito y recargar usuarios
     this.modalSuccessMessage = `Usuario registrado exitosamente con ID: ${event.idUsuario}. Debe ser activado por un administrador.`;
     this.modalSuccessBtn = 'Aceptar';
     this.modalSuccessVisible = true;
     
-    // Recargar la lista de usuarios
     this.cargarUsuarios();
   }
 
@@ -349,6 +411,17 @@ export class Users implements OnInit, OnDestroy {
   }
 
   saveUser(userData: Usuario): void {
+    // Limpiar cache y recargar usuarios
+    this.userService.clearUsersCache();
+    this.cargarUsuarios();
+    this.isUserFormVisible = false;
+    this.currentUser = null;
+    this.currentAction = '';
+  }
+
+  handleUserRejected(user: Usuario): void {
+    // Limpiar cache y recargar usuarios
+    this.userService.clearUsersCache();
     this.cargarUsuarios();
     this.isUserFormVisible = false;
     this.currentUser = null;
@@ -357,8 +430,9 @@ export class Users implements OnInit, OnDestroy {
 
   handleNavigateToUsers(): void {
     // Cerrar el modal y recargar usuarios
-    this.isUserFormVisible = false;
+    this.userService.clearUsersCache();
     this.cargarUsuarios();
+    this.isUserFormVisible = false;
     this.currentUser = null;
     this.currentAction = '';
   }
@@ -515,6 +589,27 @@ export class Users implements OnInit, OnDestroy {
         this.isChangePasswordModalVisible = true;
         break;
 
+      case 'rechazar':
+        if (this.currentUser) {
+          // Rechazar = Desactivar (PENDIENTE -> INACTIVO)
+          this.userService.desactivarUsuario(this.currentUser, password)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (response: any) => {
+                this.mostrarModalSuccess('Solicitud de usuario rechazada. El usuario ha sido marcado como INACTIVO.', 'Aceptar');
+                this.cargarUsuarios();
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
+              },
+              error: (error: any) => {
+                alert('Error al rechazar la solicitud: ' + (error.message || 'Error desconocido'));
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
+              }
+            });
+        }
+        break;
+
       default:
         this.isPasswordModalVisible = false;
         this.userStateService.clearPendingOperation();
@@ -535,7 +630,7 @@ export class Users implements OnInit, OnDestroy {
   this.cargarUsuarios();
 }
 
-  abrirConfirmModal(tipo: 'inactivar' | 'activar' | 'eliminarQR', usuario: Usuario) {
+  abrirConfirmModal(tipo: 'inactivar' | 'activar' | 'eliminarQR' | 'rechazar', usuario: Usuario) {
     this.confirmModalAction = tipo;
     this.currentUser = usuario;
     this.userStateService.setPendingOperation(usuario, tipo);
@@ -549,6 +644,9 @@ export class Users implements OnInit, OnDestroy {
         break;
       case 'eliminarQR':
         this.confirmModalMessage = '¿Está seguro de que desea eliminar el código QR?';
+        break;
+      case 'rechazar':
+        this.confirmModalMessage = '¿Está seguro de que desea rechazar la solicitud de este usuario? El usuario quedará en estado INACTIVO.';
         break;
     }
 
@@ -580,6 +678,12 @@ export class Users implements OnInit, OnDestroy {
       case 'eliminarQR':
         this.mensajePasswordModal = 'Ingrese su contraseña para eliminar el código QR.';
         this.currentAction = 'eliminarQR';
+        this.isPasswordModalVisible = true;
+        break;
+        
+      case 'rechazar':
+        this.mensajePasswordModal = 'Ingrese su contraseña para rechazar la solicitud. El usuario quedará INACTIVO.';
+        this.currentAction = 'rechazar';
         this.isPasswordModalVisible = true;
         break;
     }
@@ -630,6 +734,58 @@ export class Users implements OnInit, OnDestroy {
 
   closeExternalAlert(index: number): void {
     this.externalAlerts.splice(index, 1);
+  }
+
+  sortBy(field: string): void {
+    if (this.currentOrder === field) {
+      this.ascendingOrder = !this.ascendingOrder;
+    } else {
+      this.currentOrder = field;
+      this.ascendingOrder = true;
+    }
+    this.filtrarUsuarios();
+  }
+
+  getSortIcon(field: string): any {
+    if (this.currentOrder !== field) {
+      return { 'bi-arrow-down-up': true, 'text-muted': true };
+    }
+    return this.ascendingOrder ? { 'bi-arrow-down': true } : { 'bi-arrow-up': true };
+  }
+
+  private sortUsuarios(usuarios: Usuario[], field: string, ascending: boolean): Usuario[] {
+    return usuarios.sort((a, b) => {
+      let valueA: any;
+      let valueB: any;
+
+      switch (field) {
+        case 'idUsuario':
+          valueA = a.idUsuario || 0;
+          valueB = b.idUsuario || 0;
+          break;
+        case 'identificacion':
+          valueA = a.identificacion || '';
+          valueB = b.identificacion || '';
+          break;
+        case 'estado':
+          valueA = typeof a.estado === 'object' 
+            ? (a.estado.descripcion || '').toString().toLowerCase()
+            : String(a.estado || '').toLowerCase();
+          valueB = typeof b.estado === 'object' 
+            ? (b.estado.descripcion || '').toString().toLowerCase()
+            : String(b.estado || '').toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+
+      if (typeof valueA === 'number' && typeof valueB === 'number') {
+        return ascending ? valueA - valueB : valueB - valueA;
+      } else {
+        const comparison = valueA.toString().localeCompare(valueB.toString());
+        return ascending ? comparison : -comparison;
+      }
+    });
   }
 
 }

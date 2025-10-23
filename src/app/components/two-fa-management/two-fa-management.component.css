@@ -81,9 +81,9 @@
   color: #22543d;
 }
 
-.status-disabled {
-  background: #fed7d7;
-  color: #c53030;
+.status-pending {
+  background: #fef5e7;
+  color: #d69e2e;
 }
 
 .status-description p {
@@ -91,6 +91,14 @@
   font-size: 14px;
   line-height: 1.5;
   margin: 0;
+}
+
+.warning-text {
+  background: #fef5e7;
+  color: #744210;
+  padding: 12px;
+  border-radius: 8px;
+  border-left: 4px solid #d69e2e;
 }
 
 .stats-card {
@@ -131,6 +139,13 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.section-title {
+  color: #2d3748;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
 }
 
 .action-card {
@@ -193,16 +208,28 @@
   margin: 0;
 }
 
+.badge-active {
+  display: inline-block;
+  background: #c6f6d5;
+  color: #22543d;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.action-icon.active {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
 .action-actions {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-}
-
-.disable-form {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #e2e8f0;
 }
 
 .form-group {
@@ -319,6 +346,19 @@
   width: 16px;
   height: 16px;
   color: #4a5568;
+}
+
+.btn-outline {
+  background: transparent;
+  color: #667eea;
+  border: 2px solid #667eea;
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: #667eea;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
 }
 
 .error-message {

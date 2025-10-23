@@ -18,14 +18,9 @@ export class ProfileModal implements OnChanges {
   @Output() close = new EventEmitter<void>();
   @Output() save = new EventEmitter<UsuarioData>();
 
-  // Copia del usuario para edición
   editedUser: UsuarioData | null = null;
-  
-  // Estados de carga y mensajes
   isLoading = false;
   errorMessage = '';
-  
-  // Modal de éxito
   modalSuccessVisible = false;
   modalSuccessMessage = '';
   modalSuccessBtn = 'Aceptar';
@@ -34,10 +29,8 @@ export class ProfileModal implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['user'] && this.user) {
-      // Crear una copia del usuario para edición con mapeo correcto de teléfonos
       this.editedUser = { 
         ...this.user,
-        // Asegurar que los teléfonos estén disponibles
         telefono1: this.user.telefono1 || '',
         telefono2: this.user.telefono2 || ''
       };
@@ -45,7 +38,6 @@ export class ProfileModal implements OnChanges {
   }
 
   onClose(): void {
-    // Restaurar los datos originales al cerrar
     if (this.user) {
       this.editedUser = { 
         ...this.user,
@@ -68,7 +60,6 @@ export class ProfileModal implements OnChanges {
     this.errorMessage = '';
 
     const cleanedData = this.cleanUserData(this.editedUser);
-    
     const usuarioToUpdate: Usuario = {
       idUsuario: cleanedData.idUsuario,
       identificacion: cleanedData.identificacion,
@@ -80,27 +71,16 @@ export class ProfileModal implements OnChanges {
       telefono1: cleanedData.telefono1 || '',
       telefono2: cleanedData.telefono2 || '',
       direccion: cleanedData.direccion || '',
-      dobleAutenticacion: true,
       estado: {
-        idEstado: 5,
-        descripcion: 'ACTIVO'
+        idEstado: 4,
+        descripcion: 'PENDIENTE'
       },
-      cargo: {
-        idCargo: cleanedData.cargo.idCargo,
-        descripcion: cleanedData.cargo.descripcion,
-        area: {
-          idArea: 1,
-          descripcion: cleanedData.cargo.area || 'N/A',
-          departamento: {
-            idDepartamento: 1,
-            descripcion: cleanedData.cargo.departamento || 'N/A'
-          }
-        }
-      },
+      cargo: undefined,
       rol: {
         idRol: 2,
-        descripcion: cleanedData.rol || 'USUARIO'
-      }
+        descripcion: 'FUNCIONARIO'
+      },
+      dobleAutenticacion: 'GOOGLE_AUTH'
     };
 
     this.userService.actualizarUsuario(usuarioToUpdate).subscribe({
@@ -108,16 +88,15 @@ export class ProfileModal implements OnChanges {
         this.isLoading = false;
         
         if (response && (response.success === true || (response as any).idUsuario)) {
-          this.mostrarModalSuccess('Perfil actualizado correctamente');
+          this.mostrarModalSuccess('Usuario registrado correctamente. Quedará pendiente de activación por el administrador.');
           this.save.emit(this.editedUser!);
         } else {
-          this.errorMessage = response?.message || 'Error al actualizar el perfil.';
+          this.errorMessage = response?.message || 'Error al registrar el usuario.';
         }
       },
       error: (error) => {
         this.isLoading = false;
-        this.errorMessage = 'Error al actualizar el perfil. Inténtelo de nuevo.';
-        console.error('Error actualizando usuario:', error);
+        this.errorMessage = 'Error al registrar el usuario. Inténtelo de nuevo.';
       }
     });
   }

@@ -39,7 +39,7 @@ export interface Usuario {
     descripcion: string;
   };
   activo?: boolean;
-  cargo: {
+  cargo?: {
     idCargo: number;
     descripcion: string;
     area: {
@@ -60,7 +60,9 @@ export interface Usuario {
   telefono1: string;
   telefono2?: string;
   direccion?: string;
-  dobleAutenticacion: boolean | 'GOOGLE_AUTH' | 'EMAIL' | null;
+  dobleAutenticacion?: boolean | 'GOOGLE_AUTH' | 'EMAIL' | null;
+  tokenQr?: boolean;
+  tokenCorreo?: boolean;
   perfiles?: {
     administrador: boolean;
     funcionarioCreador: boolean;
@@ -89,7 +91,7 @@ export interface UsuarioRequest {
   telefono1: string;
   telefono2?: string;
   direccion?: string;
-  dobleAutenticacion: boolean;
+  dobleAutenticacion?: boolean;
 }
 
 export interface ApiResponse {
@@ -169,7 +171,7 @@ export interface ConfiguracionTabla {
 }
 
 export interface EventoTabla {
-  tipo: 'editar' | 'eliminar' | 'inactivar' | 'activar' | 'cambiarContraseña' | 'eliminarQR' | 'ver';
+  tipo: 'editar' | 'eliminar' | 'inactivar' | 'activar' | 'cambiarContraseña' | 'eliminarQR' | 'rechazar' | 'ver';
   usuario: Usuario;
   datos?: any;
 }
@@ -222,7 +224,7 @@ export interface Notificacion {
 
 export type EstadoCarga = 'idle' | 'loading' | 'success' | 'error';
 
-export type AccionModal = 'crear' | 'editar' | 'eliminar' | 'inactivar' | 'activar' | 'cambiarContraseña' | 'eliminarQR' | 'ver';
+export type AccionModal = 'crear' | 'editar' | 'eliminar' | 'inactivar' | 'activar' | 'cambiarContraseña' | 'eliminarQR' | 'rechazar' | 'ver';
 
 export interface UsuarioAutenticado {
   id: number;
@@ -286,6 +288,9 @@ export interface UsuarioData {
   rol: string;
   estado: string;
   tipologias: TipologiaData[];
+  dobleAutenticacion?: 'GOOGLE_AUTH' | 'EMAIL';
+  tokenQr?: boolean;
+  tokenCorreo?: boolean;
 }
 
 export interface CargoData {
@@ -355,7 +360,7 @@ export interface TwoFAResponse {
 }
 
 export interface TwoFAErrorResponse {
-  code: 'CODIGO_2FA_INVALIDO' | 'TOKEN_INVALIDO' | 'USUARIO_BLOQUEADO' | 'CREDENCIALES_INVALIDAS' | '2FA_YA_CONFIGURADO' | '2FA_DISABLED' | 'PASSWORD_INCORRECT' | 'CODIGO_INVALIDO';
+  code: 'CODIGO_2FA_INVALIDO' | 'TOKEN_INVALIDO' | 'USUARIO_BLOQUEADO' | 'CREDENCIALES_INVALIDAS' | '2FA_YA_CONFIGURADO' | '2FA_DISABLED' | 'PASSWORD_INCORRECT' | 'CODIGO_INVALIDO' | '2FA_METHOD_INCORRECT';
   message: string;
 }
 
@@ -363,7 +368,7 @@ export interface TwoFAErrorResponse {
 export interface TwoFARequiredResponse {
   message: string;
   usuario: string;
-  dobleAutenticacion: boolean;
+  dobleAutenticacion?: boolean; // Deprecated: usar hasGoogleAuth y hasEmailBackup en lugar de esto
   tempToken: string;
 }
 
@@ -418,14 +423,13 @@ export interface EmailCodeResponse {
   message: string;
 }
 
-// Estados de 2FA (actualizada)
 export interface TwoFAState {
   hasGoogleAuth: boolean;
   hasEmailBackup: boolean;
   googleAuthPending: boolean;
   isConfigured: boolean;
   needsSetup: boolean;
-  metodoActual?: 'GOOGLE_AUTH' | 'EMAIL';
+  metodoActual?: 'GOOGLE_AUTH' | 'EMAIL' | 'PENDING';
 }
 
 // Datos de configuración QR
@@ -457,11 +461,13 @@ export interface RegisterRequest {
   apellidos: string;
   usuario: string;
   password: string;
-  correoEmpresarial?: string;
+  correoEmpresarial: string;
   correoPersonal?: string;
-  telefono1?: string;
+  telefono1: string;
   telefono2?: string;
   direccion?: string;
+  cargoId: number;
+  dobleAutenticacion?: 'GOOGLE_AUTH' | 'EMAIL';
 }
 
 export interface RegisterResponse {
