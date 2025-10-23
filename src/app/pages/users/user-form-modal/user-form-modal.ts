@@ -44,13 +44,10 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   hierarchicalData: any = { departamentos: [] };
   isDropdownOpen = false;
   selectedCargoInfo: Position | null = null;
-  originalDobleAutenticacion: string = '';
+  // originalDobleAutenticacion eliminado
   isDataLoaded = false;
   
-  dobleAutenticacionOptions = [
-    { value: 'GOOGLE_AUTH', label: 'Google Authenticator' },
-    { value: 'EMAIL', label: 'Correo Electrónico' }
-  ];
+  // dobleAutenticacionOptions eliminado
 
   isPasswordModalVisible = false;
   confirmModalVisible = false;
@@ -114,7 +111,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       celular: ['', [Validators.required, Validators.pattern(/^\+?[\d\s\-()]{10,15}$/)]],
       telefono: ['', [Validators.pattern(/^\+?[\d\s\-()]{10,15}$/)]],
       direccion: ['', [Validators.maxLength(200)]],
-      dobleAutenticacion: ['GOOGLE_AUTH', Validators.required],
+      // dobleAutenticacion eliminado
       perfil: ['funcionarios', Validators.required]
     });
   }
@@ -197,15 +194,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         }
       }
 
-      let dobleAutenticacionValue: 'GOOGLE_AUTH' | 'EMAIL' = 'GOOGLE_AUTH';
-      
-      if (this.user.dobleAutenticacion === 'GOOGLE_AUTH' || this.user.dobleAutenticacion === 'EMAIL') {
-        dobleAutenticacionValue = this.user.dobleAutenticacion;
-      } else if (typeof this.user.dobleAutenticacion === 'boolean') {
-        dobleAutenticacionValue = this.user.dobleAutenticacion ? 'EMAIL' : 'GOOGLE_AUTH';
-      } else if (this.user.dobleAutenticacion === null || this.user.dobleAutenticacion === undefined) {
-        dobleAutenticacionValue = 'GOOGLE_AUTH';
-      }
+      // Lógica de dobleAutenticacion eliminada
 
       this.userForm.patchValue({
         noUsuario: this.user.idUsuario || this.user.noUsuario || 0,
@@ -219,12 +208,11 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         celular: this.user.telefono1 || '',
         telefono: this.user.telefono2 || '',
         direccion: this.user.direccion || '',
-        dobleAutenticacion: dobleAutenticacionValue,
+        // dobleAutenticacion eliminado
         perfil: perfilActivo
       });
 
-      // Guardar el valor original para detectar cambios
-      this.originalDobleAutenticacion = dobleAutenticacionValue;
+      // originalDobleAutenticacion eliminado
 
       // Solo establecer selectedCargoInfo si hay un cargo válido
       if (cargoValue) {
@@ -598,7 +586,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
               cargo: this.user?.cargo,
               rol: this.user?.rol,
               estado: this.user?.estado,
-              dobleAutenticacion: this.user?.dobleAutenticacion,
+              // dobleAutenticacion eliminado
               activo: true
             } as Usuario;
             
@@ -968,7 +956,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       telefono1: formValue.celular || '',
       telefono2: formValue.telefono || '',
       direccion: formValue.direccion || '',
-      dobleAutenticacion: this.isEditMode ? this.user?.dobleAutenticacion : formValue.dobleAutenticacion,
+      // dobleAutenticacion eliminado
       activo: true
     } as Usuario;
 
@@ -1050,7 +1038,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
   private resetForm(): void {
     this.userForm.reset({
-      dobleAutenticacion: 'GOOGLE_AUTH',
       perfil: 'funcionarios'
     });
     this.userForm.get('identificacion')?.enable();
@@ -1124,9 +1111,7 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       direccion: {
         maxlength: 'La dirección no puede exceder 200 caracteres'
       },
-      dobleAutenticacion: {
-        required: 'La doble autenticación es requerida'
-      },
+      // dobleAutenticacion eliminado
       perfil: {
         required: 'Debe seleccionar un perfil'
       },

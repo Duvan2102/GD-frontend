@@ -201,32 +201,7 @@
               {{ getErrorMessage('direccion') }}
             </div>
           </div>
-          <div class="col-md-6">
-            <label class="form-label">Método 2FA Inicial <span class="text-danger" *ngIf="!isEditMode">*</span></label>
-            <small class="form-text text-muted d-block mb-2" *ngIf="!isEditMode">
-              La autenticación de dos factores es obligatoria. Selecciona el método inicial.
-            </small>
-
-            <select *ngIf="!isEditMode" class="form-select" formControlName="dobleAutenticacion"
-                    [class.is-invalid]="userForm.get('dobleAutenticacion')?.invalid && userForm.get('dobleAutenticacion')?.touched">
-              <option *ngFor="let option of dobleAutenticacionOptions" [value]="option.value">
-                {{ option.label }}
-              </option>
-            </select>
-
-            <div *ngIf="isEditMode">
-              <input type="text" class="form-control" disabled
-                     [value]="userForm.get('dobleAutenticacion')?.value === 'GOOGLE_AUTH' ? 'Google Authenticator' : 
-                              userForm.get('dobleAutenticacion')?.value === 'EMAIL' ? 'Correo Electrónico' : 
-                              userForm.get('dobleAutenticacion')?.value === true ? 'Correo Electrónico' : 
-                              userForm.get('dobleAutenticacion')?.value === false ? 'Google Authenticator' : 
-                              'No configurado'">
-            </div>
-            
-            <div *ngIf="getErrorMessage('dobleAutenticacion') && !isEditMode" class="invalid-feedback">
-              {{ getErrorMessage('dobleAutenticacion') }}
-            </div>
-          </div>
+          <!-- Campo Método 2FA Inicial eliminado -->
         </div>
 
         <hr class="my-4">
