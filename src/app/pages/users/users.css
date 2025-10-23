@@ -1,3 +1,6 @@
+@import '../../styles/variables.css';
+
+/* Alertas externas */
 .external-alerts-container {
   position: fixed;
   top: 80px;
@@ -5,7 +8,6 @@
   z-index: 2000;
   max-width: 400px;
   width: 90%;
-  
 }
 
 .external-alert {
@@ -134,12 +136,44 @@
 
 .usuarios-tabla th, .usuarios-tabla td {
   padding: 6px 10px;
+  text-align: center;
+}
+
+.usuarios-tabla th:nth-child(1), .usuarios-tabla td:nth-child(1) {
+  text-align: center;
+}
+
+.usuarios-tabla th:nth-child(2), .usuarios-tabla td:nth-child(2) {
+  text-align: center;
+}
+
+.usuarios-tabla th:nth-child(7), .usuarios-tabla td:nth-child(7) {
+  text-align: center;
+}
+
+.usuarios-tabla th:nth-child(3), .usuarios-tabla td:nth-child(3) {
   text-align: left;
+}
+
+.usuarios-tabla th:nth-child(4), .usuarios-tabla td:nth-child(4) {
+  text-align: left;
+}
+
+.usuarios-tabla th:nth-child(5), .usuarios-tabla td:nth-child(5) {
+  text-align: left;
+}
+
+.usuarios-tabla th:nth-child(6), .usuarios-tabla td:nth-child(6) {
+  text-align: center;
 }
 
 .usuarios-tabla td {
   color: #374151;
   font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0;
 }
 .usuarios-tabla thead {
   background-color: #f9fafb;
@@ -151,6 +185,38 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.2px;
+}
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.sortable-header:hover {
+  background-color: rgba(90, 139, 129, 0.1);
+}
+
+.sortable-header i {
+  margin-left: 5px;
+  font-size: 12px;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.usuarios-ver {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px;
+  min-width: 20px;
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .usuarios-tabla tbody tr {
   border-bottom: 1px solid rgba(90, 139, 129, 0.3);
@@ -186,6 +252,7 @@
   padding: 15px 20px 10px 20px;
   font-size: 12px;
   border-bottom: 1px solid #bed6cd;
+  text-align: left;
 }
 
 .acciones-usuario {
@@ -206,6 +273,33 @@
   text-decoration: underline;
 }
 
+/* Alerta para usuarios pendientes */
+.alert-pendiente {
+  background-color: #e3f2fd;
+  border: 1px solid #2196f3;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #1565c0;
+  border-left: 4px solid #2196f3;
+}
+
+.alert-pendiente i {
+  color: #2196f3;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.alert-pendiente span {
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+/* Estilos unificados para el modal de cambio de método 2FA */
 .modal-overlay {
   position: fixed;
   top: 0;

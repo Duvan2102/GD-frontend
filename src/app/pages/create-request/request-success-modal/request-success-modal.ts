@@ -550,6 +550,7 @@ export class RequestSuccessModal implements OnChanges {
 
     this.approvalService.downloadAttachment(this.data.id, attachment.id, this.currentUser.idUsuario).subscribe({
       next: (blob) => {
+        // 1. Descargar el adjunto
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -558,11 +559,62 @@ export class RequestSuccessModal implements OnChanges {
         link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
+
+        // 2. Registrar la descarga de adjuntos
+        if (this.data?.id && this.currentUser?.idUsuario) {
+          this.approvalService.registrarDescargaAdjuntos(this.data.id, this.currentUser.idUsuario).subscribe({
+            next: () => console.log('✅ Descarga de adjuntos registrada exitosamente'),
+            error: (err) => console.warn('⚠️ No se pudo registrar la descarga de adjuntos (no afecta al usuario):', err)
+          });
+        }
       },
       error: (error) => {
         alert('Error al descargar el adjunto. Por favor, inténtelo de nuevo.');
       }
     });
+  }
+
+  /**
+   * Descarga el archivo ZIP completo de la solicitud
+   */
+  downloadCompletoZip(): void {
+    if (!this.data?.id || !this.currentUser?.idUsuario) {
+      alert('No se puede descargar el archivo ZIP. Usuario no disponible.');
+      return;
+    }
+
+    this.approvalService.downloadCompletoZip(this.data.id, this.currentUser.idUsuario).subscribe({
+      next: (blob) => {
+        // 1. Descargar el ZIP
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `solicitud_${this.data!.id}_completa.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        // 2. Registrar la descarga completa
+        if (this.data?.id && this.currentUser?.idUsuario) {
+          this.approvalService.registrarDescargaCompleta(this.data.id, this.currentUser.idUsuario).subscribe({
+            next: () => console.log('✅ Descarga completa (ZIP) registrada exitosamente'),
+            error: (err) => console.warn('⚠️ No se pudo registrar la descarga completa (no afecta al usuario):', err)
+          });
+        }
+      },
+      error: (error) => {
+        alert('Error al descargar el archivo ZIP. Por favor, inténtelo de nuevo.');
+      }
+    });
+  }
+
+  /**
+   * Verifica si la solicitud está en un estado que permite descarga ZIP
+   */
+  canDownloadZip(): boolean {
+    const estado = this.data?.estado;
+    return estado === 'Aprobada' || estado === 'Rechazada' || estado === 'Cancelada';
   }
 
   onViewApprovedDocument(): void {
@@ -605,6 +657,7 @@ export class RequestSuccessModal implements OnChanges {
       case 'RECHAZO': return 'historial-item-rechazo';
       case 'CANCELACION': return 'historial-item-cancelacion';
       case 'ENVIO': return 'historial-item-envio';
+      case 'DESCARGA': return 'historial-item-descarga';
       default: return 'historial-item-default';
     }
   }
@@ -615,8 +668,21 @@ export class RequestSuccessModal implements OnChanges {
       case 'RECHAZO': return 'bi-x-circle-fill';
       case 'CANCELACION': return 'bi-dash-circle-fill';
       case 'ENVIO': return 'bi-send-fill';
+      case 'DESCARGA': return 'bi-file-earmark-arrow-down';
       default: return 'bi-info-circle-fill';
     }
+  }
+
+  getStatusBadgeClass(estado: string): string {
+    if (!estado) return '';
+    
+    const estadoLower = estado.toLowerCase();
+    if (estadoLower.includes('aprobado') || estadoLower === 'approved') return 'status-aprobado';
+    if (estadoLower.includes('rechazado') || estadoLower === 'rejected') return 'status-rechazado';
+    if (estadoLower.includes('cancelado') || estadoLower === 'cancelled' || estadoLower.includes('cancelada')) return 'status-cancelado';
+    if (estadoLower.includes('pendiente') || estadoLower === 'pending') return 'status-pendiente';
+    
+    return '';
   }
 
   showCommentModal(gestion: GestionHistorial): void {

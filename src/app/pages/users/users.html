@@ -1,4 +1,3 @@
-<!-- Contenedor de alertas externas -->
 <div class="external-alerts-container">
   <div *ngFor="let alert of externalAlerts; let i = index"
        class="external-alert"
@@ -22,8 +21,6 @@
 
 <div class="principal-wrapper">
   <div class="container-fluid p-4">
-
-    <!-- CABECERA -->
     <div class="seccion-cabecera">
       <h2 class="mb-2">USUARIOS</h2>
       <div class="d-flex gap-2">
@@ -34,10 +31,9 @@
       </div>
     </div>
 
-    <!-- CONTROLES -->
     <app-controls
       [textoboton]="'Crear usuario'"
-      [labelAprobados]="activos ? 'ACTIVOS' : 'INACTIVOS'"
+      [labelAprobados]="activos ? 'ACTIVOS/PENDIENTES' : 'INACTIVOS'"
       [quantity]="itemsPerPage"
       [toggleApproved]="!activos"
       [search]="searchTerm"
@@ -46,36 +42,40 @@
       (searchChange)="onBuscar($event)">
     </app-controls>
 
-    <!-- TABLA HEADER -->
     <div class="header-table">
       <table class="usuarios-tabla">
         <thead>
           <tr>
-            <th (click)="sortBy('idUsuario')" style="cursor: pointer; text-align: center;">NO USUARIO <i class="bi" [ngClass]="getSortIcon('idUsuario')"></i></th>
-            <th style="text-align: center;">IDENTIFICACIÓN</th>
-            <th (click)="sortBy('nombres')" style="cursor: pointer; text-align: center;">NOMBRES <i class="bi" [ngClass]="getSortIcon('nombres')"></i></th>
-            <th (click)="sortBy('apellidos')" style="cursor: pointer; text-align: center;">APELLIDOS <i class="bi" [ngClass]="getSortIcon('apellidos')"></i></th>
-            <th style="text-align: center; padding-right: 25px;">USUARIO</th>
-            <th (click)="sortBy('estado')" style="cursor: pointer; text-align: center; padding-right: 25px;">ESTADO <i class="bi" [ngClass]="getSortIcon('estado')"></i></th>
-            <th style="width: 50px; text-align: center;"></th>
+            <th style="width: 10%;" (click)="sortBy('idUsuario')" class="sortable-header">
+              No Usuario <i class="bi" [ngClass]="getSortIcon('idUsuario')"></i>
+            </th>
+            <th style="width: 14%;" (click)="sortBy('identificacion')" class="sortable-header">
+              Identificación <i class="bi" [ngClass]="getSortIcon('identificacion')"></i>
+            </th>
+            <th style="width: 21%;">Nombres</th>
+            <th style="width: 21%;">Apellidos</th>
+            <th style="width: 17%;">Usuario</th>
+            <th style="width: 14%;" (click)="sortBy('estado')" class="sortable-header">
+              Estado <i class="bi" [ngClass]="getSortIcon('estado')"></i>
+            </th>
+            <th style="width: 5%;"></th>
           </tr>
         </thead>
       </table>
     </div>
 
-    <!-- TABLA BODY -->
     <div class="panel-tabla-scroll">
       <table class="usuarios-tabla body-table">
         <tbody>
           <ng-container *ngFor="let u of usuariosFiltrados; let i = index">
             <tr>
-              <td style="text-align: center;">{{ u.idUsuario }}</td>
-              <td style="text-align: center;">{{ u.identificacion }}</td>
-              <td style="text-align: center;">{{ u.nombres }}</td>
-              <td style="text-align: center; padding-left: 20px;">{{ u.apellidos }}</td>
-              <td style="text-align: center; padding-left: 20px;">{{ u.usuario }}</td>
-              <td style="text-align: center; padding-left: 20px;">{{ u.estado.descripcion }}</td>
-              <td style="width: 50px; text-align: center;">
+              <td style="width: 10%;">{{ u.idUsuario }}</td>
+              <td style="width: 14%;">{{ u.identificacion }}</td>
+              <td style="width: 21%;" [title]="u.nombres">{{ u.nombres }}</td>
+              <td style="width: 21%;" [title]="u.apellidos">{{ u.apellidos }}</td>
+              <td style="width: 17%;" [title]="u.usuario">{{ u.usuario }}</td>
+              <td style="width: 14%;">{{ u.estado.descripcion }}</td>
+              <td style="width: 5%;">
                 <button class="usuarios-ver" (click)="toggleDesplegable(i)">
                   <i *ngIf="filaDesplegada === i; else right" class="bi bi-chevron-down"></i>
                   <ng-template #right><i class="bi bi-chevron-right"></i></ng-template>
@@ -85,17 +85,27 @@
             <tr *ngIf="filaDesplegada === i" class="desplegable-row">
               <td colspan="7">
                 <div class="desplegable-contenido">
-                  <!-- Perfil y acciones desplegables -->
-                  <div><b>Perfil</b><br> Funcionario</div>
+                  <div><b>Perfil</b><br> 
+                    <span *ngIf="u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE'">Sin asignar</span>
+                    <span *ngIf="!(u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE')">Funcionario</span>
+                  </div>
+                  <div><b>Cargo</b><br> 
+                    <span *ngIf="u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE'">Sin asignar</span>
+                    <span *ngIf="!(u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE')">{{ u.cargo?.descripcion || 'Sin cargo' }}</span>
+                  </div>
                   <div class="acciones-usuario">
-                    <!-- Botones de activar/inactivar solo si NO está en estado PENDIENTE -->
-                    <a href="#" *ngIf="u.activo && u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() !== 'PENDIENTE'" (click)="abrirConfirmModal('inactivar', u); $event.preventDefault()"> ㊀ Inactivar usuario</a>
-                    <a href="#" *ngIf="!u.activo && u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() !== 'PENDIENTE'" (click)="abrirConfirmModal('activar', u); $event.preventDefault()"> 🗹 Activar usuario</a>
-                    <a href="#" (click)="accion('editar', u, $event); $event.preventDefault()"> ✎ Editar usuario</a>
-                    <a href="#" (click)="accion('cambiarContraseña', u, $event); $event.preventDefault()"> ⚷ Cambiar contraseña</a>
-                    <a href="#" (click)="accion('cambiar2FA', u, $event); $event.preventDefault()"> ⚠ Cambiar método 2FA</a>
-                    <a href="#" *ngIf="u.dobleAutenticacion !== null && u.dobleAutenticacion !== undefined && u.dobleAutenticacion !== 'EMAIL' && u.dobleAutenticacion !== true" (click)="abrirConfirmModal('eliminarQR', u); $event.preventDefault()"> ✖︎ Eliminar QR</a>
+                    <a href="#" *ngIf="u.activo && !(u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE')" (click)="abrirConfirmModal('inactivar', u); $event.preventDefault()"> ㊀ Inactivar usuario</a>
+                    <a href="#" *ngIf="!u.activo && !(u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE')" (click)="abrirConfirmModal('activar', u); $event.preventDefault()"> 🗹 Activar usuario</a>
+                    <a href="#" (click)="accion('editar', u, $event)"> ✎ Editar usuario</a>
+                    <a href="#" *ngIf="u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE'" (click)="abrirConfirmModal('rechazar', u); $event.preventDefault()" style="color: #dc3545;"> ✖ Rechazar solicitud (Inactivar)</a>
+                    <a href="#" (click)="accion('cambiarContraseña', u, $event)"> ⚷ Cambiar contraseña</a>
+                    <a href="#" (click)="accion('cambiar2FA', u, $event)"> ⚠ Cambiar método 2FA</a>
+                    <a href="#" *ngIf="u.dobleAutenticacion === 'GOOGLE_AUTH' || u.tokenQr === true" (click)="abrirConfirmModal('eliminarQR', u); $event.preventDefault()"> ✖︎ Eliminar QR</a>
 
+                  </div>
+                  <div *ngIf="u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE'" class="alert-pendiente">
+                    <i class="bi bi-info-circle-fill"></i>
+                    <span>Asigne los datos pendientes mediante la opción "Editar usuario". Una vez asignados y guardados, el usuario pasará a estado ACTIVO </span>
                   </div>
                 </div>
               </td>
@@ -105,7 +115,6 @@
       </table>
     </div>
 
-    <!-- FOOTER: paginación -->
     <app-footer-controls
       [totalItems]="usuariosFiltradosLength"
       [itemsPerPage]="itemsPerPage"
@@ -115,8 +124,6 @@
   </div>
 </div>
 
-<!-- MODALES -->
-
 <app-user-form-modal
   *ngIf="isUserFormVisible"
   [isVisible]="isUserFormVisible"
@@ -124,6 +131,7 @@
   [user]="currentUser"
   (close)="closeUserFormModal()"
   (save)="saveUser($event)"
+  (userRejected)="handleUserRejected($event)"
   (navigateToUsers)="handleNavigateToUsers()"
   (showAlert)="showExternalAlert($event.type, $event.title, $event.message)">
 </app-user-form-modal>
@@ -161,14 +169,12 @@
   (passwordChanged)="handlePasswordChanged($event)">
 </app-change-password>
 
-<!-- Modal para cambiar método de 2FA -->
-
-<!-- Modal de registro de usuario -->
 <app-user-form-register
   *ngIf="isRegisterUserModalVisible"
   (registered)="handleUserRegistered($event)"
   (close)="closeRegisterUserModal()">
 </app-user-form-register>
+
 <div *ngIf="isChange2FAMethodModalVisible" class="modal-overlay" (click)="closeChange2FAMethodModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -178,13 +184,35 @@
     <div class="modal-body">
       <p>Selecciona el nuevo método de autenticación de dos factores para <strong>{{currentUser?.nombres}} {{currentUser?.apellidos}}</strong>:</p>
 
+      <!-- Mostrar método actual -->
+      <div class="alert alert-info mb-3" role="alert">
+        <strong>Método actual:</strong> 
+        <ng-container [ngSwitch]="currentUser?.dobleAutenticacion">
+          <span *ngSwitchCase="'GOOGLE_AUTH'">
+            <i class="fas fa-mobile-alt me-1"></i>Google Authenticator
+          </span>
+          <span *ngSwitchCase="'EMAIL'">
+            <i class="fas fa-envelope me-1"></i>Correo Electrónico
+          </span>
+          <span *ngSwitchCase="true">
+            <i class="fas fa-envelope me-1"></i>Correo Electrónico
+          </span>
+          <span *ngSwitchCase="false">
+            <i class="fas fa-mobile-alt me-1"></i>Google Authenticator
+          </span>
+          <span *ngSwitchDefault>
+            <i class="fas fa-question-circle me-1"></i>No configurado (por defecto: Google Authenticator)
+          </span>
+        </ng-container>
+      </div>
+
       <div class="form-group">
         <label>
           <input type="radio"
                  name="metodo2FA"
                  value="GOOGLE_AUTH"
-                 [(ngModel)]="selected2FAMethod"
-                 [checked]="selected2FAMethod === 'GOOGLE_AUTH'">
+                 [checked]="selected2FAMethod === 'GOOGLE_AUTH'"
+                 (change)="selected2FAMethod = 'GOOGLE_AUTH'">
           <span class="radio-label">Google Authenticator (QR Code)</span>
         </label>
       </div>
@@ -194,8 +222,8 @@
           <input type="radio"
                  name="metodo2FA"
                  value="EMAIL"
-                 [(ngModel)]="selected2FAMethod"
-                 [checked]="selected2FAMethod === 'EMAIL'">
+                 [checked]="selected2FAMethod === 'EMAIL'"
+                 (change)="selected2FAMethod = 'EMAIL'">
           <span class="radio-label">Correo Electrónico</span>
         </label>
       </div>
@@ -209,8 +237,11 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-secondary" (click)="closeChange2FAMethodModal()">Cancelar</button>
-      <button type="button" class="btn btn-primary" (click)="on2FAMethodChange()">Cambiar Método</button>
+      <button type="button" class="btn btn-secondary" (click)="closeChange2FAMethodModal()" [disabled]="isLoading">Cancelar</button>
+      <button type="button" class="btn btn-primary" (click)="on2FAMethodChange()" [disabled]="isLoading">
+        <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+        {{ isLoading ? 'Cambiando...' : 'Cambiar Método' }}
+      </button>
     </div>
   </div>
 </div>

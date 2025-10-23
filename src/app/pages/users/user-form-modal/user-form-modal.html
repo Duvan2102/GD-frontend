@@ -15,13 +15,11 @@
       <!-- Body -->
       <div class="modal-body" [formGroup]="userForm">
 
-        <!-- Alerta de validación (se mantiene dentro porque es temporal) -->
         <div *ngIf="validatingUser" class="alert alert-info mb-3" role="alert">
           <i class="fas fa-spinner fa-spin me-2"></i>
           Validando identificación...
         </div>
 
-        <!-- Información básica -->
         <div class="row mb-3">
           <div class="col-md-4">
             <label class="form-label">Identificación <span class="text-danger">*</span></label>
@@ -49,7 +47,6 @@
           </div>
         </div>
 
-        <!-- Usuario y Cargo -->
         <div class="row mb-3">
           <div class="col-md-6">
             <label class="form-label">Usuario <span class="text-danger">*</span></label>
@@ -62,7 +59,6 @@
           <div class="col-md-6">
             <label class="form-label">Cargo <span class="text-danger">*</span></label>
 
-            <!-- Dropdown jerárquico personalizado -->
             <div class="hierarchical-dropdown" [class.is-invalid]="userForm.get('cargo')?.invalid && (userForm.get('cargo')?.touched || userForm.get('cargo')?.dirty)">
               <div class="dropdown-display"
                    (click)="toggleDropdown()"
@@ -71,24 +67,19 @@
                 <i class="fas fa-chevron-down dropdown-arrow" [class.rotated]="isDropdownOpen"></i>
               </div>
 
-              <!-- Panel desplegable -->
               <div class="dropdown-panel" *ngIf="isDropdownOpen">
-                <div class="dropdown-content"
-                     (click)="$event.stopPropagation()"
-                     style="position: relative; z-index: 1075;">
+                  <div class="dropdown-content"
+                       (click)="$event.stopPropagation()"
+                       style="position: relative; z-index: 1075;">
 
-                  <!-- Debug: mostrar información de carga -->
-                  <div *ngIf="isLoading" class="text-center p-3">
-                    <i class="fas fa-spinner fa-spin"></i> Cargando...
-                  </div>
+                    <div *ngIf="isLoading" class="text-center p-3">
+                  <i class="fas fa-spinner fa-spin"></i> Cargando...
+                </div>
 
-                  <!-- Lista de departamentos -->
-                  <div *ngFor="let departamento of hierarchicalData.departamentos; trackBy: trackByDepartamento"
+                    <div *ngFor="let departamento of hierarchicalData.departamentos; trackBy: trackByDepartamento"
                        class="dropdown-item"
                        [attr.data-dept-id]="departamento.idDepartamento"
                        style="position: relative;">
-
-                    <!-- Departamento header -->
                     <div class="department-header"
                          (click)="toggleDepartment(departamento, $event)"
                          (mousedown)="$event.stopPropagation()"
@@ -102,7 +93,6 @@
                       <small class="text-muted ms-2" style="pointer-events: none;">({{ departamento.areas?.length || 0 }} áreas)</small>
                     </div>
 
-                    <!-- Áreas del departamento -->
                     <div *ngIf="departamento.expanded && departamento.areas && departamento.areas.length > 0"
                          class="areas-container"
                          style="position: relative;">
@@ -110,8 +100,6 @@
                            class="dropdown-item area-item"
                            [attr.data-area-id]="area.idArea"
                            style="position: relative;">
-
-                        <!-- Área header -->
                         <div class="area-header"
                              (click)="toggleArea(area, $event)"
                              (mousedown)="$event.stopPropagation()"
@@ -125,7 +113,6 @@
                           <small class="text-muted ms-2" style="pointer-events: none;">({{ area.cargos?.length || 0 }} cargos)</small>
                         </div>
 
-                        <!-- Cargos del área -->
                         <div *ngIf="area.expanded && area.cargos && area.cargos.length > 0"
                              class="cargos-container"
                              style="position: relative;">
@@ -140,7 +127,6 @@
                           </div>
                         </div>
 
-                        <!-- Mensaje cuando área no tiene cargos -->
                         <div *ngIf="area.expanded && (!area.cargos || area.cargos.length === 0)"
                              class="no-cargos-message">
                           <span class="text-muted ps-4">No hay cargos disponibles en esta área</span>
@@ -148,14 +134,12 @@
                       </div>
                     </div>
 
-                    <!-- Mensaje cuando departamento no tiene áreas -->
                     <div *ngIf="departamento.expanded && (!departamento.areas || departamento.areas.length === 0)"
                          class="no-areas-message">
                       <span class="text-muted ps-4">No hay áreas disponibles en este departamento</span>
                     </div>
                   </div>
 
-                  <!-- Mensaje si no hay departamentos -->
                   <div *ngIf="!isLoading && (!hierarchicalData.departamentos || hierarchicalData.departamentos.length === 0)"
                        class="no-data-message">
                     No hay departamentos disponibles
@@ -170,7 +154,6 @@
           </div>
         </div>
 
-        <!-- Correos -->
         <div class="row mb-3">
           <div class="col-md-6">
             <label class="form-label">Correo empresarial <span class="text-danger">*</span></label>
@@ -190,7 +173,6 @@
           </div>
         </div>
 
-        <!-- Teléfonos -->
         <div class="row mb-3">
           <div class="col-md-6">
             <label class="form-label">Celular <span class="text-danger">*</span></label>
@@ -210,8 +192,6 @@
           </div>
         </div>
 
-        
-        <!-- Dirección y Doble Autenticación -->
         <div class="row mb-3">
           <div class="col-md-6">
             <label class="form-label">Dirección</label>
@@ -222,35 +202,25 @@
             </div>
           </div>
           <div class="col-md-6">
-            <label class="form-label">Doble Autenticación <span class="text-danger" *ngIf="!isEditMode">*</span></label>
-            
-            <!-- Modo creación: Select editable -->
+            <label class="form-label">Método 2FA Inicial <span class="text-danger" *ngIf="!isEditMode">*</span></label>
+            <small class="form-text text-muted d-block mb-2" *ngIf="!isEditMode">
+              La autenticación de dos factores es obligatoria. Selecciona el método inicial.
+            </small>
+
             <select *ngIf="!isEditMode" class="form-select" formControlName="dobleAutenticacion"
                     [class.is-invalid]="userForm.get('dobleAutenticacion')?.invalid && userForm.get('dobleAutenticacion')?.touched">
               <option *ngFor="let option of dobleAutenticacionOptions" [value]="option.value">
                 {{ option.label }}
               </option>
             </select>
-            
-            <!-- Modo edición: Texto informativo con método actual -->
-            <div *ngIf="isEditMode" class="form-control-plaintext">
-              <ng-container [ngSwitch]="userForm.get('dobleAutenticacion')?.value">
-                <strong *ngSwitchCase="'GOOGLE_AUTH'">
-                  <i class="fas fa-mobile-alt me-2"></i>Google Authenticator
-                </strong>
-                <strong *ngSwitchCase="'EMAIL'">
-                  <i class="fas fa-envelope me-2"></i>Correo Electrónico
-                </strong>
-                <strong *ngSwitchCase="true">
-                  <i class="fas fa-envelope me-2"></i>Correo Electrónico
-                </strong>
-                <strong *ngSwitchCase="false">
-                  <i class="fas fa-mobile-alt me-2"></i>Google Authenticator
-                </strong>
-                <strong *ngSwitchDefault>
-                  <i class="fas fa-question-circle me-2"></i>No configurado
-                </strong>
-              </ng-container>
+
+            <div *ngIf="isEditMode">
+              <input type="text" class="form-control" disabled
+                     [value]="userForm.get('dobleAutenticacion')?.value === 'GOOGLE_AUTH' ? 'Google Authenticator' : 
+                              userForm.get('dobleAutenticacion')?.value === 'EMAIL' ? 'Correo Electrónico' : 
+                              userForm.get('dobleAutenticacion')?.value === true ? 'Correo Electrónico' : 
+                              userForm.get('dobleAutenticacion')?.value === false ? 'Google Authenticator' : 
+                              'No configurado'">
             </div>
             
             <div *ngIf="getErrorMessage('dobleAutenticacion') && !isEditMode" class="invalid-feedback">
@@ -259,10 +229,8 @@
           </div>
         </div>
 
-        <!-- Separador -->
         <hr class="my-4">
 
-        <!-- Perfiles -->
         <h6 class="mb-3">Perfil <span class="text-danger">*</span></h6>
         <div class="mb-3">
           <div class="form-check mb-2">
@@ -287,7 +255,6 @@
             </label>
           </div>
 
-          <!-- Mensaje de error si es necesario -->
           <div *ngIf="userForm.get('perfil')?.invalid && userForm.get('perfil')?.touched"
                class="invalid-feedback d-block">
             Debe seleccionar un perfil
@@ -301,10 +268,18 @@
           Cancelar
         </button>
         <button type="button"
+                *ngIf="isPendingUser"
+                class="btn btn-outline-danger"
+                (click)="onRechazar()"
+                [disabled]="isLoading">
+          <span *ngIf="isLoading && pendingAction === 'reject'" class="spinner-border spinner-border-sm me-2" role="status"></span>
+          Rechazar (Inactivar)
+        </button>
+        <button type="button"
                 class="btn btn-primary-custom"
                 (click)="onSave()"
                 [disabled]="userForm.invalid || isLoading">
-          <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+          <span *ngIf="isLoading && pendingAction === 'save'" class="spinner-border spinner-border-sm me-2" role="status"></span>
           {{ submitButtonText }}
         </button>
       </div>
@@ -312,9 +287,6 @@
   </div>
 </div>
 
-<!-- MODALES DE CONFIRMACIÓN -->
-
-<!-- Modal de contraseña -->
 <app-password-modal
   [isVisible]="isPasswordModalVisible"
   [mensajeModal]="mensajePasswordModal"
@@ -324,7 +296,6 @@
   (validationError)="handlePasswordValidationError($event)">
 </app-password-modal>
 
-<!-- Modal de confirmación -->
 <app-confirm-modal
   [visible]="confirmModalVisible"
   [mensaje]="confirmModalMessage"
@@ -341,3 +312,4 @@
   [textoBtn]="modalSuccessBtn"
   (aceptar)="cerrarModalSuccess()">
 </app-success-modal>
+
