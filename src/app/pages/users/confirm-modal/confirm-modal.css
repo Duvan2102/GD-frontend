@@ -14,8 +14,8 @@
   background: #5c9785;
 }
 .modal-content.confirm-modal .confirm-btn-cancel {
-  background: #c23e3e;
-  color: #fff;
+  background: #c7cbcc;
+  color: #46655a;
   border: none;
   font-weight: bold;
   font-size: 1.13rem;
@@ -24,10 +24,42 @@
   transition: background 0.2s;
 }
 .modal-content.confirm-modal .confirm-btn-cancel:hover {
-  background: #8e2626;
+  background: #b0b4b5;
 }
 .modal-content.confirm-modal .confirm-icon {
   font-size: 3.2rem;
   color: #d56a3a;
   margin-bottom: 1.1rem;
+}
+
+/* Estilos para modal-content-custom */
+.modal-content-custom .custom-btn-accept {
+  background: #73aa98;
+  border: none;
+  font-size: 1.13rem;
+  font-weight: bold;
+  padding: 10px 2.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(76, 114, 103, 0.07);
+  transition: background 0.2s;
+  color: #fff;
+}
+
+.modal-content-custom .custom-btn-accept:hover {
+  background: #5c9785;
+}
+
+.modal-content-custom .custom-btn-cancel {
+  background: #c7cbcc;
+  color: #46655a;
+  border: none;
+  font-weight: bold;
+  font-size: 1.13rem;
+  padding: 10px 2.5rem;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.modal-content-custom .custom-btn-cancel:hover {
+  background: #b0b4b5;
 }

@@ -63,6 +63,7 @@ export class Users implements OnInit, OnDestroy {
   modalSuccessMessage: string = '';
   modalSuccessBtn: string = 'Aceptar';
   modalIsConfirmation: boolean = false;
+  modalRequiereReintentoPassword: boolean = false; // Para reabrir el modal de password
 
   confirmModalVisible = false;
   confirmModalMessage = '';
@@ -131,18 +132,26 @@ export class Users implements OnInit, OnDestroy {
   }
 
   cerrarModalSuccess() {
+    this.modalSuccessVisible = false;
+    
+    // Si requiere reintentar password, reabrir el modal de password
+    if (this.modalRequiereReintentoPassword) {
+      this.modalRequiereReintentoPassword = false;
+      this.isPasswordModalVisible = true;
+      // No limpiar currentUser ni currentAction para poder reintentar
+      return;
+    }
+    
     if (
       this.modalIsConfirmation &&
       (this.currentAction === 'inactivar' || this.currentAction === 'eliminarQR')
     ) {
-      this.modalSuccessVisible = false;
       this.isPasswordModalVisible = true;
       this.mensajePasswordModal =
         this.currentAction === 'inactivar'
           ? 'Ingrese su contraseña para inactivar el usuario.'
           : 'Ingrese su contraseña para eliminar el código QR del usuario.';
     } else {
-      this.modalSuccessVisible = false;
       this.currentUser = null;
       this.currentAction = '';
     }
@@ -439,6 +448,7 @@ export class Users implements OnInit, OnDestroy {
 
   closePasswordModal(): void {
     this.isPasswordModalVisible = false;
+    this.modalRequiereReintentoPassword = false;
     this.currentUser = null;
     this.currentAction = '';
   }
@@ -464,17 +474,44 @@ export class Users implements OnInit, OnDestroy {
           .subscribe({
             next: (response: any) => {
               this.mostrarModalSuccess('Código QR eliminado con éxito', 'Aceptar');
+              this.userService.clearUsersCache();
               this.cargarUsuarios();
               this.isPasswordModalVisible = false;
               this.userStateService.clearPendingOperation();
+              this.currentUser = null;
+              this.currentAction = '';
             },
             error: (error: any) => {
-              if (error.error?.code === 'PASSWORD_INCORRECT') {
-                alert('Contraseña incorrecta. Intente nuevamente.');
-              } else {
-                alert('Error al eliminar el código QR: ' + (error.error?.message || error.message || 'Error desconocido'));
+              this.isPasswordModalVisible = false;
+              let mensajeError = 'Error al eliminar el código QR';
+              let esErrorPassword = false;
+              
+              // Manejo de errores detallado
+              if (error.status === 401 || error.error?.code === 'PASSWORD_INCORRECT') {
+                mensajeError = 'Contraseña incorrecta. Intente nuevamente.';
+                esErrorPassword = true;
+              } else if (error.status === 404 || error.error?.code === 'USUARIO_NO_ENCONTRADO') {
+                mensajeError = 'Usuario no encontrado.';
+              } else if (error.error?.code === 'QR_NO_CONFIGURADO') {
+                mensajeError = 'El usuario no tiene un código QR configurado.';
+              } else if (error.error?.message) {
+                mensajeError = error.error.message;
+              } else if (error.message) {
+                mensajeError = error.message;
               }
-              this.userStateService.clearPendingOperation();
+              
+              // Si es error de password, permitir reintentar
+              if (esErrorPassword) {
+                this.modalRequiereReintentoPassword = true;
+                this.mostrarModalSuccess(mensajeError, 'Entendido');
+                // NO limpiar currentUser ni currentAction para poder reintentar
+              } else {
+                // Para otros errores, limpiar y no permitir reintento
+                this.mostrarModalSuccess(mensajeError, 'Entendido');
+                this.userStateService.clearPendingOperation();
+                this.currentUser = null;
+                this.currentAction = '';
+              }
             }
           });
       }
@@ -551,14 +588,36 @@ export class Users implements OnInit, OnDestroy {
             .subscribe({
               next: (response: any) => {
                 this.mostrarModalSuccess('Usuario inactivado con éxito', 'Aceptar');
+                this.userService.clearUsersCache();
                 this.cargarUsuarios();
                 this.isPasswordModalVisible = false;
                 this.userStateService.clearPendingOperation();
+                this.currentUser = null;
+                this.currentAction = '';
               },
               error: (error: any) => {
-                alert('Error al inactivar el usuario: ' + (error.message || 'Error desconocido'));
                 this.isPasswordModalVisible = false;
-                this.userStateService.clearPendingOperation();
+                let mensajeError = 'Error al inactivar el usuario';
+                let esErrorPassword = false;
+                
+                if (error.status === 401 || error.error?.code === 'PASSWORD_INCORRECT') {
+                  mensajeError = 'Contraseña incorrecta. Intente nuevamente.';
+                  esErrorPassword = true;
+                } else if (error.error?.message) {
+                  mensajeError = error.error.message;
+                } else if (error.message) {
+                  mensajeError = error.message;
+                }
+                
+                if (esErrorPassword) {
+                  this.modalRequiereReintentoPassword = true;
+                  this.mostrarModalSuccess(mensajeError, 'Entendido');
+                } else {
+                  this.mostrarModalSuccess(mensajeError, 'Entendido');
+                  this.userStateService.clearPendingOperation();
+                  this.currentUser = null;
+                  this.currentAction = '';
+                }
               }
             });
         }
@@ -571,14 +630,36 @@ export class Users implements OnInit, OnDestroy {
             .subscribe({
               next: (response: any) => {
                 this.mostrarModalSuccess('Usuario activado con éxito', 'Aceptar');
+                this.userService.clearUsersCache();
                 this.cargarUsuarios();
                 this.isPasswordModalVisible = false;
                 this.userStateService.clearPendingOperation();
+                this.currentUser = null;
+                this.currentAction = '';
               },
               error: (error: any) => {
-                alert('Error al activar el usuario: ' + (error.message || 'Error desconocido'));
                 this.isPasswordModalVisible = false;
-                this.userStateService.clearPendingOperation();
+                let mensajeError = 'Error al activar el usuario';
+                let esErrorPassword = false;
+                
+                if (error.status === 401 || error.error?.code === 'PASSWORD_INCORRECT') {
+                  mensajeError = 'Contraseña incorrecta. Intente nuevamente.';
+                  esErrorPassword = true;
+                } else if (error.error?.message) {
+                  mensajeError = error.error.message;
+                } else if (error.message) {
+                  mensajeError = error.message;
+                }
+                
+                if (esErrorPassword) {
+                  this.modalRequiereReintentoPassword = true;
+                  this.mostrarModalSuccess(mensajeError, 'Entendido');
+                } else {
+                  this.mostrarModalSuccess(mensajeError, 'Entendido');
+                  this.userStateService.clearPendingOperation();
+                  this.currentUser = null;
+                  this.currentAction = '';
+                }
               }
             });
         }
@@ -597,14 +678,36 @@ export class Users implements OnInit, OnDestroy {
             .subscribe({
               next: (response: any) => {
                 this.mostrarModalSuccess('Solicitud de usuario rechazada. El usuario ha sido marcado como INACTIVO.', 'Aceptar');
+                this.userService.clearUsersCache();
                 this.cargarUsuarios();
                 this.isPasswordModalVisible = false;
                 this.userStateService.clearPendingOperation();
+                this.currentUser = null;
+                this.currentAction = '';
               },
               error: (error: any) => {
-                alert('Error al rechazar la solicitud: ' + (error.message || 'Error desconocido'));
                 this.isPasswordModalVisible = false;
-                this.userStateService.clearPendingOperation();
+                let mensajeError = 'Error al rechazar la solicitud';
+                let esErrorPassword = false;
+                
+                if (error.status === 401 || error.error?.code === 'PASSWORD_INCORRECT') {
+                  mensajeError = 'Contraseña incorrecta. Intente nuevamente.';
+                  esErrorPassword = true;
+                } else if (error.error?.message) {
+                  mensajeError = error.error.message;
+                } else if (error.message) {
+                  mensajeError = error.message;
+                }
+                
+                if (esErrorPassword) {
+                  this.modalRequiereReintentoPassword = true;
+                  this.mostrarModalSuccess(mensajeError, 'Entendido');
+                } else {
+                  this.mostrarModalSuccess(mensajeError, 'Entendido');
+                  this.userStateService.clearPendingOperation();
+                  this.currentUser = null;
+                  this.currentAction = '';
+                }
               }
             });
         }

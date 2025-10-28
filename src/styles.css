@@ -251,8 +251,8 @@ app-requests-table {
 }
 
 .modal-content.password-modal .btn-secondary {
-  background: #c23e3e;
-  color: #fff;
+  background: #c7cbcc;
+  color: #46655a;
   font-weight: bold;
   padding: 8px 2rem;
   border-radius: 8px;
@@ -261,7 +261,7 @@ app-requests-table {
   transition: background 0.2s;
 }
 .modal-content.password-modal .btn-secondary:hover:not(:disabled) {
-  background: #8e2626;
+  background: #b0b4b5;
 }
 
 .modal-content.password-modal .input-group .form-control {

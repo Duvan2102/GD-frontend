@@ -19,12 +19,13 @@
   z-index: 1000;
 }
 
-/* barra superior (degradado verde) */
+/* barra superior (estilo minimalista) */
 .modal-content.request-success-modal::before{
   content:"";
   display:block;
   height: 60px;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  background: #f8f9fa;
+  border-bottom: 1px solid #ddd;
 }
 
 /* cabecera de iconos sobre la barra */

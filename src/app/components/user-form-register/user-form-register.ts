@@ -1,16 +1,19 @@
 import { Component, OnInit, Output, EventEmitter, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { RegisterRequest, RegisterResponse, RegisterErrorResponse } from '../../interfaces/common.interfaces';
 import { Subject } from 'rxjs';
+import { phoneValidator } from '../../utils/phone-validators';
+import { SuccessModal } from '../../pages/users/success-modal/success-modal';
 
 @Component({
   selector: 'app-user-form-register',
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    SuccessModal
   ],
   templateUrl: './user-form-register.html',
   styleUrls: ['./user-form-register.css']
@@ -24,6 +27,11 @@ export class UserFormRegister implements OnInit, OnDestroy {
   loading = false;
   apiError?: string;
   successMessage = '';
+  
+  // Modal de éxito
+  modalSuccessVisible = false;
+  modalSuccessMessage = '';
+  modalSuccessBtn = 'Aceptar';
 
   // Ya no se necesitan datos para selección de cargo
   private destroy$ = new Subject<void>();
@@ -42,8 +50,8 @@ export class UserFormRegister implements OnInit, OnDestroy {
       usuario: [{value: '', disabled: true}],
       correoEmpresarial: ['', [Validators.required, Validators.email]],
       correoPersonal: ['', [Validators.email]],
-      telefono1: ['', [Validators.required, Validators.pattern(/^[\d\s\+]+$/)]],
-      telefono2: ['', [Validators.pattern(/^[\d\s\+]+$/)]],
+      telefono1: ['', [Validators.required, phoneValidator()]],
+      telefono2: ['', [phoneValidator()]],
       direccion: ['']
     });
 
@@ -108,9 +116,22 @@ export class UserFormRegister implements OnInit, OnDestroy {
       if (fieldName === 'correoEmpresarial' || fieldName === 'correoPersonal') {
         return 'Ingrese un correo electrónico válido';
       }
-      if (fieldName === 'telefono1' || fieldName === 'telefono2') {
-        return 'Solo se permiten números, espacios y el símbolo +';
-      }
+    }
+    if (errors['phoneLength']) {
+      const field = fieldName === 'telefono1' ? 'celular' : 'teléfono';
+      return `El ${field} debe tener exactamente 10 dígitos`;
+    }
+    if (errors['phoneAllSame']) {
+      const field = fieldName === 'telefono1' ? 'celular' : 'teléfono';
+      return `El ${field} no puede tener todos los dígitos iguales`;
+    }
+    if (errors['phoneConsecutive']) {
+      const field = fieldName === 'telefono1' ? 'celular' : 'teléfono';
+      return `El ${field} no puede tener más de 3 dígitos consecutivos iguales`;
+    }
+    if (errors['phoneInvalid']) {
+      const field = fieldName === 'telefono1' ? 'celular' : 'teléfono';
+      return `El ${field} solo debe contener números`;
     }
     if (errors['email']) {
       return 'Ingrese un correo electrónico válido';
@@ -158,13 +179,13 @@ export class UserFormRegister implements OnInit, OnDestroy {
     this.authService.register(registerPayload).subscribe({
       next: (res: RegisterResponse) => {
         this.loading = false;
-        this.successMessage = res.message || 'Usuario registrado exitosamente';
+        
+        // Mostrar modal de éxito
+        this.modalSuccessMessage = res.message || '¡Usuario registrado exitosamente! Se ha enviado un correo con las instrucciones para configurar la autenticación de dos factores.';
+        this.modalSuccessBtn = 'Entendido';
+        this.modalSuccessVisible = true;
         
         this.registered.emit({ idUsuario: res.idUsuario });
-        
-        setTimeout(() => {
-          this.closeModal();
-        }, 2000);
         
         this.cdr.markForCheck();
       },
@@ -183,23 +204,27 @@ export class UserFormRegister implements OnInit, OnDestroy {
         } else if (err.message) {
           errorMsg = err.message;
         } else {
-          errorMsg = 'Error de conexión. Intenta de nuevo.';
+          errorMsg = 'Error de conexión al servidor. Por favor, intenta de nuevo más tarde.';
         }
 
         // Si hay detalles adicionales, agregarlos
         if (errorResponse?.details && Array.isArray(errorResponse.details)) {
-          errorMsg += ':\n• ' + errorResponse.details.join('\n• ');
+          const detalles = errorResponse.details.join('\n• ');
+          errorMsg += '\n\nDetalles:\n• ' + detalles;
         }
         
         this.apiError = errorMsg;
 
         // Establecer errores específicos en campos si aplica
         if (code === 'USUARIO_EXISTE') {
-          this.form.get('usuario')?.setErrors({ server: errorMsg });
+          this.form.get('usuario')?.setErrors({ server: 'Este nombre de usuario ya está en uso' });
+          this.apiError = 'El nombre de usuario ya existe. Por favor, contacta con el administrador.';
         } else if (code === 'IDENTIFICACION_EXISTE') {
-          this.form.get('identification')?.setErrors({ server: errorMsg });
+          this.form.get('identification')?.setErrors({ server: 'Esta identificación ya está registrada' });
+          this.apiError = 'La identificación ya está registrada en el sistema. Si crees que es un error, contacta con el administrador.';
         } else if (code === 'CORREO_EXISTE') {
-          this.form.get('correoEmpresarial')?.setErrors({ server: errorMsg });
+          this.form.get('correoEmpresarial')?.setErrors({ server: 'Este correo ya está registrado' });
+          this.apiError = 'El correo empresarial ya está registrado en el sistema.';
         }
 
         this.focusFirstError();
@@ -222,10 +247,17 @@ export class UserFormRegister implements OnInit, OnDestroy {
     this.form.reset();
     this.apiError = undefined;
     this.successMessage = '';
+    this.modalSuccessVisible = false;
     this.close.emit();
   }
 
   onClose(): void {
+    this.closeModal();
+  }
+
+  cerrarModalSuccess(): void {
+    this.modalSuccessVisible = false;
+    this.successMessage = '';
     this.closeModal();
   }
 }

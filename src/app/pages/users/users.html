@@ -140,6 +140,7 @@
   [isVisible]="isPasswordModalVisible"
   [mensajeModal]="mensajePasswordModal"
   [user]="currentUser"
+  [skipValidation]="currentAction === 'eliminarQR' || currentAction === 'inactivar' || currentAction === 'activar' || currentAction === 'rechazar'"
   (close)="closePasswordModal()"
   (validate)="handlePasswordValidation($event)"
   (validationError)="handlePasswordValidationError($event)">

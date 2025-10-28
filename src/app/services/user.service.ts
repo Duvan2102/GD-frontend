@@ -311,16 +311,21 @@ export class UserService {
   }
 
   private procesarUsuarioRecibido(usuario: any, index?: number): Usuario {
-    let cargoDescripcion = '';
-    let cargoId: string | number = '';
+    let cargoCompleto = null;
 
     if (usuario.cargo) {
-      if (typeof usuario.cargo === 'object') {
-        cargoId = usuario.cargo.idCargo || '';
-        cargoDescripcion = usuario.cargo.descripcion || '';
+      if (typeof usuario.cargo === 'object' && usuario.cargo.idCargo) {
+        cargoCompleto = {
+          idCargo: usuario.cargo.idCargo,
+          descripcion: usuario.cargo.descripcion || '',
+          area: usuario.cargo.area || null
+        };
       } else if (typeof usuario.cargo === 'string' || typeof usuario.cargo === 'number') {
-        cargoDescripcion = usuario.cargo.toString();
-        cargoId = usuario.cargo;
+        cargoCompleto = {
+          idCargo: typeof usuario.cargo === 'number' ? usuario.cargo : parseInt(usuario.cargo, 10) || 0,
+          descripcion: usuario.cargo.toString(),
+          area: null
+        };
       }
     }
 
@@ -367,8 +372,7 @@ export class UserService {
       ...usuario,
       idUsuario: idUsuarioFinal,
       noUsuario: idUsuarioFinal,
-      cargo: cargoId || cargoDescripcion,
-      cargoDescripcion: cargoDescripcion,
+      cargo: cargoCompleto,
       estado: typeof usuario.estado === 'object' ? usuario.estado : { descripcion: estadoDescripcion },
       activo: estadoActivo,
       rol: usuario.rol || { idRol: 2, descripcion: 'USUARIO' },

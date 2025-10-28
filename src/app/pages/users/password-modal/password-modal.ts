@@ -15,6 +15,7 @@ export class PasswordModal  {
   @Input() mensajeModal: string = 'Ingrese su contraseña para finalizar la operación.';
   @Input() isVisible = false;
   @Input() user: Usuario | null = null;
+  @Input() skipValidation = false; // Nueva opción para omitir la validación previa
   @Output() close = new EventEmitter<void>();
   @Output() validate = new EventEmitter<string>();
   @Output() validationError = new EventEmitter<string>();
@@ -51,6 +52,11 @@ export class PasswordModal  {
     }
 
     if (this.isValidating) {
+      return;
+    }
+
+    if (this.skipValidation) {
+      this.validate.emit(this.password);
       return;
     }
 
