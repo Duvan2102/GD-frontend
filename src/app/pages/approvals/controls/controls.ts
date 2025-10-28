@@ -21,6 +21,7 @@ export class Controls {
   @Input() labelAprobadosInactivo: string = '';
   @Input() labelBuscar: string = 'Buscar:';
   @Input() placeholderBuscar: string = 'Buscar...';
+  @Input() showToggle: boolean = true;
 
   @Output() quantityChange = new EventEmitter<number>();
   @Output() toggleApprovedChange = new EventEmitter<boolean>();

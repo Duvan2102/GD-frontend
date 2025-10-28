@@ -47,20 +47,25 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
                             req.url.includes('/areas') ||
                             req.url.includes('/departamentos') ||
                             req.url.includes('/cargos') ||
-                            req.url.includes('/tipologias');
+                            req.url.includes('/tipologias') ||
+                            req.url.includes('/auditoria');
 
   const isApi = isLocalhost || isApiPath || isSpecificEndpoint;
   const isSolicitudes = req.url.includes('/solicitudes');
+  const isAuditoria = req.url.includes('/auditoria');
   const isTwoFAValidation = req.url.includes('/auth/validate-2fa');
   const hasTempTokenInBody = !!req.body && typeof req.body === 'object' && 'tempToken' in req.body;
+  const requiresAuth = isApi || isSolicitudes || isAuditoria;
 
   let headers = req.headers;
 
-  if (token && isApi && !(isTwoFAValidation && hasTempTokenInBody)) {
+  // Agregar Authorization header
+  if (token && requiresAuth && !(isTwoFAValidation && hasTempTokenInBody)) {
     headers = headers.set('Authorization', `Bearer ${token}`);
   }
 
-  if ((isApi || isSolicitudes) && user?.idUsuario) {
+  // Agregar X-User-Id header
+  if (requiresAuth && user?.idUsuario) {
     headers = headers.set('X-User-Id', String(user.idUsuario));
   }
   

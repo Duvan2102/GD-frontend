@@ -1,6 +1,6 @@
-<div class="row mb-3 align-items-center">
+<div class="row mb-2 align-items-center" *ngIf="showToggle; else noToggle">
   <div class="col-md-auto">
-    <div class="d-flex align-items-center gap-2" style="height: 100px;">
+    <div class="d-flex align-items-center gap-2" style="height: 60px;">
       <label for="mostrar" class="form-label mb-0 text-secondary">{{ labelMostrar }}</label>
       <select id="mostrar" class="form-select form-select-sm" style="width: 80px;"
         (change)="quantityChange.emit($any($event.target).value)">
@@ -35,3 +35,19 @@
     </div>
   </div>
 </div>
+
+<ng-template #noToggle>
+  <div class="row mb-2 align-items-center">
+    <div class="col-md-12">
+      <div class="d-flex justify-content-center">
+        <div class="d-flex align-items-center gap-3">
+          <label for="buscar" class="form-label mb-0 text-secondary">{{ labelBuscar }}</label>
+          <input type="text" id="buscar" class="form-control form-control-sm"
+            style="width: 300px;"
+            [placeholder]="placeholderBuscar"
+            (input)="searchChange.emit($any($event.target).value)">
+        </div>
+      </div>
+    </div>
+  </div>
+</ng-template>
