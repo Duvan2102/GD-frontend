@@ -20,7 +20,11 @@
               name="descripcion"
               placeholder="Escribe el nombre de la tipología"
               required
+              [class.is-invalid]="errorMessage"
             />
+            <div class="invalid-feedback" *ngIf="errorMessage" style="display: block;">
+              {{ errorMessage }}
+            </div>
           </div>
 
           <!-- Selector de Receptor -->

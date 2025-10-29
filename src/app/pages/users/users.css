@@ -555,7 +555,10 @@
 
 .panel-tabla-scroll {
   overflow-x: auto;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  flex: 1;
+  max-height: calc(100vh - 350px);
 }
 
 .header-table {

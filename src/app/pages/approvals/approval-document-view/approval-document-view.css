@@ -76,7 +76,7 @@
 .document-viewer {
   width: 100%;
   height: 100%;
-  max-width: 1200px; /* Ancho máximo más amplio para mejor visualización */
+  max-width: 1200px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   border: 1px solid #ccc;
 }
@@ -111,7 +111,7 @@
   gap: 8px;
   color: white;
   border: none;
-  border-radius: 50px; /* Completamente redondeado */
+  border-radius: 50px;
   padding: 12px 28px;
   font-weight: bold;
   cursor: pointer;

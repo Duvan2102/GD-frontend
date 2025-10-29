@@ -1,3 +1,10 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
 .tabla-solicitudes {
   width: 100%;
   border-collapse: collapse;
@@ -157,4 +164,12 @@
 .aprobador-icono[title]:hover::after,
 .aprobador-icono[data-tooltip]:hover::after {
   display: none !important;
+}
+
+.panel-tabla-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  max-height: calc(100vh - 350px);
+  min-height: 400px;
 }

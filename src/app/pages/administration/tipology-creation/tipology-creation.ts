@@ -50,19 +50,23 @@ export class Tipology implements OnChanges {
   selectedDepartment?: Department;
   selectedArea?: Area;
   selectedPosition?: Position;
+  errorMessage = '';
 
   get modalTitle(): string {
     return this.mode === 'update' ? 'Actualización de la Tipología' : 'Crear Tipología';
   }
 
+  private validateDescripcion(descripcion: string): boolean {
+    const trimmed = descripcion.trim();
+    return /[a-záéíóúñA-ZÁÉÍÓÚÑ]/.test(trimmed);
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
-    // Inicializar arrays cuando cambien los datos de entrada
     if (changes['departments'] || changes['areas']) {
       this.initializeExpandedArrays();
     }
     
     if (changes['isVisible'] && this.isVisible) {
-      // Asegurar que los arrays estén inicializados
       if (this.departmentsWithExpanded.length === 0) {
         this.initializeExpandedArrays();
       }
@@ -114,12 +118,10 @@ export class Tipology implements OnChanges {
 
   togglePositionDropdown() {
     this.showPositionDropdown = !this.showPositionDropdown;
-    // Cerrar otros desplegables
     this.showDepartmentDropdown = false;
     this.showAreaDropdown = false;
   }
 
-  // Cerrar desplegables al hacer clic fuera
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
     const target = event.target as HTMLElement;
@@ -157,7 +159,22 @@ export class Tipology implements OnChanges {
   }
 
   onSubmit() {
-    if (!this.descripcion.trim() || !this.selectedPosition) return;
+    this.errorMessage = '';
+
+    if (!this.descripcion.trim()) {
+      this.errorMessage = 'El nombre de la tipología es obligatorio';
+      return;
+    }
+
+    if (!this.validateDescripcion(this.descripcion)) {
+      this.errorMessage = 'El nombre de la tipología debe contener al menos una letra, no puede ser solo números';
+      return;
+    }
+
+    if (!this.selectedPosition) {
+      this.errorMessage = 'Debe seleccionar un cargo destinatario';
+      return;
+    }
 
     const payload: Partial<Typology> = {
       descripcion: this.descripcion.trim(),
@@ -181,6 +198,7 @@ export class Tipology implements OnChanges {
     this.selectedDepartment = undefined;
     this.selectedArea = undefined;
     this.selectedPosition = undefined;
+    this.errorMessage = '';
     
     // Reset dropdown states
     this.showDepartmentDropdown = false;

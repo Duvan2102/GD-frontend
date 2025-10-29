@@ -1,3 +1,8 @@
+:host {
+  display: block;
+  flex-shrink: 0;
+}
+
 .controles-fijos {
   width: 600px;
 }

@@ -15,7 +15,8 @@ export class PasswordModal  {
   @Input() mensajeModal: string = 'Ingrese su contraseña para finalizar la operación.';
   @Input() isVisible = false;
   @Input() user: Usuario | null = null;
-  @Input() skipValidation = false; // Nueva opción para omitir la validación previa
+  @Input() skipValidation = false;
+  @Input() externalError: string = '';
   @Output() close = new EventEmitter<void>();
   @Output() validate = new EventEmitter<string>();
   @Output() validationError = new EventEmitter<string>();
@@ -38,6 +39,10 @@ export class PasswordModal  {
       setTimeout(() => {
         this.passwordInput?.nativeElement.focus();
       }, 100);
+    }
+    if (changes['externalError'] && this.externalError) {
+      this.errorMessage = this.externalError;
+      this.isValidating = false;
     }
   }
 

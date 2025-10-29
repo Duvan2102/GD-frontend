@@ -28,12 +28,11 @@ export class UserFormRegister implements OnInit, OnDestroy {
   apiError?: string;
   successMessage = '';
   
-  // Modal de éxito
   modalSuccessVisible = false;
   modalSuccessMessage = '';
+  modalSuccessSecondaryMessage = '';
   modalSuccessBtn = 'Aceptar';
 
-  // Ya no se necesitan datos para selección de cargo
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -62,7 +61,6 @@ export class UserFormRegister implements OnInit, OnDestroy {
       this.generateUsuario();
     });
 
-    // Ya no se cargan datos jerárquicos para cargo
   }
 
   ngOnDestroy(): void {
@@ -70,7 +68,6 @@ export class UserFormRegister implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // Métodos relacionados con cargo eliminados
 
   generateUsuario(): void {
     const nombres = this.form.get('nombres')?.value?.trim() || '';
@@ -136,7 +133,6 @@ export class UserFormRegister implements OnInit, OnDestroy {
     if (errors['email']) {
       return 'Ingrese un correo electrónico válido';
     }
-    // Validaciones de cargo eliminadas
 
     return '';
   }
@@ -161,13 +157,12 @@ export class UserFormRegister implements OnInit, OnDestroy {
     this.loading = true;
     const formValue = this.form.getRawValue();
 
-    // Construir el payload con la estructura requerida
     const registerPayload: RegisterRequest = {
-      identificacion: formValue.identificacion,
+      identificacion: formValue.identification, // El form control se llama 'identification'
       nombres: formValue.nombres,
       apellidos: formValue.apellidos,
       usuario: formValue.usuario,
-      password: '', // Será generada por el backend
+      password: '',
       correoEmpresarial: formValue.correoEmpresarial,
       correoPersonal: formValue.correoPersonal || '',
       telefono1: formValue.telefono1,
@@ -180,9 +175,9 @@ export class UserFormRegister implements OnInit, OnDestroy {
       next: (res: RegisterResponse) => {
         this.loading = false;
         
-        // Mostrar modal de éxito
-        this.modalSuccessMessage = res.message || '¡Usuario registrado exitosamente! Se ha enviado un correo con las instrucciones para configurar la autenticación de dos factores.';
-        this.modalSuccessBtn = 'Entendido';
+        this.modalSuccessMessage = `¡Usuario registrado exitosamente! ID: ${res.idUsuario}`;
+        this.modalSuccessSecondaryMessage = 'El usuario ha sido registrado y está pendiente de activación por un administrador.';
+        this.modalSuccessBtn = 'Aceptar';
         this.modalSuccessVisible = true;
         
         this.registered.emit({ idUsuario: res.idUsuario });

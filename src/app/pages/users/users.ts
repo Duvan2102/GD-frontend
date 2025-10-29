@@ -55,16 +55,15 @@ export class Users implements OnInit, OnDestroy {
   mensajePasswordModal: string = '';
 
   isLoading = false;
-  private isProcessing2FAChange = false; // Bandera adicional para prevenir llamadas duplicadas
-  private last2FAChangeTime = 0; // Timestamp del último cambio exitoso
+  private isProcessing2FAChange = false;
+  private last2FAChangeTime = 0;
   errorMessage = '';
   private destroy$ = new Subject<void>();
   modalSuccessVisible: boolean = false;
   modalSuccessMessage: string = '';
   modalSuccessBtn: string = 'Aceptar';
   modalIsConfirmation: boolean = false;
-  modalRequiereReintentoPassword: boolean = false; // Para reabrir el modal de password
-
+  passwordModalError: string = '';
   confirmModalVisible = false;
   confirmModalMessage = '';
   confirmModalAction: 'inactivar' | 'activar' | 'eliminarQR' | 'rechazar' | null = null;
@@ -97,7 +96,6 @@ export class Users implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.usuarios = [];
     
-    // Limpiar cache antes de cargar usuarios para asegurar datos actualizados
     this.userService.clearUsersCache();
     
     this.userService.obtenerUsuarios()
@@ -134,14 +132,6 @@ export class Users implements OnInit, OnDestroy {
   cerrarModalSuccess() {
     this.modalSuccessVisible = false;
     
-    // Si requiere reintentar password, reabrir el modal de password
-    if (this.modalRequiereReintentoPassword) {
-      this.modalRequiereReintentoPassword = false;
-      this.isPasswordModalVisible = true;
-      // No limpiar currentUser ni currentAction para poder reintentar
-      return;
-    }
-    
     if (
       this.modalIsConfirmation &&
       (this.currentAction === 'inactivar' || this.currentAction === 'eliminarQR')
@@ -160,14 +150,12 @@ export class Users implements OnInit, OnDestroy {
   filtrarUsuarios() {
     let filtrados = this.usuarios.filter(u => {
       if (this.activos) {
-        // ACTIVOS incluye: PENDIENTE y ACTIVO
         const estadoDescripcion = typeof u.estado === 'object'
           ? (u.estado.descripcion || '').toString().trim().toUpperCase()
           : String(u.estado || '').trim().toUpperCase();
 
         return estadoDescripcion === 'ACTIVO' || estadoDescripcion === 'PENDIENTE';
       } else {
-        // INACTIVOS
         const estadoDescripcion = typeof u.estado === 'object'
           ? (u.estado.descripcion || '').toString().trim().toUpperCase()
           : String(u.estado || '').trim().toUpperCase();
@@ -186,7 +174,6 @@ export class Users implements OnInit, OnDestroy {
       );
     }
 
-    // Aplicar ordenamiento si está configurado
     if (this.currentOrder) {
       filtrados = this.sortUsuarios(filtrados, this.currentOrder, this.ascendingOrder);
     }
@@ -243,6 +230,7 @@ export class Users implements OnInit, OnDestroy {
 
       case 'cambiarContraseña':
         this.mensajePasswordModal = 'Ingrese su contraseña para cambiar la contraseña del usuario.';
+        this.passwordModalError = '';
         this.isPasswordModalVisible = true;
         break;
 
@@ -252,6 +240,7 @@ export class Users implements OnInit, OnDestroy {
 
       case 'eliminarQR':
         this.mensajePasswordModal = 'Ingrese su contraseña para eliminar el código QR del usuario.';
+        this.passwordModalError = '';
         this.isPasswordModalVisible = true;
         break;
 
@@ -420,7 +409,6 @@ export class Users implements OnInit, OnDestroy {
   }
 
   saveUser(userData: Usuario): void {
-    // Limpiar cache y recargar usuarios
     this.userService.clearUsersCache();
     this.cargarUsuarios();
     this.isUserFormVisible = false;
@@ -429,7 +417,6 @@ export class Users implements OnInit, OnDestroy {
   }
 
   handleUserRejected(user: Usuario): void {
-    // Limpiar cache y recargar usuarios
     this.userService.clearUsersCache();
     this.cargarUsuarios();
     this.isUserFormVisible = false;
@@ -438,7 +425,6 @@ export class Users implements OnInit, OnDestroy {
   }
 
   handleNavigateToUsers(): void {
-    // Cerrar el modal y recargar usuarios
     this.userService.clearUsersCache();
     this.cargarUsuarios();
     this.isUserFormVisible = false;
@@ -448,12 +434,14 @@ export class Users implements OnInit, OnDestroy {
 
   closePasswordModal(): void {
     this.isPasswordModalVisible = false;
-    this.modalRequiereReintentoPassword = false;
+    this.passwordModalError = '';
     this.currentUser = null;
     this.currentAction = '';
   }
 
   handlePasswordValidation(password: string): void {
+    this.passwordModalError = '';
+    
     if (!this.currentUser) {
       const pending = this.userStateService.getPendingOperation();
       this.currentUser = pending.user;
@@ -482,13 +470,11 @@ export class Users implements OnInit, OnDestroy {
               this.currentAction = '';
             },
             error: (error: any) => {
-              this.isPasswordModalVisible = false;
               let mensajeError = 'Error al eliminar el código QR';
               let esErrorPassword = false;
               
-              // Manejo de errores detallado
               if (error.status === 401 || error.error?.code === 'PASSWORD_INCORRECT') {
-                mensajeError = 'Contraseña incorrecta. Intente nuevamente.';
+                mensajeError = 'Contraseña incorrecta';
                 esErrorPassword = true;
               } else if (error.status === 404 || error.error?.code === 'USUARIO_NO_ENCONTRADO') {
                 mensajeError = 'Usuario no encontrado.';
@@ -500,13 +486,10 @@ export class Users implements OnInit, OnDestroy {
                 mensajeError = error.message;
               }
               
-              // Si es error de password, permitir reintentar
               if (esErrorPassword) {
-                this.modalRequiereReintentoPassword = true;
-                this.mostrarModalSuccess(mensajeError, 'Entendido');
-                // NO limpiar currentUser ni currentAction para poder reintentar
+                this.passwordModalError = mensajeError;
               } else {
-                // Para otros errores, limpiar y no permitir reintento
+                this.isPasswordModalVisible = false;
                 this.mostrarModalSuccess(mensajeError, 'Entendido');
                 this.userStateService.clearPendingOperation();
                 this.currentUser = null;
@@ -523,6 +506,8 @@ export class Users implements OnInit, OnDestroy {
   handlePasswordValidationError(error: string): void {}
 
   confirmAction(password: string): void {
+    this.passwordModalError = '';
+    
     if (!password.trim()) {
       return alert('La contraseña no puede estar vacía');
     }
@@ -596,12 +581,11 @@ export class Users implements OnInit, OnDestroy {
                 this.currentAction = '';
               },
               error: (error: any) => {
-                this.isPasswordModalVisible = false;
                 let mensajeError = 'Error al inactivar el usuario';
                 let esErrorPassword = false;
                 
                 if (error.status === 401 || error.error?.code === 'PASSWORD_INCORRECT') {
-                  mensajeError = 'Contraseña incorrecta. Intente nuevamente.';
+                  mensajeError = 'Contraseña incorrecta';
                   esErrorPassword = true;
                 } else if (error.error?.message) {
                   mensajeError = error.error.message;
@@ -610,9 +594,9 @@ export class Users implements OnInit, OnDestroy {
                 }
                 
                 if (esErrorPassword) {
-                  this.modalRequiereReintentoPassword = true;
-                  this.mostrarModalSuccess(mensajeError, 'Entendido');
+                  this.passwordModalError = mensajeError;
                 } else {
+                  this.isPasswordModalVisible = false;
                   this.mostrarModalSuccess(mensajeError, 'Entendido');
                   this.userStateService.clearPendingOperation();
                   this.currentUser = null;
@@ -638,12 +622,11 @@ export class Users implements OnInit, OnDestroy {
                 this.currentAction = '';
               },
               error: (error: any) => {
-                this.isPasswordModalVisible = false;
                 let mensajeError = 'Error al activar el usuario';
                 let esErrorPassword = false;
                 
                 if (error.status === 401 || error.error?.code === 'PASSWORD_INCORRECT') {
-                  mensajeError = 'Contraseña incorrecta. Intente nuevamente.';
+                  mensajeError = 'Contraseña incorrecta';
                   esErrorPassword = true;
                 } else if (error.error?.message) {
                   mensajeError = error.error.message;
@@ -652,9 +635,9 @@ export class Users implements OnInit, OnDestroy {
                 }
                 
                 if (esErrorPassword) {
-                  this.modalRequiereReintentoPassword = true;
-                  this.mostrarModalSuccess(mensajeError, 'Entendido');
+                  this.passwordModalError = mensajeError;
                 } else {
+                  this.isPasswordModalVisible = false;
                   this.mostrarModalSuccess(mensajeError, 'Entendido');
                   this.userStateService.clearPendingOperation();
                   this.currentUser = null;
@@ -672,7 +655,6 @@ export class Users implements OnInit, OnDestroy {
 
       case 'rechazar':
         if (this.currentUser) {
-          // Rechazar = Desactivar (PENDIENTE -> INACTIVO)
           this.userService.desactivarUsuario(this.currentUser, password)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
@@ -686,12 +668,11 @@ export class Users implements OnInit, OnDestroy {
                 this.currentAction = '';
               },
               error: (error: any) => {
-                this.isPasswordModalVisible = false;
                 let mensajeError = 'Error al rechazar la solicitud';
                 let esErrorPassword = false;
                 
                 if (error.status === 401 || error.error?.code === 'PASSWORD_INCORRECT') {
-                  mensajeError = 'Contraseña incorrecta. Intente nuevamente.';
+                  mensajeError = 'Contraseña incorrecta';
                   esErrorPassword = true;
                 } else if (error.error?.message) {
                   mensajeError = error.error.message;
@@ -700,9 +681,9 @@ export class Users implements OnInit, OnDestroy {
                 }
                 
                 if (esErrorPassword) {
-                  this.modalRequiereReintentoPassword = true;
-                  this.mostrarModalSuccess(mensajeError, 'Entendido');
+                  this.passwordModalError = mensajeError;
                 } else {
+                  this.isPasswordModalVisible = false;
                   this.mostrarModalSuccess(mensajeError, 'Entendido');
                   this.userStateService.clearPendingOperation();
                   this.currentUser = null;
@@ -736,6 +717,7 @@ export class Users implements OnInit, OnDestroy {
   abrirConfirmModal(tipo: 'inactivar' | 'activar' | 'eliminarQR' | 'rechazar', usuario: Usuario) {
     this.confirmModalAction = tipo;
     this.currentUser = usuario;
+    this.passwordModalError = '';
     this.userStateService.setPendingOperation(usuario, tipo);
     
     switch(tipo) {
@@ -758,6 +740,7 @@ export class Users implements OnInit, OnDestroy {
 
   onAceptarConfirmacion() {
     this.confirmModalVisible = false;
+    this.passwordModalError = '';
     
     if (!this.currentUser) {
       const pending = this.userStateService.getPendingOperation();
