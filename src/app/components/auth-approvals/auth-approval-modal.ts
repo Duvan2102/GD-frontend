@@ -24,6 +24,8 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
   timeRemaining = 90;
   private timerInterval?: number;
   private readonly TIMER_DURATION = 90; // segundos
+  private failedAttempts = 0;
+  private readonly MAX_FAILED_ATTEMPTS = 3;
 
   // Dynamic UI state (based on user auth type)
   authType: DobleAutenticacionTipo = DobleAutenticacionTipo.TOKEN_SEGURIDAD;
@@ -83,6 +85,7 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
     this.errorMessage = '';
     this.infoMessage = '';
     this.isLoading = false;
+    this.failedAttempts = 0;
   }
 
   private startTimer(): void {
@@ -109,7 +112,10 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
   onTokenInput(event: Event): void {
     const target = event.target as HTMLInputElement;
     this.tokenCode = target.value;
-    if (this.errorMessage) this.errorMessage = '';
+    if (this.errorMessage) {
+      this.errorMessage = '';
+      // No limpiar infoMessage aquí porque puede tener información de intentos restantes
+    }
   }
 
   private sendEmailCode(): void {
@@ -148,22 +154,57 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
         this.isLoading = false;
         
         if (response.success && response.valid) {
+          // Código válido, resetear contador
+          this.failedAttempts = 0;
           this.validate.emit({ token: this.tokenCode.trim(), action: this.action });
-        } else if (response.requiresLogout) {
-          this.errorMessage = response.message || 'Sesión expirada. Debe cerrar sesión e iniciar sesión nuevamente.';
-          this.infoMessage = 'Por favor, cierre sesión e inicie sesión nuevamente para continuar.';
-          
-          setTimeout(() => {
-            this.onClose();
-            this.logoutRequired.emit();
-          }, 3000);
         } else {
-          this.errorMessage = response.message || 'Código inválido. Intente nuevamente.';
+          // Código inválido, incrementar contador de intentos fallidos
+          this.failedAttempts++;
+          
+          // Si es el 4to intento fallido, mostrar alerta de sesión expirada y cerrar sesión
+          if (this.failedAttempts >= this.MAX_FAILED_ATTEMPTS + 1) {
+            // Mostrar mensaje de límite excedido solo en el último intento
+            this.errorMessage = 'Ha excedido el límite de intentos para ingresar el código, por seguridad esta sesión será finalizada y será redirigido a inicio de sesión.';
+            this.infoMessage = '';
+            alert('Límite de intentos excedido por seguridad. Esta sesión será finalizada.');
+            setTimeout(() => {
+              this.onClose();
+              this.logoutRequired.emit();
+            }, 5000);
+          } else {
+            // Mostrar mensaje de error con información de intentos restantes en el mensaje rojo
+            const remainingAttempts = (this.MAX_FAILED_ATTEMPTS + 1) - this.failedAttempts;
+            this.errorMessage = `Código inválido. Valídelo e inténtelo de nuevo. Intentos restantes: ${remainingAttempts}`;
+            this.infoMessage = ''; // Limpiar mensaje informativo cuando hay error
+          }
         }
       },
       error: (error) => {
         this.isLoading = false;
-        this.errorMessage = 'Error de conexión. Intente nuevamente.';
+        // Solo incrementar contador si es un error de validación (no de conexión)
+        if (error.status === 400 || error.status === 401) {
+          this.failedAttempts++;
+          
+          // Si es el 4to intento fallido, mostrar alerta de sesión expirada y cerrar sesión
+          if (this.failedAttempts >= this.MAX_FAILED_ATTEMPTS + 1) {
+            // Mostrar mensaje de límite excedido solo en el último intento
+            this.errorMessage = 'Ha excedido el límite de intentos para ingresar el código, por seguridad esta sesión será finalizada y será redirigido a inicio de sesión.';
+            this.infoMessage = '';
+            alert('Límite de intentos excedido por seguridad. Esta sesión será finalizada.');
+            setTimeout(() => {
+              this.onClose();
+              this.logoutRequired.emit();
+            }, 5000);
+          } else {
+            // Mostrar mensaje de error con información de intentos restantes en el mensaje rojo
+            const remainingAttempts = (this.MAX_FAILED_ATTEMPTS + 1) - this.failedAttempts;
+            this.errorMessage = `Código inválido. Valídelo e inténtelo de nuevo. Intentos restantes: ${remainingAttempts}`;
+            this.infoMessage = ''; // Limpiar mensaje informativo cuando hay error
+          }
+        } else {
+          // Error de conexión, no incrementar contador
+          this.errorMessage = 'Error de conexión. Intente nuevamente.';
+        }
       }
     });
   }

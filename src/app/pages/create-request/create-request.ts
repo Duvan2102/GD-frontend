@@ -56,6 +56,7 @@ export class CreateRequest implements OnInit, OnDestroy {
   ascendingOrder: boolean = false;
   isLoading = true;
   isLoadingDetails = false;
+  isCreatingRequest = false;
 
   // Propiedades para document-view
   isDocumentViewVisible = false;
@@ -141,6 +142,13 @@ export class CreateRequest implements OnInit, OnDestroy {
       return;
     }
 
+    // Cerrar todas las modales y vistas antes de comenzar la creación
+    this.isCreateModalVisible = false;
+    this.isDocumentViewVisible = false;
+
+    // Activar overlay de carga
+    this.isCreatingRequest = true;
+
     const pdf = solicitudData.documentoAprobacion as File;
     const adjuntos = solicitudData.anexos;
 
@@ -155,13 +163,20 @@ export class CreateRequest implements OnInit, OnDestroy {
       enviarRecordatorio: solicitudData.enviarRecordatorio,
       pdfPrincipal: pdf,
       adjuntos: adjuntos
-    }).subscribe(appr => {
-      if (appr) {
-        this.wasRequestCreatedSuccessfully = true; // Marcar que se creó exitosamente
-        // Preparar datos para la success-modal - ya tenemos usuarios cargados
-        this.successModalData = this.approvalService.mapToSuccessData(appr.fullData, this.allUsers);
-        this.isCreateModalVisible = false;
-        this.isDetailModalVisible = true;
+    }).subscribe({
+      next: (appr) => {
+        this.isCreatingRequest = false; // Ocultar overlay de carga
+        if (appr) {
+          this.wasRequestCreatedSuccessfully = true; // Marcar que se creó exitosamente
+          // Preparar datos para la success-modal - ya tenemos usuarios cargados
+          this.successModalData = this.approvalService.mapToSuccessData(appr.fullData, this.allUsers);
+          this.isDetailModalVisible = true;
+        }
+      },
+      error: (error) => {
+        this.isCreatingRequest = false; // Ocultar overlay de carga
+        console.error('Error al crear la solicitud:', error);
+        alert('Error al crear la solicitud. Por favor, inténtelo de nuevo.');
       }
     });
   }
