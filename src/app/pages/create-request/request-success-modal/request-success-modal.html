@@ -243,8 +243,7 @@
                   <div *ngIf="gestion.comentario" class="historial-comment">
                     <p class="comment-preview" (click)="showCommentModal(gestion)">
                       {{ getCommentPreview(gestion.comentario) }}
-                      <i *ngIf="gestion.comentario && gestion.comentario.length > 50" 
-                         class="bi bi-arrow-right-circle-fill comment-expand-icon"></i>
+                      <i *ngIf="gestion.comentario && gestion.comentario.length > 50"></i>
                     </p>
                   </div>
                   

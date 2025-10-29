@@ -52,11 +52,20 @@ export class AreaCreation implements OnChanges {
     return trimmed.length > 0 && this.validateName(trimmed) && !!this.selectedDepartment;
   }
 
+  normalizeToUppercaseNoAccents(text: string): string {
+    return text
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  onDescripcionInput(): void {
+    this.area.descripcion = this.normalizeToUppercaseNoAccents(this.area.descripcion);
+  }
+
   private validateName(name: string): boolean {
-    // Contar cuántas letras tiene el nombre
     const letterCount = (name.match(/[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/g) || []).length;
     
-    // Verificar si es solo numérico
     const isOnlyNumeric = /^[\d\s]+$/.test(name);
     
     if (isOnlyNumeric) {
@@ -86,14 +95,12 @@ export class AreaCreation implements OnChanges {
     if (this.isVisible) {
       if (this.mode === 'update' && this.areaToEdit) {
         this.area = { ...this.areaToEdit, departamento: { ...this.areaToEdit.departamento } };
-        // Cargar selección para modo edición
         this.loadSelectionForEdit();
       } else {
         this.resetForm();
       }
     }
 
-    // Inicializar arrays cuando cambien los datos
     if (changes['departments']) {
       this.initializeExpandedArrays();
     }
@@ -105,7 +112,6 @@ export class AreaCreation implements OnChanges {
       return;
     }
     
-    // Asignar el departamento seleccionado al area
     this.area.departamento = { 
       idDepartamento: this.selectedDepartment.idDepartamento!,
       descripcion: this.selectedDepartment.descripcion
@@ -140,7 +146,6 @@ export class AreaCreation implements OnChanges {
     }
   }
 
-  // Métodos para manejar los desplegables
   toggleDepartmentDropdown() {
     this.showDepartmentDropdown = !this.showDepartmentDropdown;
   }
@@ -150,7 +155,6 @@ export class AreaCreation implements OnChanges {
     this.showDepartmentDropdown = false;
   }
 
-  // Cerrar desplegables al hacer clic fuera
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
     const target = event.target as HTMLElement;

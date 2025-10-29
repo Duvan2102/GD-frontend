@@ -19,6 +19,7 @@
               [(ngModel)]="descripcion"
               name="descripcion"
               placeholder="Escribe el nombre de la tipología"
+              (input)="onDescripcionInput()"
               required
               [class.is-invalid]="errorMessage"
             />

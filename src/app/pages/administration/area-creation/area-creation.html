@@ -19,6 +19,7 @@
               [(ngModel)]="area.descripcion"
               name="areaDescripcion"
               placeholder="Escribe el nombre del área"
+              (input)="onDescripcionInput()"
               (ngModelChange)="validateOnChange()"
               required
               autocomplete="off"

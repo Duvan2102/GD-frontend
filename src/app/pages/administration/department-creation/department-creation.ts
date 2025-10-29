@@ -36,11 +36,20 @@ export class DepartmentCreation implements OnChanges {
     return trimmed.length > 0 && this.validateName(trimmed);
   }
 
+  normalizeToUppercaseNoAccents(text: string): string {
+    return text
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  onNombreInput(): void {
+    this.nombreDepartamento = this.normalizeToUppercaseNoAccents(this.nombreDepartamento);
+  }
+
   private validateName(name: string): boolean {
-    // Contar cuántas letras tiene el nombre
     const letterCount = (name.match(/[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/g) || []).length;
     
-    // Verificar si es solo numérico
     const isOnlyNumeric = /^[\d\s]+$/.test(name);
     
     if (isOnlyNumeric) {

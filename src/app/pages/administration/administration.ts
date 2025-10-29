@@ -266,7 +266,7 @@ export class Administration implements OnInit {
     }
 
     if (typology.descripcion && this.existeDuplicado(typology.descripcion, this.typologies, undefined, 'idTipologia', 'descripcion')) {
-      this.mostrarModalError('Ya existe una tipología con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes.');
+      this.mostrarModalError('Nombre duplicado. Ya existe una tipología con ese nombre.');
       return;
     }
 
@@ -288,7 +288,7 @@ export class Administration implements OnInit {
     }
 
     if (this.existeDuplicado(typology.descripcion, this.typologies, typology.idTipologia, 'idTipologia', 'descripcion')) {
-      this.mostrarModalError('Ya existe una tipología con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes.');
+      this.mostrarModalError('Nombre duplicado. Ya existe una tipología con ese nombre.');
       return;
     }
 
@@ -325,7 +325,7 @@ export class Administration implements OnInit {
     if (!nombre?.trim()) return;
     
     if (this.existeDuplicado(nombre.trim(), this.departments, undefined, 'idDepartamento', 'descripcion')) {
-      this.mostrarModalError('Ya existe un departamento con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes.');
+      this.mostrarModalError('Nombre duplicado. Ya existe un departamento con ese nombre.');
       return;
     }
 
@@ -349,7 +349,7 @@ export class Administration implements OnInit {
     }
 
     if (this.existeDuplicado(department.descripcion.trim(), this.departments, departmentId, 'idDepartamento', 'descripcion')) {
-      this.mostrarModalError('Ya existe un departamento con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes.');
+      this.mostrarModalError('Nombre duplicado. Ya existe un departamento con ese nombre.');
       return;
     }
 
@@ -406,7 +406,7 @@ export class Administration implements OnInit {
     if (!area.descripcion.trim() || !area.departamento?.idDepartamento) return;
     
     if (this.existeDuplicado(area.descripcion.trim(), this.areas, undefined, 'idArea', 'descripcion')) {
-      this.mostrarModalError('Ya existe un área con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes, incluso si están en diferentes departamentos.');
+      this.mostrarModalError('Nombre duplicado. Ya existe un área con ese nombre.');
       return;
     }
 
@@ -431,7 +431,7 @@ export class Administration implements OnInit {
     }
 
     if (this.existeDuplicado(area.descripcion.trim(), this.areas, areaId, 'idArea', 'descripcion')) {
-      this.mostrarModalError('Ya existe un área con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes, incluso si están en diferentes departamentos.');
+      this.mostrarModalError('Nombre duplicado. Ya existe un área con ese nombre.');
       return;
     }
   
@@ -493,7 +493,7 @@ export class Administration implements OnInit {
     }
     
     if (this.existeDuplicado(position.descripcion.trim(), this.positions, undefined, 'idCargo', 'descripcion')) {
-      this.mostrarModalError('Ya existe un cargo con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes, incluso si están en diferentes áreas.');
+      this.mostrarModalError('Nombre duplicado. Ya existe un cargo con ese nombre.');
       return;
     }
 
@@ -517,7 +517,7 @@ export class Administration implements OnInit {
     if (isNaN(positionId)) return;
 
     if (this.existeDuplicado(position.descripcion.trim(), this.positions, positionId, 'idCargo', 'descripcion')) {
-      this.mostrarModalError('Ya existe un cargo con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes, incluso si están en diferentes áreas.');
+      this.mostrarModalError('Nombre duplicado. Ya existe un cargo con ese nombre.');
       return;
     }
 

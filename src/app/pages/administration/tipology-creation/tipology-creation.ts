@@ -56,6 +56,17 @@ export class Tipology implements OnChanges {
     return this.mode === 'update' ? 'Actualización de la Tipología' : 'Crear Tipología';
   }
 
+  normalizeToUppercaseNoAccents(text: string): string {
+    return text
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  onDescripcionInput(): void {
+    this.descripcion = this.normalizeToUppercaseNoAccents(this.descripcion);
+  }
+
   private validateDescripcion(descripcion: string): boolean {
     const trimmed = descripcion.trim();
     return /[a-záéíóúñA-ZÁÉÍÓÚÑ]/.test(trimmed);
@@ -104,14 +115,12 @@ export class Tipology implements OnChanges {
 
   toggleDepartmentDropdown() {
     this.showDepartmentDropdown = !this.showDepartmentDropdown;
-    // Cerrar otros desplegables
     this.showAreaDropdown = false;
     this.showPositionDropdown = false;
   }
 
   toggleAreaDropdown() {
     this.showAreaDropdown = !this.showAreaDropdown;
-    // Cerrar otros desplegables
     this.showDepartmentDropdown = false;
     this.showPositionDropdown = false;
   }
@@ -200,12 +209,10 @@ export class Tipology implements OnChanges {
     this.selectedPosition = undefined;
     this.errorMessage = '';
     
-    // Reset dropdown states
     this.showDepartmentDropdown = false;
     this.showAreaDropdown = false;
     this.showPositionDropdown = false;
     
-    // Reset expanded states
     this.departmentsWithExpanded.forEach(dept => dept.expanded = false);
     this.areasWithExpanded.forEach(area => area.expanded = false);
   }

@@ -6,14 +6,22 @@
 .controles-fijos {
   width: 600px;
 }
+
+.form-check.form-switch {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+}
+
 .switch {
   position: relative;
   display: inline-block;
   width: 40px;
   height: 20px;
-  margin-left: 30px;
-  margin-right: 200px;
-  margin-bottom: 20px;
+  margin: 0;
 }
 
 .switch input {
