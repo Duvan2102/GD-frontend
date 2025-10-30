@@ -74,7 +74,12 @@
     <span class="visually-hidden">Cargando...</span>
   </div>
   <div class="mt-2">Cargando detalles...</div>
-  <style>
-    .loading-overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.6);z-index:1050}
-  </style>
+</div>
+
+<!-- Loading overlay for request creation -->
+<div *ngIf="isCreatingRequest" class="loading-overlay creating-request-overlay">
+  <div class="spinner-border creating-spinner" role="status">
+    <span class="visually-hidden">Creando solicitud...</span>
+  </div>
+  <div class="mt-3 loading-message">Creando solicitud...</div>
 </div>

@@ -522,6 +522,10 @@ export class CreateForm implements OnInit, OnChanges {
       anexos: this.anexos.length > 0 ? this.anexos : undefined,
     };
 
+    // Cerrar vista de documento antes de emitir
+    this.showDocumentView = false;
+    this.confirmVisible = false;
+
     this.onSaved.emit(solicitudData);
     this.resetForm();
   }

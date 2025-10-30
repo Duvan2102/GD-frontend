@@ -53,7 +53,7 @@
 .container-fluid {
   display: flex;
   flex-direction: column;
-  height: 70vh;
+  height: 80vh;
 }
 
 .seccion-cabecera,
