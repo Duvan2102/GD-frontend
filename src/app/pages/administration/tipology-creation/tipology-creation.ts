@@ -50,19 +50,34 @@ export class Tipology implements OnChanges {
   selectedDepartment?: Department;
   selectedArea?: Area;
   selectedPosition?: Position;
+  errorMessage = '';
 
   get modalTitle(): string {
     return this.mode === 'update' ? 'Actualización de la Tipología' : 'Crear Tipología';
   }
 
+  normalizeToUppercaseNoAccents(text: string): string {
+    return text
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  onDescripcionInput(): void {
+    this.descripcion = this.normalizeToUppercaseNoAccents(this.descripcion);
+  }
+
+  private validateDescripcion(descripcion: string): boolean {
+    const trimmed = descripcion.trim();
+    return /[a-záéíóúñA-ZÁÉÍÓÚÑ]/.test(trimmed);
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
-    // Inicializar arrays cuando cambien los datos de entrada
     if (changes['departments'] || changes['areas']) {
       this.initializeExpandedArrays();
     }
     
     if (changes['isVisible'] && this.isVisible) {
-      // Asegurar que los arrays estén inicializados
       if (this.departmentsWithExpanded.length === 0) {
         this.initializeExpandedArrays();
       }
@@ -100,26 +115,22 @@ export class Tipology implements OnChanges {
 
   toggleDepartmentDropdown() {
     this.showDepartmentDropdown = !this.showDepartmentDropdown;
-    // Cerrar otros desplegables
     this.showAreaDropdown = false;
     this.showPositionDropdown = false;
   }
 
   toggleAreaDropdown() {
     this.showAreaDropdown = !this.showAreaDropdown;
-    // Cerrar otros desplegables
     this.showDepartmentDropdown = false;
     this.showPositionDropdown = false;
   }
 
   togglePositionDropdown() {
     this.showPositionDropdown = !this.showPositionDropdown;
-    // Cerrar otros desplegables
     this.showDepartmentDropdown = false;
     this.showAreaDropdown = false;
   }
 
-  // Cerrar desplegables al hacer clic fuera
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
     const target = event.target as HTMLElement;
@@ -157,7 +168,22 @@ export class Tipology implements OnChanges {
   }
 
   onSubmit() {
-    if (!this.descripcion.trim() || !this.selectedPosition) return;
+    this.errorMessage = '';
+
+    if (!this.descripcion.trim()) {
+      this.errorMessage = 'El nombre de la tipología es obligatorio';
+      return;
+    }
+
+    if (!this.validateDescripcion(this.descripcion)) {
+      this.errorMessage = 'El nombre de la tipología debe contener al menos una letra, no puede ser solo números';
+      return;
+    }
+
+    if (!this.selectedPosition) {
+      this.errorMessage = 'Debe seleccionar un cargo destinatario';
+      return;
+    }
 
     const payload: Partial<Typology> = {
       descripcion: this.descripcion.trim(),
@@ -181,13 +207,12 @@ export class Tipology implements OnChanges {
     this.selectedDepartment = undefined;
     this.selectedArea = undefined;
     this.selectedPosition = undefined;
+    this.errorMessage = '';
     
-    // Reset dropdown states
     this.showDepartmentDropdown = false;
     this.showAreaDropdown = false;
     this.showPositionDropdown = false;
     
-    // Reset expanded states
     this.departmentsWithExpanded.forEach(dept => dept.expanded = false);
     this.areasWithExpanded.forEach(area => area.expanded = false);
   }

@@ -7,10 +7,10 @@
   padding: 0;
 }
 .modal-header {
-  background-color: hsl(180, 100%, 10%);
-  color: white;
-  border-bottom: none;
-  padding: 20;
+  background-color: #f8f9fa;
+  color: #2d3748;
+  border-bottom: 1px solid #ddd;
+  padding: 20px;
   text-align: center;
   margin: 0;
 }
@@ -70,14 +70,15 @@
 }
 
 .btn-secondary {
-  background-color: transparent;
-  color: red;
-  border: 2px solid red;
+  background-color: #c7cbcc;
+  color: #46655a;
+  border: 2px solid #c7cbcc;
 }
 
 .btn-secondary:hover {
-  background-color: red;
-  color: white;
+  background-color: #b0b4b5;
+  color: #46655a;
+  border-color: #b0b4b5;
 }
 
 .btn-primary {

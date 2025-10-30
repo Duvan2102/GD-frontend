@@ -140,6 +140,8 @@
   [isVisible]="isPasswordModalVisible"
   [mensajeModal]="mensajePasswordModal"
   [user]="currentUser"
+  [skipValidation]="currentAction === 'eliminarQR' || currentAction === 'rechazar'"
+  [externalError]="passwordModalError"
   (close)="closePasswordModal()"
   (validate)="handlePasswordValidation($event)"
   (validationError)="handlePasswordValidationError($event)">
@@ -182,9 +184,7 @@
       <button type="button" class="close-btn" (click)="closeChange2FAMethodModal()">&times;</button>
     </div>
     <div class="modal-body">
-      <p>Selecciona el nuevo método de autenticación de dos factores para <strong>{{currentUser?.nombres}} {{currentUser?.apellidos}}</strong>:</p>
-
-      <!-- Mostrar método actual -->
+      
       <div class="alert alert-info mb-3" role="alert">
         <strong>Método actual:</strong> 
         <ng-container [ngSwitch]="currentUser?.dobleAutenticacion">

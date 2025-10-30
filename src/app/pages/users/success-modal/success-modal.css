@@ -30,3 +30,65 @@
 .modal-content.feedback-modal .feedback-title {
   color: #222;
 }
+
+.custom-backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+}
+
+.modal-content-custom {
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border: none;
+  padding: 1.5rem;
+}
+
+.success-icon-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.success-icon-large {
+  font-size: 4rem;
+  color: #28a745;
+}
+
+.modal-title-custom {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.4;
+}
+
+.mensaje-secundario {
+  font-size: 1rem;
+  color: #666;
+  line-height: 1.5;
+  margin: 0 auto;
+  max-width: 90%;
+}
+
+.custom-btn-accept {
+  background: #6366f1;
+  border: none;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 0.75rem 2.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+  color: #fff;
+  transition: all 0.2s;
+  min-width: 120px;
+}
+
+.custom-btn-accept:hover {
+  background: #4f46e5;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  transform: translateY(-1px);
+}
+
+.custom-btn-accept:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
+}

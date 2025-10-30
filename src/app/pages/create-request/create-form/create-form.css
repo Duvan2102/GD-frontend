@@ -419,9 +419,9 @@
 }
 
 .btn-cancelar {
-  background: transparent;
-  color: red;
-  border: 1px solid red;
+  background: #c7cbcc;
+  color: #46655a;
+  border: 1px solid #c7cbcc;
   border-radius: 4px;
   font-size: 13px;
   font-weight: 600;
@@ -454,8 +454,9 @@
 }
 
 .btn-cancelar:hover { 
-  background: red; 
-  color: white; 
+  background: #b0b4b5; 
+  color: #46655a;
+  border-color: #b0b4b5;
 }
 .btn-previsualizar:hover { 
   background: #6b9080; 

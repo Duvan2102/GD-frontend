@@ -119,6 +119,16 @@ export class CreateRequest implements OnInit, OnDestroy {
       });
   }
 
+  reloadApprovals(): void {
+    if (!this.currentUser) return;
+    this.approvalsSubscription?.unsubscribe();
+    this.approvalsSubscription = this.approvalService.getApprovalsByCreator(this.currentUser.idUsuario, this.allUsers)
+      .subscribe(approvals => {
+        this.approvalsList = approvals;
+        this.applyViewLogic();
+      });
+  }
+
   openCreateModal(): void {
     this.isCreateModalVisible = true;
   }
@@ -185,7 +195,6 @@ export class CreateRequest implements OnInit, OnDestroy {
     this.isDetailModalVisible = false;
     this.successModalData = null;
 
-    // Mostrar modal de éxito como última acción en todos los casos
     if (this.wasRequestCreatedSuccessfully) {
       this.successModalService.showSuccess('Solicitud enviada', 'Tu solicitud ha sido creada y enviada exitosamente. Los aprobadores han sido notificados para su revisión.');
       this.wasRequestCreatedSuccessfully = false; // Resetear el flag
@@ -271,7 +280,6 @@ export class CreateRequest implements OnInit, OnDestroy {
         }
       });
     } else {
-      // Si no hay ID o usuario, mostrar error
       this.documentViewData = {
         id: data.id!,
         file: undefined,
@@ -289,7 +297,6 @@ export class CreateRequest implements OnInit, OnDestroy {
 
   closeDocumentView(): void {
     this.isDocumentViewVisible = false;
-    // Reset document data to ensure fresh load on next open
     this.documentViewData = null;
   }
 
@@ -298,16 +305,12 @@ export class CreateRequest implements OnInit, OnDestroy {
     if (!uid) return;
     this.approvalService.cancelarSolicitud(event.solicitudId, uid, event.comentario).subscribe({
       next: () => {
-        // Marcar que se canceló exitosamente para mostrar modal de éxito al cerrar
         this.wasRequestCancelledSuccessfully = true;
-        // Cerrar la modal de gestión después del éxito
         this.closeDetailModal();
-        this.subscribeToApprovals();
+        this.reloadApprovals();
       },
       error: (error) => {
-        // Mostrar mensaje de error y reabrir la modal de gestión
         alert('Error al cancelar la solicitud. Por favor, inténtelo de nuevo.');
-        // Reabrir la modal de gestión para que el usuario pueda intentar nuevamente
         this.isDetailModalVisible = true;
       }
     });
@@ -321,7 +324,8 @@ export class CreateRequest implements OnInit, OnDestroy {
 
     this.approvalService.deleteApproval(solicitudId, uid).subscribe({
       next: () => {
-        this.subscribeToApprovals(); // Recargar la lista
+        this.reloadApprovals();
+        this.successModalService.showSuccess('Solicitud eliminada', 'La solicitud ha sido eliminada exitosamente.');
       },
       error: (error) => {
         alert('Error al eliminar la solicitud. Por favor, inténtalo de nuevo.');
@@ -335,9 +339,9 @@ export class CreateRequest implements OnInit, OnDestroy {
     this.approvalService.getApprovalDetails(id, this.allUsers, uid).pipe()
       .subscribe(request => {
         if (request && request.fullData) {
-          // Usar directamente los datos ya procesados en lugar de mapear nuevamente
           this.successModalData = request.fullData;
           this.isDetailModalVisible = true;
+          this.reloadApprovals();
         }
         this.isLoadingDetails = false;
       });

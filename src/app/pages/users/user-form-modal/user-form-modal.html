@@ -177,6 +177,9 @@
           <div class="col-md-6">
             <label class="form-label">Celular <span class="text-danger">*</span></label>
             <input type="text" class="form-control" formControlName="celular"
+                   maxlength="10"
+                   inputmode="numeric"
+                   placeholder="3001234567"
                    [class.is-invalid]="userForm.get('celular')?.invalid && userForm.get('celular')?.touched">
             <div *ngIf="getErrorMessage('celular')" class="invalid-feedback">
               {{ getErrorMessage('celular') }}
@@ -185,6 +188,9 @@
           <div class="col-md-6">
             <label class="form-label">Teléfono</label>
             <input type="text" class="form-control" formControlName="telefono"
+                   maxlength="10"
+                   inputmode="numeric"
+                   placeholder="6012345678"
                    [class.is-invalid]="userForm.get('telefono')?.invalid && userForm.get('telefono')?.touched">
             <div *ngIf="getErrorMessage('telefono')" class="invalid-feedback">
               {{ getErrorMessage('telefono') }}

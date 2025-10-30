@@ -130,19 +130,48 @@ form {
 }
 
 .success-message {
-    background-color: #d4edda;
-    border: 1px solid #c3e6cb;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
+    background: linear-gradient(135deg, #d1f2eb 0%, #34646480 120%);
+    border: 2px solid #6c8382;
+    border-radius: 12px;
+    padding: 30px 25px;
+    margin-bottom: 25px;
     text-align: center;
-    color: #155724;
+    color: #2c5654;
+    box-shadow: 0 4px 15px rgba(108, 131, 130, 0.2);
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.success-message i {
+    color: #28a745;
+    font-size: 48px;
+    display: block;
+    margin-bottom: 15px;
+    animation: checkmarkPulse 0.6s ease-in-out;
+}
+
+@keyframes checkmarkPulse {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 .success-message p {
     margin: 10px 0 0 0;
     font-size: 14px;
-    opacity: 0.8;
+    opacity: 0.9;
+}
+
+.success-message .buttons-container {
+    margin-top: 25px;
 }
 
 .buttons-container {
@@ -320,12 +349,6 @@ footer {
 .loading-message i {
     margin-right: 8px;
     font-size: 18px;
-}
-
-.success-message i {
-    color: #28a745;
-    font-size: 20px;
-    margin-right: 8px;
 }
 
 /* --- Diseño Responsivo para móviles y tablets --- */

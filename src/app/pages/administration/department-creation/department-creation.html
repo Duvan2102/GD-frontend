@@ -17,6 +17,7 @@
             [(ngModel)]="nombreDepartamento"
             name="nombreDepartamento"
             placeholder="Escribe el nombre"
+            (input)="onNombreInput()"
             (ngModelChange)="validateOnChange()"
             required
           />

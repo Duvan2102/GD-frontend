@@ -56,11 +56,20 @@ export class PositionsCreation implements OnChanges {
     return trimmed.length > 0 && this.validateName(trimmed) && !!this.selectedArea;
   }
 
+  normalizeToUppercaseNoAccents(text: string): string {
+    return text
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  onDescripcionInput(): void {
+    this.position.descripcion = this.normalizeToUppercaseNoAccents(this.position.descripcion);
+  }
+
   private validateName(name: string): boolean {
-    // Contar cuántas letras tiene el nombre
     const letterCount = (name.match(/[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/g) || []).length;
     
-    // Verificar si es solo numérico
     const isOnlyNumeric = /^[\d\s]+$/.test(name);
     
     if (isOnlyNumeric) {
@@ -96,14 +105,12 @@ export class PositionsCreation implements OnChanges {
             esAuditor: false
           };
         }
-        // Cargar selecciones para modo edición
         this.loadSelectionsForEdit();
       } else {
         this.resetForm();
       }
     }
 
-    // Inicializar arrays cuando cambien los datos
     if (changes['departments'] || changes['areas']) {
       this.initializeExpandedArrays();
     }
@@ -115,7 +122,6 @@ export class PositionsCreation implements OnChanges {
       return;
     }
     
-    // Asignar el área seleccionada al position
     this.position.area = { ...this.selectedArea };
     
     if (this.mode === 'create') {
@@ -166,7 +172,6 @@ export class PositionsCreation implements OnChanges {
     }
   }
 
-  // Métodos para manejar los desplegables
   toggleDepartmentDropdown() {
     this.showDepartmentDropdown = !this.showDepartmentDropdown;
     this.showAreaDropdown = false;

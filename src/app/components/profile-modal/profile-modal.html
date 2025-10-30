@@ -33,6 +33,9 @@
               <div class="form-group">
                 <label class="form-label">Teléfono movil</label>
                 <input type="tel" class="form-control" [(ngModel)]="editedUser.telefono1" 
+                       maxlength="10"
+                       inputmode="numeric"
+                       placeholder="3001234567"
                        (keypress)="onlyNumbers($event)" />
               </div>
                <div class="form-group">
@@ -54,6 +57,9 @@
               <div class="form-group">
                 <label class="form-label">Teléfono</label>
                 <input type="tel" class="form-control" [(ngModel)]="editedUser.telefono2" 
+                       maxlength="10"
+                       inputmode="numeric"
+                       placeholder="6012345678"
                        (keypress)="onlyNumbers($event)" />
               </div>
                <div class="form-group">

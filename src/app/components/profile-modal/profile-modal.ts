@@ -178,29 +178,47 @@ export class ProfileModal implements OnChanges {
     
     // Validar teléfono móvil (telefono1)
     if (this.editedUser.telefono1 && this.editedUser.telefono1.trim() !== '') {
-      const phoneRegex = /^\d{7,}$/;
-      const cleanPhone = this.editedUser.telefono1.replace(/\s/g, '');
+      const cleanPhone = this.editedUser.telefono1.replace(/\D/g, '');
       
       if (!/^\d+$/.test(cleanPhone)) {
         return { isValid: false, errorMessage: 'El teléfono móvil solo debe contener números.' };
       }
       
-      if (!phoneRegex.test(cleanPhone)) {
-        return { isValid: false, errorMessage: 'El teléfono móvil debe tener al menos 7 dígitos.' };
+      if (cleanPhone.length !== 10) {
+        return { isValid: false, errorMessage: 'El teléfono móvil debe tener exactamente 10 dígitos.' };
+      }
+      
+      // Validar que no todos los dígitos sean iguales
+      if (/^(\d)\1{9}$/.test(cleanPhone)) {
+        return { isValid: false, errorMessage: 'El teléfono móvil no puede contener todos los dígitos iguales.' };
+      }
+      
+      // Validar que no haya más de 3 dígitos consecutivos iguales
+      if (/(\d)\1{3,}/.test(cleanPhone)) {
+        return { isValid: false, errorMessage: 'El teléfono móvil no puede tener más de 3 dígitos consecutivos iguales.' };
       }
     }
     
     // Validar teléfono (telefono2)
     if (this.editedUser.telefono2 && this.editedUser.telefono2.trim() !== '') {
-      const phoneRegex = /^\d{7,}$/;
-      const cleanPhone = this.editedUser.telefono2.replace(/\s/g, '');
+      const cleanPhone = this.editedUser.telefono2.replace(/\D/g, '');
       
       if (!/^\d+$/.test(cleanPhone)) {
         return { isValid: false, errorMessage: 'El teléfono solo debe contener números.' };
       }
       
-      if (!phoneRegex.test(cleanPhone)) {
-        return { isValid: false, errorMessage: 'El teléfono debe tener al menos 7 dígitos.' };
+      if (cleanPhone.length !== 10) {
+        return { isValid: false, errorMessage: 'El teléfono debe tener exactamente 10 dígitos.' };
+      }
+      
+      // Validar que no todos los dígitos sean iguales
+      if (/^(\d)\1{9}$/.test(cleanPhone)) {
+        return { isValid: false, errorMessage: 'El teléfono no puede contener todos los dígitos iguales.' };
+      }
+      
+      // Validar que no haya más de 3 dígitos consecutivos iguales
+      if (/(\d)\1{3,}/.test(cleanPhone)) {
+        return { isValid: false, errorMessage: 'El teléfono no puede tener más de 3 dígitos consecutivos iguales.' };
       }
     }
     
