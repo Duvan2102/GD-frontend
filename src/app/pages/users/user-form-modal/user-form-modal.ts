@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged, forkJoin, switchMap } from 'rxjs';
 import { Usuario } from '../../../interfaces/common.interfaces';
 import { UserService } from '../../../services/user.service';
@@ -11,6 +11,7 @@ import { AreaService, Area } from '../../../services/area.service';
 import { PasswordModal } from '../password-modal/password-modal';
 import { ConfirmModal } from '../confirm-modal/confirm-modal';
 import { SuccessModal } from '../success-modal/success-modal';
+import { phoneValidator } from '../../../utils/phone-validators';
 
 @Component({
   selector: 'app-user-form-modal',
@@ -44,14 +45,8 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   hierarchicalData: any = { departamentos: [] };
   isDropdownOpen = false;
   selectedCargoInfo: Position | null = null;
-  originalDobleAutenticacion: string = '';
   isDataLoaded = false;
   
-  dobleAutenticacionOptions = [
-    { value: 'GOOGLE_AUTH', label: 'Google Authenticator' },
-    { value: 'EMAIL', label: 'Correo Electrónico' }
-  ];
-
   isPasswordModalVisible = false;
   confirmModalVisible = false;
   modalSuccessVisible = false;
@@ -111,10 +106,10 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       cargo: ['', Validators.required],
       correoEmpresarial: ['', [Validators.required, Validators.email]],
       correoPersonal: ['', [Validators.email]],
-      celular: ['', [Validators.required, Validators.pattern(/^\+?[\d\s\-()]{10,15}$/)]],
-      telefono: ['', [Validators.pattern(/^\+?[\d\s\-()]{10,15}$/)]],
+      celular: ['', [Validators.required, phoneValidator()]],
+      telefono: ['', [phoneValidator()]],
       direccion: ['', [Validators.maxLength(200)]],
-      dobleAutenticacion: ['GOOGLE_AUTH', Validators.required],
+      // dobleAutenticacion eliminado
       perfil: ['funcionarios', Validators.required]
     });
   }
@@ -170,7 +165,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         }
       }
       
-      // Si no hay cargo válido, limpiar la selección
       if (!cargoValue) {
         this.selectedCargoInfo = null;
       }
@@ -197,16 +191,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         }
       }
 
-      let dobleAutenticacionValue: 'GOOGLE_AUTH' | 'EMAIL' = 'GOOGLE_AUTH';
-      
-      if (this.user.dobleAutenticacion === 'GOOGLE_AUTH' || this.user.dobleAutenticacion === 'EMAIL') {
-        dobleAutenticacionValue = this.user.dobleAutenticacion;
-      } else if (typeof this.user.dobleAutenticacion === 'boolean') {
-        dobleAutenticacionValue = this.user.dobleAutenticacion ? 'EMAIL' : 'GOOGLE_AUTH';
-      } else if (this.user.dobleAutenticacion === null || this.user.dobleAutenticacion === undefined) {
-        dobleAutenticacionValue = 'GOOGLE_AUTH';
-      }
-
       this.userForm.patchValue({
         noUsuario: this.user.idUsuario || this.user.noUsuario || 0,
         identificacion: this.user.identificacion || '',
@@ -219,24 +203,20 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         celular: this.user.telefono1 || '',
         telefono: this.user.telefono2 || '',
         direccion: this.user.direccion || '',
-        dobleAutenticacion: dobleAutenticacionValue,
         perfil: perfilActivo
       });
 
-      // Guardar el valor original para detectar cambios
-      this.originalDobleAutenticacion = dobleAutenticacionValue;
-
-      // Solo establecer selectedCargoInfo si hay un cargo válido
       if (cargoValue) {
         this.setSelectedCargoFromValue(cargoValue);
       } else {
-        // Limpiar la selección si no hay cargo
         this.selectedCargoInfo = null;
       }
       
       this.userForm.get('identificacion')?.disable();
+      this.userForm.get('usuario')?.disable();
     } else {
       this.userForm.get('identificacion')?.enable();
+      this.userForm.get('usuario')?.enable();
       this.resetForm();
     }
   }
@@ -257,7 +237,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   private loadHierarchicalData(): void {
     this.isLoading = true;
 
-    // Cargar todos los datos para tener la estructura completa
     forkJoin({
       departamentos: this.departmentService.getAll(),
       areas: this.areaService.getAll(),
@@ -397,7 +376,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         };
         areasMap.set(areaKey, areaObj);
 
-        // Asignar área al departamento
         const departamento = departamentosMap.get(area.departamento.idDepartamento);
         if (departamento) {
           departamento.areas.push(areaObj);
@@ -441,7 +419,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     this.isDropdownOpen = false;
   }
 
-  // Método para prevenir el cierre accidental del dropdown
   preventDropdownClose(event: Event): void {
     event.preventDefault();
     event.stopPropagation();
@@ -515,7 +492,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       return;
     }
 
-    // Guardar el password para usarlo después en la activación o rechazo
     this.pendingPassword = password;
     
     this.isPasswordModalVisible = false;
@@ -546,22 +522,16 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
     this.isLoading = true;
     
-    // Detectar si es un usuario pendiente que necesita ser activado
     const isPendingUser = this.user?.estado && 
       this.user.estado.descripcion && 
       this.user.estado.descripcion.toUpperCase() === 'PENDIENTE';
     
-    if (this.isEditMode && isPendingUser) {
-      // FLUJO PARA EDITAR Y ACTIVAR USUARIO PENDIENTE (2 pasos automáticos)
-      // PASO 1: Actualizar datos (cargo, rol, teléfonos, etc.) manteniendo estado PENDIENTE
-      // PASO 2: Activar usuario (cambiar estado a ACTIVO) con password del admin
-      
+    if (this.isEditMode && isPendingUser) {      
       const datosParaActualizar = {
         ...this.pendingUserData,
         estado: this.user?.estado || { idEstado: 3, descripcion: 'PENDIENTE' }
       };
       
-      // ENDPOINT 1: PUT /usuarios/{id} - Actualizar datos del usuario
       console.log('🔄 Iniciando actualización de usuario pendiente:', {
         userId: this.user?.idUsuario || this.user?.noUsuario,
         datosParaActualizar: datosParaActualizar
@@ -570,7 +540,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       this.userService.actualizarUsuario(datosParaActualizar)
         .pipe(
           takeUntil(this.destroy$),
-          // ENDPOINT 2: PUT /usuarios/{id}/activar - Activar usuario con password
           switchMap((updateResponse) => {
             console.log('✅ Usuario actualizado exitosamente:', updateResponse);
             
@@ -583,8 +552,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
             
             console.log('🔄 Iniciando activación de usuario con ID:', userId);
             
-            // Crear un objeto usuario mínimo para la activación
-            // Solo necesitamos el ID, el endpoint de activación solo requiere password
             const usuarioParaActivar: Usuario = {
               idUsuario: userId,
               identificacion: this.user?.identificacion || '',
@@ -598,7 +565,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
               cargo: this.user?.cargo,
               rol: this.user?.rol,
               estado: this.user?.estado,
-              dobleAutenticacion: this.user?.dobleAutenticacion,
               activo: true
             } as Usuario;
             
@@ -616,7 +582,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
               message: 'Usuario actualizado y activado correctamente'
             });
             
-            // Actualizar el usuario con el estado ACTIVO
             const usuarioActualizado = {
               ...this.pendingUserData,
               idUsuario: this.user?.idUsuario || this.user?.noUsuario || this.pendingUserData?.idUsuario || 0,
@@ -626,10 +591,8 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
             this.userUpdated.emit(usuarioActualizado);
             this.save.emit(usuarioActualizado);
             
-            // Limpiar datos sensibles
             this.pendingPassword = '';
             
-            // Cerrar el modal después de un breve delay
             setTimeout(() => {
               this.onClose();
             }, 500);
@@ -665,9 +628,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
           }
         });
     } else {
-      // FLUJO PARA USUARIOS NORMALES O NUEVOS
-      // - Editar ACTIVO: Solo actualizar datos (1 endpoint)
-      // - Crear nuevo: Solo crear usuario (1 endpoint)
       const operacion = this.isEditMode
         ? this.userService.actualizarUsuario(this.pendingUserData)
         : this.userService.crearUsuario(this.pendingUserData);
@@ -695,10 +655,8 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
             }
             this.save.emit(this.pendingUserData!);
             
-            // Limpiar datos sensibles
             this.pendingPassword = '';
             
-            // Cerrar el modal después de un breve delay
             setTimeout(() => {
               this.onClose();
             }, 500);
@@ -721,7 +679,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
             errorMsg += ':\n• ' + error.error.details.join('\n• ');
           }
 
-          // Emitir alerta externa en lugar de mostrar error interno
           this.showAlert.emit({
             type: 'danger',
             title: 'Error',
@@ -763,7 +720,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
     this.isLoading = true;
 
-    // Rechazar = Desactivar (PENDIENTE -> INACTIVO)
     this.userService.desactivarUsuario(this.user, this.pendingPassword)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -778,11 +734,9 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
           
           this.userRejected.emit(this.user!);
           
-          // Limpiar datos sensibles
           this.pendingPassword = '';
           this.pendingAction = 'save';
           
-          // Cerrar el modal después de un breve delay
           setTimeout(() => {
             this.onClose();
           }, 500);
@@ -864,7 +818,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  // Método helper para convertir perfil a rol
   private convertirPerfilARol(perfilSeleccionado: string): any {
     switch (perfilSeleccionado) {
       case 'administrador':
@@ -880,24 +833,32 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   onSave(): void {
     this.resetMessages();
     const identificacionControl = this.userForm.get('identificacion');
-    const wasDisabled = identificacionControl?.disabled;
-    if (wasDisabled) {
+    const usuarioControl = this.userForm.get('usuario');
+    const wasIdentificacionDisabled = identificacionControl?.disabled;
+    const wasUsuarioDisabled = usuarioControl?.disabled;
+    
+    if (wasIdentificacionDisabled) {
       identificacionControl?.enable();
+    }
+    if (wasUsuarioDisabled) {
+      usuarioControl?.enable();
     }
 
     if (this.userForm.invalid) {
       console.error('Formulario inválido:', this.userForm.errors);
       this.markFormGroupTouched();
       
-      // Emitir alerta externa para errores de validación
       this.showAlert.emit({
         type: 'warning',
         title: 'Formulario incompleto',
         message: 'Por favor, corrige los errores en el formulario antes de continuar.'
       });
       
-      if (wasDisabled) {
+      if (wasIdentificacionDisabled) {
         identificacionControl?.disable();
+      }
+      if (wasUsuarioDisabled) {
+        usuarioControl?.disable();
       }
       return;
     }
@@ -939,8 +900,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         break;
     }
 
-    // Usuario creado por admin debe quedar ACTIVO (no PENDIENTE)
-    // Si se está editando un usuario PENDIENTE, también debe quedar ACTIVO
     const isPendingUser = this.isEditMode && this.user?.estado && 
       this.user.estado.descripcion && 
       this.user.estado.descripcion.toUpperCase() === 'PENDIENTE';
@@ -949,7 +908,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       ? (isPendingUser ? { idEstado: 5, descripcion: 'ACTIVO' } : (this.user?.estado || { idEstado: 5, descripcion: 'ACTIVO' }))
       : { idEstado: 5, descripcion: 'ACTIVO' };
 
-    // Preparar idUsuario para modo edición
     const userIdForOperation = this.isEditMode 
       ? (this.user?.idUsuario || this.user?.noUsuario) 
       : undefined;
@@ -968,12 +926,14 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       telefono1: formValue.celular || '',
       telefono2: formValue.telefono || '',
       direccion: formValue.direccion || '',
-      dobleAutenticacion: this.isEditMode ? this.user?.dobleAutenticacion : formValue.dobleAutenticacion,
       activo: true
     } as Usuario;
 
-    if (wasDisabled) {
+    if (wasIdentificacionDisabled) {
       identificacionControl?.disable();
+    }
+    if (wasUsuarioDisabled) {
+      usuarioControl?.disable();
     }
 
     this.mensajePasswordModal = this.isEditMode
@@ -1010,7 +970,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       }
     }
 
-    // Buscar por ID numérico en cargosDisponibles
     const cargoIdNum = typeof cargoId === 'string' ? parseInt(cargoId, 10) : cargoId;
     const cargo = this.cargosDisponibles.find(c => c.idCargo === cargoIdNum);
 
@@ -1050,10 +1009,10 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
   private resetForm(): void {
     this.userForm.reset({
-      dobleAutenticacion: 'GOOGLE_AUTH',
       perfil: 'funcionarios'
     });
     this.userForm.get('identificacion')?.enable();
+    this.userForm.get('usuario')?.enable();
     this.selectedCargoInfo = null;
     this.isDropdownOpen = false;
     this.isPasswordModalVisible = false;
@@ -1109,29 +1068,65 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     const control = this.userForm.get(controlName);
     if (!control?.errors) return '';
     
-    // No mostrar error si el campo no ha sido tocado
     if (!control.touched && !control.dirty) return '';
 
     const errors = control.errors;
+    
+    if (controlName === 'celular' || controlName === 'telefono') {
+      const field = controlName === 'celular' ? 'celular' : 'teléfono';
+      
+      if (errors['required']) {
+        return `El ${field} es requerido`;
+      }
+      if (errors['phoneLength']) {
+        return `El ${field} debe tener exactamente 10 dígitos`;
+      }
+      if (errors['phoneAllSame']) {
+        return `El ${field} no puede tener todos los dígitos iguales`;
+      }
+      if (errors['phoneConsecutive']) {
+        return `El ${field} no puede tener más de 3 dígitos consecutivos iguales`;
+      }
+      if (errors['phoneInvalid']) {
+        return `El ${field} solo debe contener números`;
+      }
+    }
+    
     const errorMessages: { [key: string]: { [key: string]: string } } = {
       identificacion: {
         required: 'La identificación es requerida',
-        pattern: 'Ingresa un número de celular válido'
-      },
-      telefono: {
-        pattern: 'Agrega el indicativo y un N° teléfono válido.'
+        pattern: 'Ingresa un número de identificación válido (6-12 dígitos)'
       },
       direccion: {
         maxlength: 'La dirección no puede exceder 200 caracteres'
-      },
-      dobleAutenticacion: {
-        required: 'La doble autenticación es requerida'
       },
       perfil: {
         required: 'Debe seleccionar un perfil'
       },
       cargo: {
         required: 'Debe seleccionar un cargo'
+      },
+      nombres: {
+        required: 'Los nombres son requeridos',
+        minlength: 'Los nombres deben tener al menos 2 caracteres',
+        maxlength: 'Los nombres no pueden exceder 50 caracteres'
+      },
+      apellidos: {
+        required: 'Los apellidos son requeridos',
+        minlength: 'Los apellidos deben tener al menos 2 caracteres',
+        maxlength: 'Los apellidos no pueden exceder 50 caracteres'
+      },
+      usuario: {
+        required: 'El usuario es requerido',
+        minlength: 'El usuario debe tener al menos 3 caracteres',
+        maxlength: 'El usuario no puede exceder 20 caracteres'
+      },
+      correoEmpresarial: {
+        required: 'El correo empresarial es requerido',
+        email: 'Ingrese un correo electrónico válido'
+      },
+      correoPersonal: {
+        email: 'Ingrese un correo electrónico válido'
       }
     };
 
@@ -1146,7 +1141,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     return 'Campo inválido';
   }
 
-  // Métodos de tracking para mejorar performance del *ngFor
   trackByDepartamento(index: number, item: any): any {
     return item?.idDepartamento || index;
   }

@@ -331,13 +331,13 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-lg);
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-  border-bottom: none;
+  background: #f8f9fa;
+  border-bottom: 1px solid #ddd;
 }
 
 .modal-header h3 {
   margin: 0;
-  color: var(--color-text-white);
+  color: #2d3748;
   font-size: 18px;
   font-weight: 600;
 }
@@ -347,7 +347,7 @@
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: var(--color-text-white);
+  color: var(--color-text-black);
   padding: 0;
   width: 32px;
   height: 32px;
@@ -555,7 +555,10 @@
 
 .panel-tabla-scroll {
   overflow-x: auto;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  flex: 1;
+  max-height: calc(100vh - 350px);
 }
 
 .header-table {

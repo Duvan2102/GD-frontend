@@ -84,9 +84,12 @@ export class Administration implements OnInit {
       .replace(/\s+/g, ' ');
   }
 
-  /**
-   * Verifica si existe un nombre duplicado en una lista de entidades
-   */
+
+  private validateContainsLetters(text: string): boolean {
+    const trimmed = text.trim();
+    return /[a-záéíóúñA-ZÁÉÍÓÚÑ]/.test(trimmed);
+  }
+
   private existeDuplicado(nombre: string, lista: any[], idActual?: number, campoId: string = 'id', campoNombre: string = 'descripcion'): boolean {
     const nombreNormalizado = this.normalizeText(nombre);
     return lista.some(item => {
@@ -237,7 +240,7 @@ export class Administration implements OnInit {
       if (!typology.idTipologia) return;
       this.typologyService.delete(typology.idTipologia).subscribe({
         next: () => {
-          this.loadTypologies();
+          this.loadAllData();
           this.mostrarModalSuccess('Tipología eliminada con éxito');
         },
         error: (error) => {
@@ -248,7 +251,7 @@ export class Administration implements OnInit {
             },
             error: () => {
               // Si ya no existe, se asume borrada
-              this.loadTypologies();
+              this.loadAllData();
               this.mostrarModalSuccess('Tipología eliminada con éxito');
             }
           });
@@ -257,15 +260,19 @@ export class Administration implements OnInit {
     });
   }
   crearTipologia(typology: Partial<Typology>) {
-    // Validar que no exista una tipología con el mismo nombre
+    if (typology.descripcion && !this.validateContainsLetters(typology.descripcion)) {
+      this.mostrarModalError('El nombre de la tipología debe contener al menos una letra, no puede ser solo números.');
+      return;
+    }
+
     if (typology.descripcion && this.existeDuplicado(typology.descripcion, this.typologies, undefined, 'idTipologia', 'descripcion')) {
-      this.mostrarModalError('Ya existe una tipología con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes.');
+      this.mostrarModalError('Nombre duplicado. Ya existe una tipología con ese nombre.');
       return;
     }
 
     this.typologyService.create(typology).subscribe({
       next: () => {
-        this.loadTypologies();
+        this.loadAllData();
         this.showTypologyCreateModal = false;
         this.mostrarModalSuccess('Tipología creada con éxito');
       },
@@ -275,9 +282,13 @@ export class Administration implements OnInit {
   actualizarTipologia(typology: Typology) {
     if (!typology.idTipologia) return;
     
-    // Validar que no exista otra tipología con el mismo nombre
+    if (!this.validateContainsLetters(typology.descripcion)) {
+      this.mostrarModalError('El nombre de la tipología debe contener al menos una letra, no puede ser solo números.');
+      return;
+    }
+
     if (this.existeDuplicado(typology.descripcion, this.typologies, typology.idTipologia, 'idTipologia', 'descripcion')) {
-      this.mostrarModalError('Ya existe una tipología con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes.');
+      this.mostrarModalError('Nombre duplicado. Ya existe una tipología con ese nombre.');
       return;
     }
 
@@ -287,7 +298,7 @@ export class Administration implements OnInit {
     };
     this.typologyService.update(typology.idTipologia, updatePayload).subscribe({
       next: () => {
-        this.loadTypologies();
+        this.loadAllData();
         this.showTypologyUpdateModal = false;
         this.selectedTypology = undefined;
         this.mostrarModalSuccess('Tipología actualizada con éxito');
@@ -313,16 +324,15 @@ export class Administration implements OnInit {
   confirmDepartmentCreate(nombre: string): void {
     if (!nombre?.trim()) return;
     
-    // Validar que no exista un departamento con el mismo nombre
     if (this.existeDuplicado(nombre.trim(), this.departments, undefined, 'idDepartamento', 'descripcion')) {
-      this.mostrarModalError('Ya existe un departamento con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes.');
+      this.mostrarModalError('Nombre duplicado. Ya existe un departamento con ese nombre.');
       return;
     }
 
     const newDepartment: Partial<Department> = { descripcion: nombre.trim() };
     this.departmentService.create(newDepartment).subscribe({
         next: () => {
-            this.loadDepartments();
+            this.loadAllData();
             this.closeDepartmentModal();
             this.mostrarModalSuccess('Departamento creado con éxito');
         },
@@ -338,15 +348,14 @@ export class Administration implements OnInit {
         return;
     }
 
-    // Validar que no exista otro departamento con el mismo nombre
     if (this.existeDuplicado(department.descripcion.trim(), this.departments, departmentId, 'idDepartamento', 'descripcion')) {
-      this.mostrarModalError('Ya existe un departamento con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes.');
+      this.mostrarModalError('Nombre duplicado. Ya existe un departamento con ese nombre.');
       return;
     }
 
     this.departmentService.update(departmentId, { ...department, idDepartamento: departmentId }).subscribe({
         next: () => {
-            this.loadDepartments();
+            this.loadAllData();
             this.closeDepartmentModal();
             this.mostrarModalSuccess('Departamento actualizado con éxito');
         },
@@ -360,7 +369,7 @@ export class Administration implements OnInit {
 
       this.departmentService.delete(departmentId).subscribe({
         next: () => {
-          this.loadDepartments();
+          this.loadAllData();
           this.mostrarModalSuccess('Departamento eliminado con éxito');
         },
         error: (error) => {
@@ -369,7 +378,7 @@ export class Administration implements OnInit {
               this.mostrarModalError('El Departamento no puede eliminarse porque tiene solicitudes asociadas.', error);
             },
             error: () => {
-              this.loadDepartments();
+              this.loadAllData();
               this.mostrarModalSuccess('Departamento eliminado con éxito');
             }
           });
@@ -396,15 +405,14 @@ export class Administration implements OnInit {
   confirmAreaCreate(area: Area): void {
     if (!area.descripcion.trim() || !area.departamento?.idDepartamento) return;
     
-    // Validar que no exista un área con el mismo nombre (en cualquier departamento)
     if (this.existeDuplicado(area.descripcion.trim(), this.areas, undefined, 'idArea', 'descripcion')) {
-      this.mostrarModalError('Ya existe un área con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes, incluso si están en diferentes departamentos.');
+      this.mostrarModalError('Nombre duplicado. Ya existe un área con ese nombre.');
       return;
     }
 
     this.areaService.create(area).subscribe({
         next: () => {
-            this.loadAreas();
+            this.loadAllData();
             this.showAreaCreateModal = false;
             this.mostrarModalSuccess('Área creada exitosamente');
         },
@@ -422,9 +430,8 @@ export class Administration implements OnInit {
         return;
     }
 
-    // Validar que no exista otra área con el mismo nombre (en cualquier departamento)
     if (this.existeDuplicado(area.descripcion.trim(), this.areas, areaId, 'idArea', 'descripcion')) {
-      this.mostrarModalError('Ya existe un área con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes, incluso si están en diferentes departamentos.');
+      this.mostrarModalError('Nombre duplicado. Ya existe un área con ese nombre.');
       return;
     }
   
@@ -436,7 +443,7 @@ export class Administration implements OnInit {
 
     this.areaService.update(areaId, areaToUpdate).subscribe({
         next: () => {
-            this.loadAreas();
+            this.loadAllData();
             this.showAreaUpdateModal = false;
             this.selectedArea = undefined;
             this.mostrarModalSuccess('Área actualizada exitosamente');
@@ -451,7 +458,7 @@ export class Administration implements OnInit {
 
       this.areaService.delete(areaId).subscribe({
         next: () => {
-          this.loadAreas();
+          this.loadAllData();
           this.mostrarModalSuccess('Área eliminada con éxito');
         },
         error: (error) => {
@@ -460,7 +467,7 @@ export class Administration implements OnInit {
               this.mostrarModalError('El Área no puede eliminarse porque tiene solicitudes asociadas.', error);
             },
             error: () => {
-              this.loadAreas();
+              this.loadAllData();
               this.mostrarModalSuccess('Área eliminada con éxito');
             }
           });
@@ -485,9 +492,8 @@ export class Administration implements OnInit {
         return;
     }
     
-    // Validar que no exista un cargo con el mismo nombre (en cualquier área)
     if (this.existeDuplicado(position.descripcion.trim(), this.positions, undefined, 'idCargo', 'descripcion')) {
-      this.mostrarModalError('Ya existe un cargo con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes, incluso si están en diferentes áreas.');
+      this.mostrarModalError('Nombre duplicado. Ya existe un cargo con ese nombre.');
       return;
     }
 
@@ -497,7 +503,7 @@ export class Administration implements OnInit {
     };
     this.positionService.create(positionToCreate).subscribe({
         next: () => {
-            this.loadPositions();
+            this.loadAllData();
             this.showPositionCreateModal = false;
             this.mostrarModalSuccess('Cargo creado exitosamente');
         },
@@ -510,9 +516,8 @@ export class Administration implements OnInit {
     const positionId = Number(position.idCargo);
     if (isNaN(positionId)) return;
 
-    // Validar que no exista otro cargo con el mismo nombre (en cualquier área)
     if (this.existeDuplicado(position.descripcion.trim(), this.positions, positionId, 'idCargo', 'descripcion')) {
-      this.mostrarModalError('Ya existe un cargo con ese nombre. Los nombres no pueden repetirse aunque estén en mayúsculas, minúsculas o con tildes diferentes, incluso si están en diferentes áreas.');
+      this.mostrarModalError('Nombre duplicado. Ya existe un cargo con ese nombre.');
       return;
     }
 
@@ -525,7 +530,7 @@ export class Administration implements OnInit {
 
     this.positionService.update(positionId, positionToUpdate).subscribe({
         next: () => {
-            this.loadPositions();
+            this.loadAllData();
             this.showPositionUpdateModal = false;
             this.selectedPosition = undefined;
             this.mostrarModalSuccess('Cargo actualizado exitosamente');
@@ -540,7 +545,7 @@ export class Administration implements OnInit {
 
       this.positionService.delete(positionId).subscribe({
         next: () => {
-          this.loadPositions();
+          this.loadAllData();
           this.mostrarModalSuccess('Cargo eliminado con éxito');
         },
         error: (error) => {
@@ -549,7 +554,7 @@ export class Administration implements OnInit {
               this.mostrarModalError('El Cargo no puede eliminarse porque tiene solicitudes asociadas.', error);
             },
             error: () => {
-              this.loadPositions();
+              this.loadAllData();
               this.mostrarModalSuccess('Cargo eliminado con éxito');
             }
           });

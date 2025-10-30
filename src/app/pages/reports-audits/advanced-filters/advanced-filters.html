@@ -1,0 +1,122 @@
+<div class="filters-section mb-3">
+  <!-- Primera fila: Filtros principales -->
+  <div class="row g-2 align-items-end mb-3">
+    <!-- Filtro de Rango de Fecha -->
+    <div class="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-12">
+      <label for="rangoFecha" class="form-label text-secondary">Rango de Fecha:</label>
+      <div class="d-flex gap-2">
+        <input 
+          type="date" 
+          id="fechaDesde" 
+          class="form-control form-control-sm"
+          [(ngModel)]="fechaDesde"
+          (change)="onFilterChange()">
+        <span class="align-self-center text-secondary flex-shrink-0">-</span>
+        <input 
+          type="date" 
+          id="fechaHasta" 
+          class="form-control form-control-sm"
+          [(ngModel)]="fechaHasta"
+          (change)="onFilterChange()">
+      </div>
+    </div>
+
+    <!-- Filtro de Estado -->
+    <div class="col-xxl-2 col-xl-2 col-lg-2 col-md-3 col-sm-6">
+      <label for="estado" class="form-label text-secondary">Estado:</label>
+      <select 
+        id="estado" 
+        class="form-select form-select-sm"
+        [(ngModel)]="estadoSeleccionado"
+        (change)="onFilterChange()">
+        <option value="" disabled selected>Seleccionar...</option>
+        <option value="APROBADO">APROBADO</option>
+        <option value="PENDIENTE">PENDIENTE</option>
+        <option value="RECHAZADO">RECHAZADO</option>
+        <option value="CANCELADA">CANCELADA</option>
+      </select>
+    </div>
+
+    <!-- Filtro de Tipo de Solicitud -->
+    <div class="col-xxl-2 col-xl-2 col-lg-2 col-md-3 col-sm-6">
+      <label for="tipoSolicitud" class="form-label text-secondary">Tipo:</label>
+      <select 
+        id="tipoSolicitud" 
+        class="form-select form-select-sm"
+        [(ngModel)]="tipoSolicitudSeleccionado"
+        (change)="onFilterChange()">
+        <option value="" disabled selected>Seleccionar...</option>
+        <option *ngFor="let tipo of tiposSolicitud" [value]="tipo">{{ tipo }}</option>
+      </select>
+    </div>
+
+    <!-- Filtro de Solicitante -->
+    <div class="col-xxl-2 col-xl-2 col-lg-2 col-md-4 col-sm-6">
+      <label for="solicitante" class="form-label text-secondary">Solicitante:</label>
+      <select 
+        id="solicitante" 
+        class="form-select form-select-sm"
+        [(ngModel)]="solicitanteSeleccionado"
+        (change)="onFilterChange()">
+        <option value="" disabled selected>Seleccionar...</option>
+        <option *ngFor="let usuario of usuarios" [value]="usuario.usuario">{{ usuario.nombres }} {{ usuario.apellidos }}</option>
+      </select>
+    </div>
+
+    <!-- Filtro de Departamento -->
+    <div class="col-xxl-2 col-xl-2 col-lg-2 col-md-4 col-sm-6">
+      <label for="departamento" class="form-label text-secondary">Departamento:</label>
+      <select 
+        id="departamento" 
+        class="form-select form-select-sm"
+        [(ngModel)]="departamentoSeleccionado"
+        (change)="onFilterChange()">
+        <option value="" disabled selected>Seleccionar...</option>
+        <option *ngFor="let dept of departamentos" [value]="dept.descripcion">{{ dept.descripcion }}</option>
+      </select>
+    </div>
+
+    <!-- Botón de Limpiar Filtros -->
+    <div class="col-xxl-1 col-xl-1 col-lg-2 col-md-4 col-sm-12 d-flex align-items-end">
+      <button 
+        type="button" 
+        class="btn btn-outline-secondary btn-sm w-100"
+        (click)="clearFilters()">
+        <i class="bi bi-x-circle"></i> Limpiar
+      </button>
+    </div>
+  </div>
+
+  <!-- Segunda fila: Campo de búsqueda y control de cantidad -->
+  <div class="row g-2 align-items-end">
+    <div class="col-lg-4 col-md-6 col-sm-12">
+      <label for="buscar" class="form-label text-secondary">Buscar:</label>
+      <input 
+        type="text" 
+        id="buscar" 
+        class="form-control form-control-sm"
+        placeholder="Buscar..."
+        [(ngModel)]="busqueda"
+        (input)="onFilterChange()">
+    </div>
+    
+    <!-- Control de cantidad a mostrar -->
+    <div class="col-lg-3 col-md-6 col-sm-12">
+      <div class="d-flex align-items-center gap-2 ms-auto" style="height: 38px; width: fit-content;">
+        <label for="mostrar" class="form-label mb-0 text-secondary">Mostrar</label>
+        <select 
+          id="mostrar" 
+          class="form-select form-select-sm" 
+          style="width: 80px;"
+          [(ngModel)]="selectedQuantity"
+          (change)="onQuantityChangeToParent()">
+          <option [value]="10">10</option>
+          <option [value]="25">25</option>
+          <option [value]="50">50</option>
+          <option [value]="100">100</option>
+        </select>
+        <span class="text-secondary">Entradas</span>
+      </div>
+    </div>
+  </div>
+</div>

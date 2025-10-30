@@ -19,6 +19,7 @@
               [(ngModel)]="position.descripcion"
               name="positionDescripcion"
               placeholder="Escribe el nombre del cargo"
+              (input)="onDescripcionInput()"
               (ngModelChange)="validateOnChange()"
               required
               autocomplete="off"

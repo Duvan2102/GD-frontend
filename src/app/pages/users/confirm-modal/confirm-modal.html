@@ -10,11 +10,11 @@
           <i class="bi bi-exclamation-octagon" style="font-size: 3rem; color: #c9613e;"></i>
         </div>
         <h2 class="modal-title-custom" style="margin-bottom: 2rem;">{{ mensaje }}</h2>
-        <button class="btn btn-success btn-lg custom-btn-accept"
+        <button class="btn btn-lg custom-btn-accept"
                 style="margin-right:16px;" (click)="aceptar.emit()">
           {{ textoAceptar || 'Aceptar' }}
         </button>
-        <button class="btn btn-danger btn-lg" (click)="cancelar.emit()">
+        <button class="btn btn-lg custom-btn-cancel" (click)="cancelar.emit()">
           Cancelar
         </button>
       </div>

@@ -1,17 +1,23 @@
-<div class="modal fade show custom-backdrop"
-     tabindex="-1"
-     *ngIf="visible"
-     style="display: block;"
-     (click)="aceptar.emit()">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content modal-content-custom">
-      <div class="modal-body text-center">
-        <h2 class="modal-title-custom">{{ mensaje }}</h2>
-        <button class="btn btn-success btn-lg custom-btn-accept"
-                (click)="aceptar.emit()">
-          {{ textoBtn || 'Aceptar' }}
-        </button>
+@if (visible) {
+  <div class="modal fade show custom-backdrop"
+       tabindex="-1"
+       style="display: block;">
+    <div class="modal-dialog modal-dialog-centered" (click)="$event.stopPropagation()">
+      <div class="modal-content modal-content-custom">
+        <div class="modal-body text-center">
+          <div class="success-icon-container mb-3">
+            <i class="fas fa-check-circle success-icon-large"></i>
+          </div>
+          <h2 class="modal-title-custom mb-3">{{ mensaje }}</h2>
+          @if (mensajeSecundario) {
+            <p class="mensaje-secundario mb-4">{{ mensajeSecundario }}</p>
+          }
+          <button class="btn btn-success btn-lg custom-btn-accept"
+                  (click)="aceptar.emit()">
+            {{ textoBtn || 'Aceptar' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
-</div>
+}

@@ -1,0 +1,33 @@
+/* Loading overlay styles */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.6);
+  z-index: 1050;
+}
+
+.creating-request-overlay {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 9999; /* Asegurar que está por encima de todo */
+}
+
+.creating-request-overlay .creating-spinner {
+  width: 3rem;
+  height: 3rem;
+  border-width: 0.3rem;
+  border-color: rgba(90, 150, 140, 0.95) rgba(61, 107, 99, 0.15) rgba(61, 107, 99, 0.15) rgba(61, 107, 99, 0.15);
+}
+
+.creating-request-overlay .loading-message {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: #ffffff;
+  margin-top: 1rem;
+}
+

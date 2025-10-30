@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 export class SuccessModal {
   @Input() visible: boolean = false;
   @Input() mensaje: string = '';
+  @Input() mensajeSecundario: string = '';
   @Input() textoBtn: string = 'Aceptar';
   @Output() aceptar = new EventEmitter<void>();
 }

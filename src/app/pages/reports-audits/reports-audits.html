@@ -5,18 +5,26 @@
       <h2 class="mb-2">INFORMES Y AUDITORIAS</h2>
       <button
     class="btn-crear"
-    data-bs-toggle="modal"
-    data-bs-target="#crearSolicitudModal">
+    (click)="onGenerateReport()"
+    [disabled]="isLoading || allItems.length === 0">
     <i class="bi bi-download"></i>
     EXPORTAR INFORME
   </button>
     </div>
 
-    <app-controls
+    <app-advanced-filters
+      [fechaDesde]="advancedFilters.fechaDesde"
+      [fechaHasta]="advancedFilters.fechaHasta"
+      [estadoSeleccionado]="advancedFilters.estado"
+      [tipoSolicitudSeleccionado]="advancedFilters.tipoSolicitud"
+      [solicitanteSeleccionado]="advancedFilters.solicitante"
+      [departamentoSeleccionado]="advancedFilters.departamento"
+      [busqueda]="advancedFilters.busqueda"
+      (filterChange)="onAdvancedFilterChange($event)"
       (quantityChange)="onQuantityChange($event)"
-      (toggleApprovedChange)="onToggleApproved($event)"
-      (searchChange)="onSearchChange($event)">
-    </app-controls>
+      (clearAll)="onClearAll()"
+      (loadAllApprovals)="loadAllApprovals()">
+    </app-advanced-filters>
 
     <!-- Indicador de carga -->
     <div *ngIf="isLoading" class="d-flex justify-content-center align-items-center" style="min-height: 300px;">
@@ -30,21 +38,21 @@
       <table class="table table-borderless align-middle">
         <thead class="border-bottom">
           <tr>
-            <th scope="col"><input type="checkbox" (change)="toggleAll($event)" /></th>
+            <th scope="col"></th>
             <th scope="col">TIPO DE SOLICITUD</th>
-            <th scope="col">CODIFICACIÓN</th>
             <th scope="col">ID</th>
             <th scope="col">FECHA CREACIÓN</th>
-            <th scope="col">USUARIO CREADOR</th>
+            <th scope="col">FUNCIONARIOS CREADOR</th>
             <th scope="col">ÁREA</th>
             <th scope="col">DEPARTAMENTO</th>
             <th scope="col">ÚLTIMA ACTUALIZACIÓN</th>
             <th scope="col">ESTADO</th>
+            <th scope="col">ACCIONES</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngIf="displayedItems.length === 0">
-            <td colspan="10" class="text-center py-4 text-muted">
+            <td colspan="9" class="text-center py-4 text-muted">
               No se encontraron solicitudes
             </td>
           </tr>
@@ -57,11 +65,9 @@
               />
             </td>
             <td>{{ item.tipoSolicitud }}</td>
-            <td>{{ item.codificacion }}</td>
             <td>{{ item.id }}</td>
             <td>{{ item.fechaCreacion | date:'dd/MM/yyyy HH:mm:ss' }}</td>
             <td>{{ item.usuarioCreador }}</td>
-            <td>{{ item.area }}</td>
             <td>{{ item.departamento }}</td>
             <td>{{ item.ultimaActualizacion | date:'dd/MM/yyyy HH:mm:ss' }}</td>
               <td>
@@ -71,6 +77,11 @@
              'text-bg-danger': item.estado === 'RECHAZADO',
              'text-bg-secondary': item.estado === 'CANCELADA'
            }">{{ item.estado }}</span>
+        </td>
+        <td class="text-center">
+          <button class="btn btn-sm btn-gestionar" (click)="onManage(item.id)">
+            VISUALIZAR <br> SOLICITUD
+          </button>
         </td>
           </tr>
         </tbody>
@@ -86,3 +97,21 @@
 
   </div>
 </div>
+
+<app-request-success-modal
+  [isVisible]="isDetailModalVisible"
+  [data]="successModalData"
+  [usuariosDisponibles]="allUsers"
+  [currentUser]="currentUser"
+  [isApprovalFlow]="true"
+  [hideManageButton]="true"
+  (close)="closeDetailModal()"
+  (viewApprovedDocument)="handleViewApprovedDocument($event)">
+</app-request-success-modal>
+
+<app-document-view
+  [isVisible]="isDocumentViewVisible"
+  [documentData]="documentViewData"
+  [hideManagementButtons]="true"
+  (close)="closeDocumentView()">
+</app-document-view>

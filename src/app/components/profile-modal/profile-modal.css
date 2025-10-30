@@ -242,15 +242,15 @@
 }
 
 .btn-cancel {
-  color: #fff;
-  background-color: #1f3d33; /* Verde oscuro como en la imagen */
-  border-color: #1f3d33;
+  color: #46655a;
+  background-color: #c7cbcc; /* Gris consistente con user-form-modal */
+  border-color: #c7cbcc;
 }
 
 .btn-cancel:hover {
-  color: #fff;
-  background-color: #19342b;
-  border-color: #19342b;
+  color: #46655a;
+  background-color: #b0b4b5;
+  border-color: #b0b4b5;
 }
 
 .btn-save {

@@ -180,14 +180,14 @@
 }
 
 .modal-header.bg-success {
-  background-color: #5a8b81 ;
-  color: white;
-  border-bottom: none;
+  background-color: #f8f9fa;
+  color: #2d3748;
+  border-bottom: 1px solid #ddd;
   padding: 1rem 1.5rem;
 }
 
 .modal-header .btn-close-white {
-  filter: brightness(0) invert(1);
+  filter: none;
 }
 
 .modal-body {

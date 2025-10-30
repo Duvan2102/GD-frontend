@@ -13,15 +13,28 @@
         <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
 
           <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show mb-3" role="alert">
-            <i class="fas fa-check-circle"></i>
-            <span><strong>¡Éxito!</strong> {{ successMessage }}</span>
-            <button type="button" class="btn-close" (click)="clearSuccessMessage()" aria-label="Cerrar">×</button>
+            <i class="fas fa-check-circle me-2"></i>
+            <div>
+              <strong>¡Registro exitoso!</strong>
+              <p class="mb-0 mt-1">{{ successMessage }}</p>
+            </div>
+            <button type="button" class="btn-close" (click)="clearSuccessMessage()" aria-label="Cerrar"></button>
           </div>
 
+          <!-- Alerta de error (si existe) -->
           <div *ngIf="apiError" class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-            <i class="fas fa-exclamation-triangle"></i>
-            <span><strong>Error:</strong> {{ apiError }}</span>
-            <button type="button" class="btn-close" (click)="clearErrorMessage()" aria-label="Cerrar">×</button>
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <div>
+              <strong>Error en el registro</strong>
+              <p class="mb-0 mt-1" style="white-space: pre-line;">{{ apiError }}</p>
+            </div>
+            <button type="button" class="btn-close" (click)="clearErrorMessage()" aria-label="Cerrar"></button>
+          </div>
+
+          <!-- Alerta de validación de formulario -->
+          <div *ngIf="form.invalid && form.touched && !apiError" class="alert alert-warning mb-3" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <strong>Atención:</strong> Por favor, completa todos los campos obligatorios marcados con &nbsp; <span class="text-danger">*</span>&nbsp; correctamente.
           </div>
 
           <div class="row mb-3">
@@ -143,6 +156,8 @@
                 class="form-control"
                 formControlName="telefono1"
                 placeholder=" 3001234567"
+                maxlength="10"
+                inputmode="numeric"
                 [class.is-invalid]="form.get('telefono1')?.invalid && form.get('telefono1')?.touched"
                 aria-describedby="telefono1-error"
                 aria-invalid="form.get('telefono1')?.invalid">
@@ -161,6 +176,8 @@
                 class="form-control"
                 formControlName="telefono2"
                 placeholder=" 6012345678"
+                maxlength="10"
+                inputmode="numeric"
                 [class.is-invalid]="form.get('telefono2')?.invalid && form.get('telefono2')?.touched"
                 aria-describedby="telefono2-error"
                 aria-invalid="form.get('telefono2')?.invalid">
@@ -180,16 +197,16 @@
                 id="direccion"
                 type="text" 
                 class="form-control" 
-                formControlName="direction"
+                formControlName="direccion"
                 placeholder=" Calle 123 #45-67, Bogotá"
-                [class.is-invalid]="form.get('direction')?.invalid && form.get('direction')?.touched"
+                [class.is-invalid]="form.get('direccion')?.invalid && form.get('direccion')?.touched"
                 aria-describedby="direccion-error"
-                aria-invalid="form.get('direction')?.invalid">
+                aria-invalid="form.get('direccion')?.invalid">
               <div 
-                *ngIf="getErrorMessage('direction')" 
+                *ngIf="getErrorMessage('direccion')" 
                 id="direccion-error"
                 class="invalid-feedback">
-                {{ getErrorMessage('direction') }}
+                {{ getErrorMessage('direccion') }}
               </div>
             </div>
           </div>
@@ -199,16 +216,27 @@
 
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" (click)="onClose()" [disabled]="loading">
-          Cancelar
+          <i class="fas fa-times me-1"></i> Cancelar
         </button>
         <button type="button"
                 class="btn btn-primary-custom"
                 (click)="onSubmit()"
-                [disabled]="form.invalid || loading">
-          <span *ngIf="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
-          Registrar
+                [disabled]="form.invalid || loading"
+                [attr.aria-busy]="loading">
+          <span *ngIf="loading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          <i *ngIf="!loading" class="fas fa-user-plus me-1"></i>
+          {{ loading ? 'Registrando usuario...' : 'Registrar Usuario' }}
         </button>
       </div>
     </div>
   </div>
 </div>
+
+<!-- Modal de éxito -->
+<app-success-modal
+  [visible]="modalSuccessVisible"
+  [mensaje]="modalSuccessMessage"
+  [mensajeSecundario]="modalSuccessSecondaryMessage"
+  [textoBtn]="modalSuccessBtn"
+  (aceptar)="cerrarModalSuccess()">
+</app-success-modal>
