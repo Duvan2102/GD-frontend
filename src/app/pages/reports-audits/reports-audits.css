@@ -1,6 +1,6 @@
 /* Espaciado antes de la tabla */
 .table-responsive {
-  margin-top: 1rem;
+  margin-top: 0.5rem;
 }
 
 /* Tabla sin bordes exteriores y con ancho completo */
@@ -13,11 +13,31 @@ table {
 /* Encabezados */
 thead th {
   text-align: left;
-  padding: 0.75rem 0.5rem;
+  padding: 0.5rem 0.5rem;
   color: #516E5F;
   border-bottom: 2px solid #516E5F;
   text-transform: uppercase;
   font-weight: 600;
+}
+
+/* Headers ordenables */
+thead th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+thead th.sortable:hover {
+  background-color: #f8f9fa;
+}
+
+thead th.sortable i {
+  margin-left: 0.25rem;
+  font-size: 0.8rem;
+}
+
+thead th.sortable i.text-muted {
+  opacity: 0.5;
 }
 
 /* Filas de cuerpo */
@@ -31,7 +51,7 @@ tbody tr:last-child {
 
 /* Celdas */
 tbody td {
-  padding: 0.75rem 0.5rem;
+  padding: 0.5rem 0.5rem;
   color: #333;
 }
 
@@ -43,4 +63,36 @@ tbody tr:nth-child(even) td {
 /* Aumentar tamaño de los checkboxes */
 input[type="checkbox"] {
   transform: scale(1.2);
+}
+
+/* Estilos para los filtros avanzados */
+.filters-section {
+  margin-bottom: 0.5rem;
+}
+
+.filters-section .form-control,
+.filters-section .form-select {
+  font-size: 0.875rem;
+}
+
+.filters-section .btn-outline-secondary {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+}
+
+/* Estilo del botón gestionar/visualizar solicitud */
+.btn-gestionar {
+  background-color: #5A8B81;
+  color: white;
+  border-color: #5A8B81;
+  font-weight: 600;
+  font-size: 11px;
+  padding: 4px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.btn-gestionar:hover {
+  background-color: #3fb49f;
+  border-color: #496f68;
 }
