@@ -194,8 +194,8 @@ export class ProfileModal implements OnChanges {
       }
       
       // Validar que no haya más de 3 dígitos consecutivos iguales
-      if (/(\d)\1{3,}/.test(cleanPhone)) {
-        return { isValid: false, errorMessage: 'El teléfono móvil no puede tener más de 3 dígitos consecutivos iguales.' };
+      if (/(\d)\1{5,}/.test(cleanPhone)) {
+        return { isValid: false, errorMessage: 'El teléfono móvil no puede tener más de 5 dígitos consecutivos iguales.' };
       }
     }
     
@@ -217,8 +217,8 @@ export class ProfileModal implements OnChanges {
       }
       
       // Validar que no haya más de 3 dígitos consecutivos iguales
-      if (/(\d)\1{3,}/.test(cleanPhone)) {
-        return { isValid: false, errorMessage: 'El teléfono no puede tener más de 3 dígitos consecutivos iguales.' };
+      if (/(\d)\1{5,}/.test(cleanPhone)) {
+        return { isValid: false, errorMessage: 'El teléfono no puede tener más de 5 dígitos consecutivos iguales.' };
       }
     }
     
@@ -227,11 +227,9 @@ export class ProfileModal implements OnChanges {
 
   onlyNumbers(event: KeyboardEvent): boolean {
     const charCode = event.which ? event.which : event.keyCode;
-    // Permitir: backspace, delete, tab, escape, enter
     if ([8, 9, 27, 13, 46].indexOf(charCode) !== -1) {
       return true;
     }
-    // Permitir solo números (0-9)
     if (charCode < 48 || charCode > 57) {
       event.preventDefault();
       return false;

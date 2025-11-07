@@ -110,7 +110,9 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       telefono: ['', [phoneValidator()]],
       direccion: ['', [Validators.maxLength(200)]],
       // dobleAutenticacion eliminado
-      perfil: ['funcionarios', Validators.required]
+      vistaUsuarios: [false],
+      vistaAuditor: [false],
+      vistaAdministracion: [false]
     });
   }
 
@@ -169,26 +171,23 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         this.selectedCargoInfo = null;
       }
 
-      let perfilActivo = 'funcionarios';
-      
-      if (this.user.rol && this.user.rol.descripcion) {
-        const rolDesc = this.user.rol.descripcion.toUpperCase();
-        
-        if (rolDesc === 'ADMINISTRADOR' || rolDesc === 'ADMIN') {
-          perfilActivo = 'administrador';
-        } else if (rolDesc === 'AUDITOR' || rolDesc === 'FUNCIONARIO CREADOR') {
-          perfilActivo = 'funcionarioCreador';
-        } else {
-          perfilActivo = 'funcionarios';
-        }
-      } else if (this.user.perfiles) {
-        if (this.user.perfiles.administrador) {
-          perfilActivo = 'administrador';
-        } else if (this.user.perfiles.funcionarioCreador) {
-          perfilActivo = 'funcionarioCreador';
-        } else if (this.user.perfiles.funcionarios) {
-          perfilActivo = 'funcionarios';
-        }
+      let tieneVistaUsuarios = false;
+      let tieneVistaAuditor = false;
+      let tieneVistaAdministracion = false;
+
+      if (Array.isArray(this.user.rol)) {
+        tieneVistaUsuarios = this.user.rol.includes(1);
+        tieneVistaAuditor = this.user.rol.includes(2);
+        tieneVistaAdministracion = this.user.rol.includes(3);
+      } else if (this.user.rol && typeof this.user.rol === 'object' && 'idRol' in this.user.rol) {
+        const rolId = (this.user.rol as any).idRol;
+        tieneVistaUsuarios = rolId === 1;
+        tieneVistaAuditor = rolId === 3;
+        tieneVistaAdministracion = rolId === 1;
+      } else {
+        tieneVistaUsuarios = (this.user as any).vistaUsuarios ?? false;
+        tieneVistaAuditor = (this.user as any).vistaAuditor ?? false;
+        tieneVistaAdministracion = (this.user as any).vistaAdministracion ?? false;
       }
 
       this.userForm.patchValue({
@@ -203,7 +202,9 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
         celular: this.user.telefono1 || '',
         telefono: this.user.telefono2 || '',
         direccion: this.user.direccion || '',
-        perfil: perfilActivo
+        vistaUsuarios: tieneVistaUsuarios,
+        vistaAuditor: tieneVistaAuditor,
+        vistaAdministracion: tieneVistaAdministracion
       });
 
       if (cargoValue) {
@@ -818,17 +819,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  private convertirPerfilARol(perfilSeleccionado: string): any {
-    switch (perfilSeleccionado) {
-      case 'administrador':
-        return { idRol: 1, descripcion: 'ADMINISTRADOR' };
-      case 'funcionarioCreador':
-        return { idRol: 3, descripcion: 'AUDITOR' };
-      case 'funcionarios':
-      default:
-        return { idRol: 2, descripcion: 'FUNCIONARIO' };
-    }
-  }
 
   onSave(): void {
     this.resetMessages();
@@ -886,19 +876,19 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       return;
     }
 
-    let rolCompleto: any;
-    switch (formValue.perfil) {
-      case 'administrador':
-        rolCompleto = { idRol: 1, descripcion: 'ADMINISTRADOR' };
-        break;
-      case 'funcionarioCreador':
-        rolCompleto = { idRol: 3, descripcion: 'AUDITOR' };
-        break;
-      case 'funcionarios':
-      default:
-        rolCompleto = { idRol: 2, descripcion: 'FUNCIONARIO' };
-        break;
+    const rolesArray: number[] = [0];
+    
+    if (formValue.vistaUsuarios) {
+      rolesArray.push(1);
     }
+    if (formValue.vistaAuditor) {
+      rolesArray.push(2);
+    }
+    if (formValue.vistaAdministracion) {
+      rolesArray.push(3);
+    }
+    
+    const rolCompleto = rolesArray;
 
     const isPendingUser = this.isEditMode && this.user?.estado && 
       this.user.estado.descripcion && 
@@ -926,8 +916,11 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
       telefono1: formValue.celular || '',
       telefono2: formValue.telefono || '',
       direccion: formValue.direccion || '',
-      activo: true
-    } as Usuario;
+      activo: true,
+      vistaUsuarios: formValue.vistaUsuarios || false,
+      vistaAuditor: formValue.vistaAuditor || false,
+      vistaAdministracion: formValue.vistaAdministracion || false
+    } as unknown as Usuario & { vistaUsuarios: boolean; vistaAuditor: boolean; vistaAdministracion: boolean };
 
     if (wasIdentificacionDisabled) {
       identificacionControl?.disable();
@@ -1009,7 +1002,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
   private resetForm(): void {
     this.userForm.reset({
-      perfil: 'funcionarios'
     });
     this.userForm.get('identificacion')?.enable();
     this.userForm.get('usuario')?.enable();

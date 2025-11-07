@@ -124,7 +124,7 @@ export class UserFormRegister implements OnInit, OnDestroy {
     }
     if (errors['phoneConsecutive']) {
       const field = fieldName === 'telefono1' ? 'celular' : 'teléfono';
-      return `El ${field} no puede tener más de 3 dígitos consecutivos iguales`;
+      return `El ${field} no puede tener más de 5 dígitos consecutivos iguales`;
     }
     if (errors['phoneInvalid']) {
       const field = fieldName === 'telefono1' ? 'celular' : 'teléfono';
