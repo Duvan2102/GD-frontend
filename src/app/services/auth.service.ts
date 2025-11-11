@@ -65,6 +65,11 @@ export class AuthService {
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser);
+        if (userData.rol && !Array.isArray(userData.rol)) {
+          userData.rol = [0];
+        } else if (!userData.rol) {
+          userData.rol = [0];
+        }
         return of(userData);
       } catch {
         this.clearAuthData();
@@ -76,6 +81,23 @@ export class AuthService {
   }
 
   private convertMockUserToUsuarioData(mockUser: Usuario & { cargoCompleto: Position }): UsuarioData {
+    let rolArray: number[] = [0];
+    
+    if (Array.isArray(mockUser.rol)) {
+      rolArray = mockUser.rol.filter((r: any) => typeof r === 'number');
+      if (!rolArray.includes(0)) {
+        rolArray.unshift(0);
+      }
+    } else if (mockUser.rol && typeof mockUser.rol === 'object' && 'idRol' in mockUser.rol) {
+      const rolId = (mockUser.rol as any).idRol;
+      rolArray = [0];
+      if (rolId === 1) {
+        rolArray.push(1, 3);
+      } else if (rolId === 3) {
+        rolArray.push(2);
+      }
+    }
+    
     return {
       idUsuario: mockUser.idUsuario || mockUser.noUsuario || 0,
       identificacion: mockUser.identificacion,
@@ -93,7 +115,7 @@ export class AuthService {
         area: mockUser.cargoCompleto.area.descripcion,
         departamento: mockUser.cargoCompleto.area.departamento?.descripcion || ''
       },
-      rol: mockUser.rol?.descripcion || '',
+      rol: rolArray,
       estado: mockUser.estado?.descripcion || '',
       tipologias: []
     };
@@ -117,22 +139,55 @@ export class AuthService {
     return of(this.currentUser);
   }
 
-
-
-
   canAccessAdmin(): boolean {
-    return this.currentUser?.rol?.toLowerCase().includes('administrador') ?? false;
+    if (!this.currentUser?.rol) {
+      return false;
+    }
+    
+    if (Array.isArray(this.currentUser.rol)) {
+      return this.currentUser.rol.includes(3);
+    }
+    
+    if (typeof this.currentUser.rol === 'string') {
+      return this.currentUser.rol.toLowerCase().includes('administrador');
+    }
+    
+    return false;
   }
 
+
   canAccessUsers(): boolean {
-    return this.currentUser?.rol?.toLowerCase().includes('administrador') ?? false;
+    if (!this.currentUser?.rol) {
+      return false;
+    }
+    
+    if (Array.isArray(this.currentUser.rol)) {
+      return this.currentUser.rol.includes(1);
+    }
+    
+    if (typeof this.currentUser.rol === 'string') {
+      return this.currentUser.rol.toLowerCase().includes('administrador');
+    }
+    
+    return false;
   }
 
   canAccessReports(): boolean {
-    return this.currentUser?.rol?.toLowerCase().includes('auditor') ?? false;
+    if (!this.currentUser?.rol) {
+      return false;
+    }
+    
+    if (Array.isArray(this.currentUser.rol)) {
+      return this.currentUser.rol.includes(2);
+    }
+    
+    if (typeof this.currentUser.rol === 'string') {
+      return this.currentUser.rol.toLowerCase().includes('auditor');
+    }
+    
+    return false;
   }
 
-  // Método de login que consume el backend real
   login(username: string, password: string): Observable<boolean> {
     const loginRequest: LoginRequest = {
       usuario: username,
@@ -142,14 +197,17 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${this.apiUrl}/auth/login`, loginRequest)
       .pipe(
         map((response: AuthResponse) => {
-          // Guardar el token
           localStorage.setItem(this.tokenKey, response.token);
 
-          // Actualizar el usuario actual
+          if (response.usuario.rol && !Array.isArray(response.usuario.rol)) {
+            response.usuario.rol = [0];
+          } else if (!response.usuario.rol) {
+            response.usuario.rol = [0];
+          }
+
           this.currentUser = response.usuario;
           this.currentUserSubject.next(this.currentUser);
 
-          // Guardar la información del usuario en localStorage para persistencia
           localStorage.setItem('current_user_data', JSON.stringify(this.currentUser));
 
           return true;
@@ -161,7 +219,6 @@ export class AuthService {
       );
   }
 
-  // Método de logout
   logout(): Observable<boolean> {
     const token = localStorage.getItem(this.tokenKey);
 
@@ -387,6 +444,13 @@ export class AuthService {
           
           if (status === 200 && body.token && body.usuario) {
             localStorage.setItem(this.tokenKey, body.token);
+            
+            if (body.usuario.rol && !Array.isArray(body.usuario.rol)) {
+              body.usuario.rol = [0];
+            } else if (!body.usuario.rol) {
+              body.usuario.rol = [0];
+            }
+            
             this.currentUser = body.usuario;
             this.currentUserSubject.next(this.currentUser);
             localStorage.setItem('current_user_data', JSON.stringify(this.currentUser));
