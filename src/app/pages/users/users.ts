@@ -853,6 +853,18 @@ export class Users implements OnInit, OnDestroy {
           valueA = a.identificacion || '';
           valueB = b.identificacion || '';
           break;
+        case 'nombres':
+          valueA = (a.nombres || '').toLowerCase();
+          valueB = (b.nombres || '').toLowerCase();
+          break;
+        case 'apellidos':
+          valueA = (a.apellidos || '').toLowerCase();
+          valueB = (b.apellidos || '').toLowerCase();
+          break;
+        case 'usuario':
+          valueA = (a.usuario || '').toLowerCase();
+          valueB = (b.usuario || '').toLowerCase();
+          break;
         case 'estado':
           valueA = typeof a.estado === 'object' 
             ? (a.estado.descripcion || '').toString().toLowerCase()

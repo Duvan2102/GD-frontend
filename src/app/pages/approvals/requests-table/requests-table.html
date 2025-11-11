@@ -7,7 +7,7 @@
         <th (click)="sort.emit('id')">ID <i class="bi" [ngClass]="getSortIcon('id')"></i></th>
         <th (click)="sort.emit('creationDate')">FECHA <i class="bi" [ngClass]="getSortIcon('creationDate')"></i></th>
         <th (click)="sort.emit('creatorFullName')">FUNCIONARIOS <i class="bi" [ngClass]="getSortIcon('creatorFullName')"></i></th>
-        <th>CARGO</th>
+        <th (click)="sort.emit('position')">CARGO <i class="bi" [ngClass]="getSortIcon('position')"></i></th>
         <th>ULT. ACTUALIZACIÓN</th>
         <th>APROBADORES</th>
         <th (click)="sort.emit('status')">ESTADO <i class="bi" [ngClass]="getSortIcon('status')"></i></th>
