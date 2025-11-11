@@ -45,7 +45,6 @@
                 type="text" 
                 class="form-control" 
                 formControlName="identification"
-                placeholder=" 12345678"
                 [class.is-invalid]="form.get('identification')?.invalid && form.get('identification')?.touched"
                 aria-describedby="identificacion-error"
                 aria-invalid="form.get('identification')?.invalid">
@@ -63,7 +62,6 @@
                 type="text" 
                 class="form-control" 
                 formControlName="nombres"
-                placeholder=" Nombre1 Nombre2"
                 [class.is-invalid]="form.get('nombres')?.invalid && form.get('nombres')?.touched"
                 aria-describedby="nombres-error"
                 aria-invalid="form.get('nombres')?.invalid">
@@ -81,7 +79,6 @@
                 type="text" 
                 class="form-control" 
                 formControlName="apellidos"
-                placeholder=" Apellido1 Apellido2"
                 [class.is-invalid]="form.get('apellidos')?.invalid && form.get('apellidos')?.touched"
                 aria-describedby="apellidos-error"
                 aria-invalid="form.get('apellidos')?.invalid">
@@ -116,7 +113,6 @@
                 type="email"
                 class="form-control"
                 formControlName="correoEmpresarial"
-                placeholder=" nombre1.apellido1@empresa.com"
                 [class.is-invalid]="form.get('correoEmpresarial')?.invalid && form.get('correoEmpresarial')?.touched"
                 aria-describedby="correoEmpresarial-error"
                 aria-invalid="form.get('correoEmpresarial')?.invalid">
@@ -134,7 +130,6 @@
                 type="email" 
                 class="form-control" 
                 formControlName="correoPersonal"
-                placeholder=" nombre1.apellido1@gmail.com"
                 [class.is-invalid]="form.get('correoPersonal')?.invalid && form.get('correoPersonal')?.touched"
                 aria-describedby="correoPersonal-error"
                 aria-invalid="form.get('correoPersonal')?.invalid">
@@ -155,7 +150,6 @@
                 type="text"
                 class="form-control"
                 formControlName="telefono1"
-                placeholder=" 3001234567"
                 maxlength="10"
                 inputmode="numeric"
                 [class.is-invalid]="form.get('telefono1')?.invalid && form.get('telefono1')?.touched"
@@ -175,7 +169,6 @@
                 type="text"
                 class="form-control"
                 formControlName="telefono2"
-                placeholder=" 6012345678"
                 maxlength="10"
                 inputmode="numeric"
                 [class.is-invalid]="form.get('telefono2')?.invalid && form.get('telefono2')?.touched"
@@ -198,7 +191,6 @@
                 type="text" 
                 class="form-control" 
                 formControlName="direccion"
-                placeholder=" Calle 123 #45-67, Bogotá"
                 [class.is-invalid]="form.get('direccion')?.invalid && form.get('direccion')?.touched"
                 aria-describedby="direccion-error"
                 aria-invalid="form.get('direccion')?.invalid">

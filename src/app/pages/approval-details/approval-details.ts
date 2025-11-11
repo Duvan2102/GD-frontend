@@ -167,21 +167,17 @@ export class ApprovalDetails implements OnInit, OnDestroy {
           }
         }
       },
-      rol: {
-        idRol: 0,
-        descripcion: usuarioData.rol || 'Usuario'
-      },
+      rol: Array.isArray(usuarioData.rol) ? usuarioData.rol : [0],
       correoEmpresarial: usuarioData.correoEmpresarial,
       correoPersonal: usuarioData.correoPersonal,
       telefono1: usuarioData.telefono1,
       telefono2: usuarioData.telefono2,
       direccion: usuarioData.direccion,
-      dobleAutenticacion: false // Valor por defecto
+      dobleAutenticacion: false
     };
   }
 
   private findAreaByName(areaName: string): any {
-    // Buscar en las tipologías para encontrar el área correcta
     const typology = this.tipologias.find(t => t.cargo?.area?.descripcion === areaName);
     return typology?.cargo?.area;
   }

@@ -81,19 +81,15 @@ describe('UserFormRegister', () => {
   it('should validate usuario field with proper constraints', () => {
     const usuarioControl = component.form.get('usuario');
 
-    // Test minLength
     usuarioControl?.setValue('ab');
     expect(usuarioControl?.hasError('minlength')).toBeTrue();
 
-    // Test maxLength
     usuarioControl?.setValue('a'.repeat(51));
     expect(usuarioControl?.hasError('maxlength')).toBeTrue();
 
-    // Test pattern - invalid characters
     usuarioControl?.setValue('user@invalid');
     expect(usuarioControl?.hasError('pattern')).toBeTrue();
 
-    // Test valid value
     usuarioControl?.setValue('valid_user123');
     expect(usuarioControl?.hasError('pattern')).toBeFalse();
     expect(usuarioControl?.hasError('minlength')).toBeFalse();
@@ -103,11 +99,9 @@ describe('UserFormRegister', () => {
   it('should validate password field with minimum length', () => {
     const passwordControl = component.form.get('password');
 
-    // Test minLength
     passwordControl?.setValue('1234567');
     expect(passwordControl?.hasError('minlength')).toBeTrue();
 
-    // Test valid value
     passwordControl?.setValue('12345678');
     expect(passwordControl?.hasError('minlength')).toBeFalse();
   });
@@ -116,21 +110,18 @@ describe('UserFormRegister', () => {
     const correoEmpresarialControl = component.form.get('correoEmpresarial');
     const correoPersonalControl = component.form.get('correoPersonal');
 
-    // Test invalid email
     correoEmpresarialControl?.setValue('invalid-email');
     expect(correoEmpresarialControl?.hasError('email')).toBeTrue();
 
     correoPersonalControl?.setValue('invalid-email');
     expect(correoPersonalControl?.hasError('email')).toBeTrue();
 
-    // Test valid email
     correoEmpresarialControl?.setValue('test@company.com');
     expect(correoEmpresarialControl?.hasError('email')).toBeFalse();
 
     correoPersonalControl?.setValue('test@gmail.com');
     expect(correoPersonalControl?.hasError('email')).toBeFalse();
 
-    // Test empty email (should be valid as it's optional)
     correoEmpresarialControl?.setValue('');
     expect(correoEmpresarialControl?.hasError('email')).toBeFalse();
   });
@@ -139,21 +130,18 @@ describe('UserFormRegister', () => {
     const telefono1Control = component.form.get('telefono1');
     const telefono2Control = component.form.get('telefono2');
 
-    // Test invalid phone
     telefono1Control?.setValue('abc123');
     expect(telefono1Control?.hasError('pattern')).toBeTrue();
 
     telefono2Control?.setValue('abc123');
     expect(telefono2Control?.hasError('pattern')).toBeTrue();
 
-    // Test valid phone
     telefono1Control?.setValue('+57 300 123 4567');
     expect(telefono1Control?.hasError('pattern')).toBeFalse();
 
     telefono2Control?.setValue('6012345678');
     expect(telefono2Control?.hasError('pattern')).toBeFalse();
 
-    // Test empty phone (should be valid as it's optional)
     telefono1Control?.setValue('');
     expect(telefono1Control?.hasError('pattern')).toBeFalse();
   });
@@ -164,31 +152,25 @@ describe('UserFormRegister', () => {
     const passwordControl = component.form.get('password');
     const correoControl = component.form.get('correoEmpresarial');
 
-    // Test required error
     identificacionControl?.markAsTouched();
     identificacionControl?.setValue('');
     expect(component.getErrorMessage('identificacion')).toBe('Este campo es obligatorio');
 
-    // Test minlength error for usuario
     usuarioControl?.markAsTouched();
     usuarioControl?.setValue('ab');
     expect(component.getErrorMessage('usuario')).toBe('El usuario debe tener al menos 3 caracteres');
 
-    // Test minlength error for password
     passwordControl?.markAsTouched();
     passwordControl?.setValue('1234567');
     expect(component.getErrorMessage('password')).toBe('La contraseña debe tener al menos 8 caracteres');
 
-    // Test pattern error for usuario
     usuarioControl?.setValue('user@invalid');
     expect(component.getErrorMessage('usuario')).toBe('Solo se permiten letras, números, puntos, guiones bajos y guiones');
 
-    // Test email error
     correoControl?.markAsTouched();
     correoControl?.setValue('invalid-email');
     expect(component.getErrorMessage('correoEmpresarial')).toBe('Ingrese un correo electrónico válido');
 
-    // Test server error
     usuarioControl?.setErrors({ server: 'Usuario ya existe' });
     expect(component.getErrorMessage('usuario')).toBe('Usuario ya existe');
   });
@@ -203,7 +185,6 @@ describe('UserFormRegister', () => {
 
     authService.register.and.returnValue(of(mockResponse));
 
-    // Fill form with valid data
     component.form.setValue({
       identificacion: '12345678',
       nombres: 'Juan',
@@ -248,7 +229,6 @@ describe('UserFormRegister', () => {
 
     authService.register.and.returnValue(throwError(() => mockError));
 
-    // Fill form with valid data
     component.form.setValue({
       identificacion: '12345678',
       nombres: 'Juan',
@@ -280,7 +260,6 @@ describe('UserFormRegister', () => {
 
     authService.register.and.returnValue(throwError(() => mockError));
 
-    // Fill form with valid data
     component.form.setValue({
       identificacion: 'existing123',
       nombres: 'Juan',
@@ -312,7 +291,6 @@ describe('UserFormRegister', () => {
 
     authService.register.and.returnValue(throwError(() => mockError));
 
-    // Fill form with valid data
     component.form.setValue({
       identificacion: '12345678',
       nombres: 'Juan',
@@ -343,7 +321,6 @@ describe('UserFormRegister', () => {
 
     authService.register.and.returnValue(throwError(() => mockError));
 
-    // Fill form with valid data
     component.form.setValue({
       identificacion: '12345678',
       nombres: 'Juan',
@@ -369,7 +346,6 @@ describe('UserFormRegister', () => {
 
     authService.register.and.returnValue(throwError(() => mockError));
 
-    // Fill form with valid data
     component.form.setValue({
       identificacion: '12345678',
       nombres: 'Juan',

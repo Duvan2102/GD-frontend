@@ -268,8 +268,25 @@ export class UserService {
       throw new Error('Cargo requerido para usuarios activos');
     }
 
-    // Extraer solo el idRol del objeto rol
-    const rolId = usuario.rol?.idRol || 2; // Default a FUNCIONARIO si no hay rol
+    let rolesArray: number[] = [0];
+    
+    if (Array.isArray(usuario.rol)) {
+      rolesArray = usuario.rol.filter((r: any) => typeof r === 'number');
+      if (!rolesArray.includes(0)) {
+        rolesArray.unshift(0);
+      }
+    } else if (usuario.rol && typeof usuario.rol === 'object' && 'idRol' in usuario.rol) {
+      const rolId = (usuario.rol as any).idRol;
+      rolesArray = [0];
+      if (rolId === 1) {
+        rolesArray.push(1, 3);
+      } else if (rolId === 2) {
+      } else if (rolId === 3) {
+        rolesArray.push(2);
+      }
+    } else if (typeof usuario.rol === 'string') {
+      rolesArray = [0];
+    }
 
     let dobleAutenticacionParaEnviar: any;
     
@@ -288,9 +305,9 @@ export class UserService {
       nombres: usuario.nombres?.trim() || '',
       apellidos: usuario.apellidos?.trim() || '',
       usuario: usuario.usuario?.trim() || '',
-      cargo: usuario.cargo,  // Ya viene con estructura completa desde el componente
-      estado: usuario.estado,  // Ya viene con estructura completa
-      rol: { idRol: rolId },  // Enviar solo el idRol
+      cargo: usuario.cargo,
+      estado: usuario.estado,
+      rol: rolesArray,
       correoEmpresarial: usuario.correoEmpresarial?.trim() || '',
       correoPersonal: usuario.correoPersonal?.trim() || '',
       telefono1: this.cleanPhoneNumber(usuario.telefono1?.trim() || ''),
@@ -368,6 +385,15 @@ export class UserService {
 
     const idUsuarioFinal = usuario.idUsuario || usuario.noUsuario || (index !== undefined ? index + 1 : 0);
     
+    let rolProcesado: any;
+    if (Array.isArray(usuario.rol)) {
+      rolProcesado = usuario.rol;
+    } else if (usuario.rol && typeof usuario.rol === 'object' && 'idRol' in usuario.rol) {
+      rolProcesado = usuario.rol;
+    } else {
+      rolProcesado = [0];
+    }
+    
     return {
       ...usuario,
       idUsuario: idUsuarioFinal,
@@ -375,7 +401,7 @@ export class UserService {
       cargo: cargoCompleto,
       estado: typeof usuario.estado === 'object' ? usuario.estado : { descripcion: estadoDescripcion },
       activo: estadoActivo,
-      rol: usuario.rol || { idRol: 2, descripcion: 'USUARIO' },
+      rol: rolProcesado,
       correoEmpresarial: usuario.correoEmpresarial || '',
       celular: usuario.telefono1 || usuario.celular || '',
       telefono: usuario.telefono2 || usuario.telefono || '',
@@ -388,17 +414,14 @@ export class UserService {
   }
 
   private obtenerIdCargo(cargo: any): { idCargo: number } | null {
-    // Si cargo ya es un objeto con idCargo, devolverlo tal cual
     if (cargo && typeof cargo === 'object' && cargo.idCargo) {
       return { idCargo: cargo.idCargo };
     }
 
-    // Si cargo es un número, envolver en objeto
     if (typeof cargo === 'number') {
       return { idCargo: cargo };
     }
 
-    // Si cargo es string numérico, convertir y envolver
     if (typeof cargo === 'string') {
       const cargoNumerico = parseInt(cargo, 10);
       if (!isNaN(cargoNumerico)) {

@@ -51,7 +51,7 @@ export interface Usuario {
       };
     };
   };
-  rol: {
+  rol: number[] | {
     idRol: number;
     descripcion: string;
   };
@@ -82,7 +82,7 @@ export interface UsuarioRequest {
     idEstado: number;
     descripcion: string;
   };
-  rol: {
+  rol: number[] | {
     idRol: number;
     descripcion: string;
   };
@@ -285,7 +285,7 @@ export interface UsuarioData {
   telefono2?: string;
   direccion?: string;
   cargo: CargoData;
-  rol: string;
+  rol: number[] | string;
   estado: string;
   tipologias: TipologiaData[];
   dobleAutenticacion?: 'GOOGLE_AUTH' | 'EMAIL';
