@@ -66,7 +66,7 @@ export class Users implements OnInit, OnDestroy {
   passwordModalError: string = '';
   confirmModalVisible = false;
   confirmModalMessage = '';
-  confirmModalAction: 'inactivar' | 'activar' | 'eliminarQR' | 'rechazar' | null = null;
+  confirmModalAction: 'inactivar' | 'activar' | 'eliminarQR' | 'rechazar' | 'marcarEliminado' | null = null;
 
   // Sistema de alertas externas
   externalAlerts: Array<{
@@ -88,7 +88,7 @@ export class Users implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    this.userStateService.clearPendingOperation(); // Limpiar al destruir
+    this.userStateService.clearPendingOperation();
   }
 
   cargarUsuarios(): void {
@@ -149,17 +149,17 @@ export class Users implements OnInit, OnDestroy {
 
   filtrarUsuarios() {
     let filtrados = this.usuarios.filter(u => {
-      if (this.activos) {
-        const estadoDescripcion = typeof u.estado === 'object'
-          ? (u.estado.descripcion || '').toString().trim().toUpperCase()
-          : String(u.estado || '').trim().toUpperCase();
+      const estadoDescripcion = typeof u.estado === 'object'
+        ? (u.estado.descripcion || '').toString().trim().toUpperCase()
+        : String(u.estado || '').trim().toUpperCase();
 
+      if (estadoDescripcion === 'ELIMINADO') {
+        return false;
+      }
+
+      if (this.activos) {
         return estadoDescripcion === 'ACTIVO' || estadoDescripcion === 'PENDIENTE';
       } else {
-        const estadoDescripcion = typeof u.estado === 'object'
-          ? (u.estado.descripcion || '').toString().trim().toUpperCase()
-          : String(u.estado || '').trim().toUpperCase();
-
         return estadoDescripcion === 'INACTIVO';
       }
     });
@@ -242,6 +242,10 @@ export class Users implements OnInit, OnDestroy {
         this.mensajePasswordModal = 'Ingrese su contraseña para eliminar el código QR del usuario.';
         this.passwordModalError = '';
         this.isPasswordModalVisible = true;
+        break;
+
+      case 'marcarEliminado':
+        this.abrirConfirmModal('marcarEliminado', u);
         break;
 
       default:
@@ -694,6 +698,47 @@ export class Users implements OnInit, OnDestroy {
         }
         break;
 
+      case 'marcarEliminado':
+        if (this.currentUser && this.currentUser.idUsuario) {
+          this.userService.marcarUsuarioEliminado(this.currentUser.idUsuario)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (response: any) => {
+                this.mostrarModalSuccess('Usuario marcado como eliminado con éxito', 'Aceptar');
+                this.userService.clearUsersCache();
+                this.cargarUsuarios();
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
+                this.currentUser = null;
+                this.currentAction = '';
+              },
+              error: (error: any) => {
+                let mensajeError = 'Error al marcar el usuario como eliminado';
+                
+                if (error.status === 0) {
+                  mensajeError = 'Error de conexión con el servidor. Verifica tu conexión a internet.';
+                } else if (error.status === 401) {
+                  mensajeError = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
+                } else if (error.status === 403) {
+                  mensajeError = 'No tienes permisos para realizar esta operación.';
+                } else if (error.status === 404) {
+                  mensajeError = 'Usuario no encontrado.';
+                } else if (error.error?.message) {
+                  mensajeError = error.error.message;
+                } else if (error.message) {
+                  mensajeError = error.message;
+                }
+                
+                this.isPasswordModalVisible = false;
+                this.mostrarModalSuccess(mensajeError, 'Entendido');
+                this.userStateService.clearPendingOperation();
+                this.currentUser = null;
+                this.currentAction = '';
+              }
+            });
+        }
+        break;
+
       default:
         this.isPasswordModalVisible = false;
         this.userStateService.clearPendingOperation();
@@ -714,7 +759,7 @@ export class Users implements OnInit, OnDestroy {
   this.cargarUsuarios();
 }
 
-  abrirConfirmModal(tipo: 'inactivar' | 'activar' | 'eliminarQR' | 'rechazar', usuario: Usuario) {
+  abrirConfirmModal(tipo: 'inactivar' | 'activar' | 'eliminarQR' | 'rechazar' | 'marcarEliminado', usuario: Usuario) {
     this.confirmModalAction = tipo;
     this.currentUser = usuario;
     this.passwordModalError = '';
@@ -732,6 +777,9 @@ export class Users implements OnInit, OnDestroy {
         break;
       case 'rechazar':
         this.confirmModalMessage = '¿Está seguro de que desea rechazar la solicitud de este usuario? El usuario quedará en estado INACTIVO.';
+        break;
+      case 'marcarEliminado':
+        this.confirmModalMessage = '¿Está seguro de que desea marcar este usuario como eliminado? El usuario será ocultado de la lista.';
         break;
     }
 
@@ -772,6 +820,12 @@ export class Users implements OnInit, OnDestroy {
         this.currentAction = 'rechazar';
         this.isPasswordModalVisible = true;
         break;
+        
+      case 'marcarEliminado':
+        this.mensajePasswordModal = 'Ingrese su contraseña para marcar el usuario como eliminado.';
+        this.currentAction = 'marcarEliminado';
+        this.isPasswordModalVisible = true;
+        break;
     }
   }
 
@@ -802,12 +856,10 @@ export class Users implements OnInit, OnDestroy {
     }
   }
 
-  // Métodos para alertas externas
   showExternalAlert(type: 'success' | 'danger' | 'info' | 'warning', title: string, message: string, duration: number = 5000): void {
     const alertItem = { type, title, message };
     this.externalAlerts.push(alertItem);
 
-    // Auto-cerrar después de la duración especificada
     if (duration > 0) {
       setTimeout(() => {
         const index = this.externalAlerts.indexOf(alertItem);

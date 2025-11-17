@@ -22,7 +22,7 @@ export class UserService {
   private readonly apiUrl = `${this.baseUrl}/usuarios`;
   private usersCache: Usuario[] | null = null;
   private lastCacheTime = 0;
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+  private readonly CACHE_DURATION = 5 * 60 * 1000;
 
   private readonly httpOptions = {
     headers: new HttpHeaders({
@@ -252,15 +252,18 @@ export class UserService {
       .pipe(catchError(this.handleError));
   }
 
+  marcarUsuarioEliminado(id: number): Observable<ApiResponse> {
+    const url = `${this.apiUrl}/${id}/marcar-eliminado`;
+    return this.http.put<ApiResponse>(url, {}, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
   getDobleAutenticacionOpciones(): string[] {
     return Object.values(DobleAutenticacionTipo);
   }
 
   private transformarUsuarioParaApi(usuario: Usuario): UsuarioRequest & { idUsuario?: number } {
-    // Validación de cargo según el estado del usuario:
-    // - ACTIVO: Cargo es OBLIGATORIO (validación estricta)
-    // - PENDIENTE con cargo: Permitido (admin activando usuario)
-    // - PENDIENTE sin cargo: Permitido (auto-registro desde profile-modal)
+
     const isActiveUser = usuario.estado && usuario.estado.descripcion && 
       usuario.estado.descripcion.toUpperCase() === 'ACTIVO';
     
