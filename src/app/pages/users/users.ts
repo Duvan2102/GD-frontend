@@ -68,7 +68,6 @@ export class Users implements OnInit, OnDestroy {
   confirmModalMessage = '';
   confirmModalAction: 'inactivar' | 'activar' | 'eliminarQR' | 'rechazar' | 'marcarEliminado' | null = null;
 
-  // Sistema de alertas externas
   externalAlerts: Array<{
     type: 'success' | 'danger' | 'info' | 'warning';
     title: string;

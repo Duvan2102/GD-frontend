@@ -103,7 +103,6 @@
                     <a href="#" *ngIf="u.activo && !(u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE')" (click)="abrirConfirmModal('inactivar', u); $event.preventDefault()"> ㊀ Inactivar usuario</a>
                     <a href="#" *ngIf="!u.activo && !(u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE')" (click)="abrirConfirmModal('activar', u); $event.preventDefault()"> 🗹 Activar usuario</a>
                     <a href="#" (click)="accion('editar', u, $event)"> ✎ Editar usuario</a>
-                    <!-- Botón Rechazar eliminado -->
                     <a href="#" (click)="accion('cambiarContraseña', u, $event)"> ⚷ Cambiar contraseña</a>
                     <a href="#" (click)="accion('marcarEliminado', u, $event)"> 🗑️ Borrar usuario</a>
                     <a href="#" (click)="accion('cambiar2FA', u, $event)"> ⚠ Cambiar método 2FA</a>
