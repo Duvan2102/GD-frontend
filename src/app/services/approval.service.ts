@@ -153,7 +153,7 @@ export class ApprovalService {
     // Información básica del creador (sin resolver aún)
     const creatorUser = 'Usuario no encontrado';
     const creatorFullName = 'Usuario no encontrado';
-    const position = 'Funcionario';
+    const position = item?.solicitanteCargo || 'Funcionario';
 
     return {
       id: String(id),
