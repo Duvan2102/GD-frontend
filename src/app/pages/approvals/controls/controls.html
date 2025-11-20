@@ -14,7 +14,7 @@
   </div>
   <div class="col-md">
     <div class="d-flex flex-column align-items-end gap-3">
-      <div class="form-check form-switch">
+      <div class="form-check form-switch" *ngIf="showToggleSwitch">
         <label for="toggleAprobados" class="form-label mb-0 text-secondary">
           {{ toggleApproved ? labelAprobados : (labelAprobadosInactivo || labelAprobados) }}
         </label>
