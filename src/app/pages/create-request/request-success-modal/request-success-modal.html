@@ -107,6 +107,55 @@
                   </div>
                 </div>
               </div>
+              
+              <div *ngIf="enableProcessUpdate" class="process-update-section">
+                <h3 class="section-subtitle">ACTUALIZACIÓN DEL PROCESO</h3>
+                <p class="process-update-description">
+                  Adjunta nueva evidencia o deja un comentario para mantener trazabilidad antes de continuar.
+                </p>
+                <div class="process-update-upload">
+                  <button
+                    type="button"
+                    class="process-upload-link"
+                    (click)="processAttachmentInput.click()">
+                    <i class="bi bi-paperclip"></i>
+                    Cargar adjuntos
+                  </button>
+                  <input
+                    #processAttachmentInput
+                    type="file"
+                    class="d-none"
+                    multiple
+                    (change)="onProcessAttachmentsSelected($event)">
+                </div>
+
+                <ul *ngIf="processUpdateAttachments.length" class="process-update-files">
+                  <li *ngFor="let file of processUpdateAttachments; let i = index">
+                    <i class="bi bi-file-earmark-arrow-up"></i>
+                    <span>{{ file.name }}</span>
+                    <button type="button" class="remove-file-btn" (click)="removeProcessAttachment(i)">
+                      <i class="bi bi-x"></i>
+                    </button>
+                  </li>
+                </ul>
+
+                <label for="processUpdateComment" class="form-label mb-1">Comentario</label>
+                <textarea
+                  id="processUpdateComment"
+                  class="form-control process-update-textarea"
+                  rows="3"
+                  [(ngModel)]="processUpdateComment"
+                  placeholder="Describe el contexto de la actualización...">
+                </textarea>
+                <button
+                  class="btn btn-primary w-100"
+                  type="button"
+                  [disabled]="!canSubmitProcessUpdate()"
+                  (click)="onProcessUpdateClick()">
+                  Actualizar
+                </button>
+              </div>
+
             </div>
           </div>
 
@@ -278,3 +327,12 @@
   [data]="commentModalData"
   (close)="onCommentModalClose()">
 </app-comment-modal>
+
+<app-password-modal
+  [isVisible]="isPasswordModalVisible"
+  [mensajeModal]="'Ingrese su contraseña para confirmar la actualización.'"
+  [externalError]="passwordModalError"
+  (close)="handlePasswordModalClose()"
+  (validate)="handlePasswordValidated($event)"
+  (validationError)="handlePasswordValidationError($event)">
+</app-password-modal>
