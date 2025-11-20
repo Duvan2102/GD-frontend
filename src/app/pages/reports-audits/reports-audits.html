@@ -34,27 +34,25 @@
       <span class="ms-3">Cargando datos...</span>
     </div>
 
-    <div *ngIf="!isLoading" class="panel-tabla-scroll">
-      <table class="table table-borderless align-middle">
-        <thead class="border-bottom">
+    <div *ngIf="!isLoading" class="panel-tabla-scroll bg-white rounded">
+      <table class="tabla-solicitudes">
+        <thead class="sticky-top">
           <tr>
-            <th scope="col"></th>
-            <th scope="col">TIPO DE SOLICITUD</th>
-            <th scope="col">ID</th>
-            <th scope="col">FECHA CREACIÓN</th>
-            <th scope="col">FUNCIONARIOS CREADOR</th>
-            <th scope="col">ÁREA</th>
-            <th scope="col">DEPARTAMENTO</th>
-            <th scope="col">ÚLTIMA ACTUALIZACIÓN</th>
-            <th scope="col">ESTADO</th>
-            <th scope="col">ACCIONES</th>
+            <th></th>
+            <th (click)="sortBy('tipoSolicitud')" class="sortable-header">TIPO DE SOLICITUD <i class="bi" [ngClass]="getSortIcon('tipoSolicitud')"></i></th>
+            <th (click)="sortBy('id')" class="sortable-header">ID <i class="bi" [ngClass]="getSortIcon('id')"></i></th>
+            <th (click)="sortBy('fechaCreacion')" class="sortable-header">FECHA CREACIÓN <i class="bi" [ngClass]="getSortIcon('fechaCreacion')"></i></th>
+            <th (click)="sortBy('usuarioCreador')" class="sortable-header">FUNCIONARIOS CREADOR <i class="bi" [ngClass]="getSortIcon('usuarioCreador')"></i></th>
+            <th (click)="sortBy('area')" class="sortable-header">ÁREA <i class="bi" [ngClass]="getSortIcon('area')"></i></th>
+            <th (click)="sortBy('departamento')" class="sortable-header">DEPARTAMENTO <i class="bi" [ngClass]="getSortIcon('departamento')"></i></th>
+            <th (click)="sortBy('ultimaActualizacion')" class="sortable-header">ÚLTIMA ACTUALIZACIÓN <i class="bi" [ngClass]="getSortIcon('ultimaActualizacion')"></i></th>
+            <th (click)="sortBy('estado')" class="sortable-header">ESTADO <i class="bi" [ngClass]="getSortIcon('estado')"></i></th>
+            <th>ACCIONES</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngIf="displayedItems.length === 0">
-            <td colspan="9" class="text-center py-4 text-muted">
-              No se encontraron solicitudes
-            </td>
+            <td colspan="10" class="text-center py-5">No se encontraron resultados.</td>
           </tr>
           <tr *ngFor="let item of displayedItems">
             <td>
@@ -68,6 +66,7 @@
             <td>{{ item.id }}</td>
             <td>{{ item.fechaCreacion | date:'dd/MM/yyyy HH:mm:ss' }}</td>
             <td>{{ item.usuarioCreador }}</td>
+            <td>{{ item.area }}</td>
             <td>{{ item.departamento }}</td>
             <td>{{ item.ultimaActualizacion | date:'dd/MM/yyyy HH:mm:ss' }}</td>
               <td>
