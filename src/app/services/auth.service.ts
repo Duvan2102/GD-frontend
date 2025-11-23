@@ -509,7 +509,11 @@ export class AuthService {
             } else if (errorCode === 'TOKEN_INVALIDO') {
               error.userMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
             } else if (errorMessage) {
-              error.userMessage = errorMessage;
+              if (errorMessage.toLowerCase().includes('user is disabled')) {
+                error.userMessage = 'Usuario deshabilitado. Contacta al administrador.';
+              } else {
+                error.userMessage = errorMessage;
+              }
             }
           }
           
@@ -556,7 +560,11 @@ export class AuthService {
             error.userMessage = errorMessage || 'Demasiados intentos. Por favor, espera unos minutos.';
             error.rateLimited = true;
           } else {
-            error.userMessage = errorMessage || 'Error enviando código por email';
+            if (errorMessage && errorMessage.toLowerCase().includes('user is disabled')) {
+              error.userMessage = 'Usuario deshabilitado. Contacta al administrador.';
+            } else {
+              error.userMessage = errorMessage || 'Error enviando código por email';
+            }
           }
           
           return throwError(() => error);

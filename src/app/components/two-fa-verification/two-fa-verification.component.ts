@@ -26,13 +26,11 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
   qrScanned: boolean = false;
   qrSecret: string = '';
   
-  // Propiedades para envío automático de correo
   emailSent: boolean = false;
   canResendEmail: boolean = false;
   resendCountdown: number = 0;
   private resendTimer: any = null;
   
-  // Propiedades para timer de 90 segundos
   timeRemaining: number = 90;
   private timerInterval?: number;
   private readonly TIMER_DURATION = 90;
@@ -55,25 +53,20 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Iniciar timer de 90 segundos
     this.startTimer();
 
-    // Suscribirse al usuario que requiere 2FA
     this.authService.getTwoFAUser()
       .pipe(takeUntil(this.destroy$))
       .subscribe(user => {
         this.currentUser = user;
       });
 
-    // Verificar y cargar el estado de 2FA
     this.check2FAStatus();
 
-    // Suscribirse al estado de 2FA para mostrar opciones apropiadas
     this.authService.getTwoFAState()
       .pipe(
         takeUntil(this.destroy$),
         distinctUntilChanged((prev, curr) => {
-          // Comparar por referencia y por metodoActual para evitar emisiones duplicadas
           return JSON.stringify(prev) === JSON.stringify(curr);
         })
       )
@@ -81,14 +74,11 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
         if (state) {
           this.twoFAState = state;
 
-          // Si Google Auth está pendiente, intentar validar para obtener QR
           if (state.googleAuthPending) {
             this.attemptValidationForQR();
-            // NO enviar email si Google Auth está pendiente
             return;
           }
           
-          // Si el método es EMAIL y NO hay Google Auth pendiente, enviar correo automáticamente
           if (state.metodoActual === 'EMAIL' && !this.emailSent && !state.googleAuthPending) {
             this.sendEmailAutomatically();
           }
@@ -111,7 +101,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
     
-    // Limpiar temporizadores
     this.clearTimer();
     if (this.resendTimer) {
       clearInterval(this.resendTimer);
@@ -125,13 +114,11 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
 
       const { codigo } = this.verificationForm.value;
 
-      // Si ya se escaneó el QR, confirmar Google Auth
       if (this.qrScanned && this.qrSecret) {
         this.confirmGoogleAuthWithCode(codigo);
         return;
       }
 
-      // Validación normal de código 2FA
       this.authService.validate2FACode(codigo).subscribe({
         next: (response) => {
           if (response.success) {
@@ -158,7 +145,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Enviar correo automáticamente cuando el método es EMAIL
   private sendEmailAutomatically(): void {
     if (this.emailSent) {
       return;
@@ -178,7 +164,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
         console.error('Error enviando código por email automáticamente:', error);
         this.isLoading = false;
         
-        // Usar mensaje personalizado si está disponible
         if (error.userMessage) {
           this.errorMessage = error.userMessage;
         } else if (error.error?.code === '2FA_METHOD_INCORRECT') {
@@ -206,7 +191,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error enviando código por email:', error);
         
-        // Usar mensaje personalizado si está disponible
         if (error.userMessage) {
           this.errorMessage = error.userMessage;
         } else if (error.error?.code === '2FA_METHOD_INCORRECT') {
@@ -220,7 +204,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Iniciar temporizador para reenvío
   private startResendTimer(): void {
     this.canResendEmail = false;
     this.resendCountdown = 15;
@@ -245,22 +228,18 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
     this.router.navigate(['/login']);
   }
 
-  // Nuevo método para cuando el usuario ya escaneó el QR
   onQRScanned(): void {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // Ocultar el QR y mostrar el formulario de código
     this.showQRCode = false;
     this.qrScanned = true;
 
-    // Limpiar el formulario para que el usuario ingrese el código
     this.verificationForm.patchValue({ codigo: '' });
 
     this.isLoading = false;
   }
 
-  // Nuevo método para intentar validación y obtener QR automáticamente
   private attemptValidationForQR(): void {
     this.authService.validate2FACode('').subscribe({
       next: (response) => {
@@ -276,7 +255,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Generar código QR
   private generateQRCode(otpauthUrl: string): void {
     QRCode.toDataURL(otpauthUrl, {
       width: 256,
@@ -293,7 +271,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Confirmar configuración de Google Auth con código
   private confirmGoogleAuthWithCode(codigo: string): void {
     if (!this.qrSecret) {
       this.errorMessage = 'Error: Secret no encontrado';
@@ -313,7 +290,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Validar código 2FA después de configurar Google Auth
   private validate2FACodeAfterGoogleAuthSetup(codigo: string): void {
     this.authService.validate2FACode(codigo).subscribe({
       next: (response) => {
@@ -340,13 +316,11 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
   }
 
   private handleError(error: any): void {
-    // Usar mensaje personalizado si está disponible
     if (error.userMessage) {
       this.errorMessage = error.userMessage;
       return;
     }
     
-    // Detectar tipo de error específico
     if (error.errorType) {
       switch (error.errorType) {
         case 'GOOGLE_AUTH':
@@ -356,14 +330,12 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
           this.errorMessage = 'Código de email incorrecto. Revisa tu correo e ingresa el código correcto.';
           break;
         case 'METHOD_INCORRECT':
-          // El mensaje ya está en error.userMessage
           this.errorMessage = error.userMessage || 'Método de autenticación incorrecto.';
           break;
       }
       return;
     }
     
-    // Manejo de errores estándar
     if (error.error?.code) {
       switch (error.error.code) {
         case 'CODIGO_2FA_INVALIDO':
@@ -380,7 +352,19 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
           this.errorMessage = 'Usuario bloqueado. Intenta más tarde';
           break;
         default:
-          this.errorMessage = error.error.message || 'Error desconocido';
+          const errorMsg = error.error.message || '';
+          if (errorMsg.toLowerCase().includes('user is disabled')) {
+            this.errorMessage = 'Usuario deshabilitado. Contacta al administrador.';
+          } else {
+            this.errorMessage = errorMsg || 'Error desconocido';
+          }
+      }
+    } else if (error.error?.message) {
+      const errorMsg = error.error.message;
+      if (errorMsg.toLowerCase().includes('user is disabled')) {
+        this.errorMessage = 'Usuario deshabilitado. Contacta al administrador.';
+      } else {
+        this.errorMessage = errorMsg;
       }
     } else {
       this.errorMessage = 'Error de conexión. Verifica tu conexión a internet';
@@ -400,7 +384,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
     return '';
   }
 
-  // Auto-avanzar al siguiente campo cuando se completa un dígito
   onKeyUp(event: any): void {
     const input = event.target;
     const value = input.value;
@@ -412,7 +395,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Permitir solo números
   onKeyPress(event: any): boolean {
     const charCode = event.which ? event.which : event.keyCode;
     if (charCode > 31 && (charCode < 48 || charCode > 57)) {
@@ -421,7 +403,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
     return true;
   }
 
-  // Getters para el template
   get hasGoogleAuth(): boolean {
     return this.twoFAState?.hasGoogleAuth || false;
   }
@@ -444,32 +425,26 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
            (this.hasGoogleAuth && !this.googleAuthPending);
   }
 
-  // Getter para determinar el tipo de 2FA activo
   get current2FAMethod(): 'GOOGLE_AUTH' | 'EMAIL' | 'QR_SETUP' | 'UNKNOWN' {
     if (this.showQRCode && this.qrCodeDataUrl) {
       return 'QR_SETUP';
     }
     
-    // Si ya escaneó el QR, debe ser Google Auth
     if (this.qrScanned && this.qrSecret) {
       return 'GOOGLE_AUTH';
     }
     
-    // Si Google Auth está pendiente pero no hay QR visible, es configuración
     if (this.googleAuthPending && !this.showQRCode) {
       return 'QR_SETUP';
     }
     
-    // Usar el método actual del servidor si está disponible
     if (this.twoFAState?.metodoActual) {
-      // Mapear 'PENDING' a 'QR_SETUP' para compatibilidad
       if (this.twoFAState.metodoActual === 'PENDING') {
         return 'QR_SETUP';
       }
       return this.twoFAState.metodoActual;
     }
     
-    // Fallback basado en configuración disponible
     if (this.hasGoogleAuth && !this.googleAuthPending) {
       return 'GOOGLE_AUTH';
     }
@@ -481,7 +456,6 @@ export class TwoFAVerificationComponent implements OnInit, OnDestroy {
     return 'UNKNOWN';
   }
 
-  // Métodos para manejar el timer de 90 segundos
   private startTimer(): void {
     this.clearTimer();
     this.timeRemaining = this.TIMER_DURATION;
