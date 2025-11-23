@@ -125,7 +125,8 @@ export function applyApprovalDetailsViewLogic(
   if (showOnlyManaged) {
     result = result.filter(req => ['RECHAZADO', 'CANCELADA'].includes(req.status));
   } else {
-    result = result.filter(req => req.status === 'APROBADO');
+    // Mostrar tanto aprobados como aprobados pendientes (PENDIENTE)
+    result = result.filter(req => ['APROBADO', 'PENDIENTE'].includes(req.status));
   }
 
   if (searchTerm) {
