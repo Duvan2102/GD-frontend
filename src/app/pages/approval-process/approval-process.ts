@@ -77,6 +77,12 @@ export class ApprovalProcess implements OnInit, OnDestroy {
   isDocumentViewVisible = false;
   documentViewData: DocumentViewData | null = null;
 
+  externalAlerts: Array<{
+    type: 'success' | 'danger' | 'info' | 'warning';
+    title: string;
+    message: string;
+  }> = [];
+
   constructor(
     private userService: UserService,
     private approvalService: ApprovalService,
@@ -557,11 +563,11 @@ export class ApprovalProcess implements OnInit, OnDestroy {
               this.isApprovalDocumentViewVisible = true;
             },
             error: (error) => {
-              alert('Error al cargar el documento. Por favor, inténtalo de nuevo.');
+              this.showExternalAlert('danger', 'Error al cargar documento', 'Error al cargar el documento. Por favor, inténtalo de nuevo.');
             }
           });
         } else {
-          alert('No se pudo cargar el documento. Verifique que la solicitud tenga un documento asociado.');
+          this.showExternalAlert('warning', 'Documento no disponible', 'No se pudo cargar el documento. Verifique que la solicitud tenga un documento asociado.');
         }
       }
     }
@@ -580,7 +586,7 @@ export class ApprovalProcess implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        alert('Error al aprobar la solicitud. Por favor, inténtelo de nuevo.');
+        this.showExternalAlert('danger', 'Error al aprobar', 'Error al aprobar la solicitud. Por favor, inténtelo de nuevo.');
         this.isApprovalDocumentViewVisible = true;
       }
     });
@@ -599,7 +605,7 @@ export class ApprovalProcess implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        alert('Error al rechazar la solicitud. Por favor, inténtelo de nuevo.');
+        this.showExternalAlert('danger', 'Error al rechazar', 'Error al rechazar la solicitud. Por favor, inténtelo de nuevo.');
         this.isApprovalDocumentViewVisible = true;
       }
     });
@@ -654,4 +660,22 @@ export class ApprovalProcess implements OnInit, OnDestroy {
   onSearchChange(term: string): void { this.searchTerm = term; this.currentPage = 1; this.applyViewLogic(); }
   onChangePage(newPage: number): void { this.currentPage = newPage; this.applyViewLogic(); }
   sortBy(field: string): void { if (this.currentOrder === field) { this.ascendingOrder = !this.ascendingOrder; } else { this.currentOrder = field; this.ascendingOrder = true; } this.applyViewLogic(); }
+
+  showExternalAlert(type: 'success' | 'danger' | 'info' | 'warning', title: string, message: string, duration: number = 5000): void {
+    const alertItem = { type, title, message };
+    this.externalAlerts.push(alertItem);
+
+    if (duration > 0) {
+      setTimeout(() => {
+        const index = this.externalAlerts.indexOf(alertItem);
+        if (index > -1) {
+          this.closeExternalAlert(index);
+        }
+      }, duration);
+    }
+  }
+
+  closeExternalAlert(index: number): void {
+    this.externalAlerts.splice(index, 1);
+  }
 }

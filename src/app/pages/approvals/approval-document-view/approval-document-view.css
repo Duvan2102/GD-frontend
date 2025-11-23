@@ -24,6 +24,15 @@
   align-items: center;
 }
 
+.btn-close {
+  filter: brightness(0);
+  opacity: 0.75;
+}
+
+.btn-close:hover {
+  opacity: 1;
+}
+
 .modal-title {
   font-size: 1rem;
   font-weight: 500;
