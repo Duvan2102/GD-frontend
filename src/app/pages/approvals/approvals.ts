@@ -27,7 +27,7 @@ export interface Approval {
   creatorFullName: string;
   position: string;
   lastUpdate: string;
-  status: 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA';
+  status: 'PENDIENTE' | 'APROBADO' | 'RECHAZADO' | 'CANCELADA' | 'APROB-PENDIENTE' | 'APROB-POCESADO';
   approvers: { initials: string; fullName: string }[];
   priority: boolean;
   fullData?: any;
@@ -138,7 +138,10 @@ export class Approvals implements OnInit, OnDestroy {
     // Obtener historial de aprobaciones gestionadas
     this.approvalService.getHistorico(uid, this.allUsers).subscribe({
       next: (list) => {
-        this.managedApprovals = (list || []).filter(a => ['APROBADO','RECHAZADO','CANCELADA'].includes(a.status));
+        this.managedApprovals = (list || []).filter(a => {
+          const status = a.status?.toUpperCase();
+          return ['APROBADO','RECHAZADO','CANCELADA','APROB-POCESADO'].includes(status);
+        });
         this.refreshApprovalsSource();
       },
       error: (error) => {

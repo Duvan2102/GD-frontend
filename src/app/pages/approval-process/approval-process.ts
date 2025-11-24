@@ -27,7 +27,7 @@ export interface Approval {
   creatorFullName: string;
   position: string;
   lastUpdate: string;
-  status: 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA';
+  status: 'PENDIENTE' | 'APROBADO' | 'RECHAZADO' | 'CANCELADA' | 'APROB-PENDIENTE' | 'APROB-POCESADO';
   approvers: { initials: string; fullName: string }[];
   priority: boolean;
   fullData?: any;
@@ -122,9 +122,20 @@ export class ApprovalProcess implements OnInit, OnDestroy {
     if (!this.currentUser) return;
     const uid = this.currentUser.idUsuario;
     
+    // Obtener todas las aprobaciones asignadas al usuario como aprobador
     this.approvalService.getApprovalsForApprover(uid, this.allUsers).subscribe({
       next: (list) => {
-        this.pendingApprovals = list || [];
+        // Filtrar solo las que están en estados APROB-PENDIENTE o APROB-POCESADO
+        // y que estén asignadas al usuario como procesador
+        this.pendingApprovals = (list || []).filter(approval => {
+          const status = approval.status;
+          const isProcessState = status === 'APROB-PENDIENTE' || status === 'APROB-POCESADO';
+          
+          // Verificar que el usuario esté asignado como procesador
+          const isAssignedAsProcessor = this.isUserAssignedAsProcessor(approval, uid);
+          
+          return isProcessState && isAssignedAsProcessor;
+        });
         this.refreshApprovalsSource();
       },
       error: (error) => {
@@ -133,15 +144,45 @@ export class ApprovalProcess implements OnInit, OnDestroy {
       }
     });
     
+    // Para gestionados, mantener los estados finales tradicionales
     this.approvalService.getHistorico(uid, this.allUsers).subscribe({
       next: (list) => {
-        this.managedApprovals = (list || []).filter(a => ['APROBADO','RECHAZADO','CANCELADA'].includes(a.status));
+        this.managedApprovals = (list || []).filter(a => {
+          const status = a.status;
+          return ['APROBADO','RECHAZADO','CANCELADA','APROB-POCESADO'].includes(status);
+        });
         this.refreshApprovalsSource();
       },
       error: (error) => {
         this.managedApprovals = [];
         this.refreshApprovalsSource();
       }
+    });
+  }
+
+  /**
+   * Verifica si el usuario está asignado como procesador en la solicitud
+   */
+  private isUserAssignedAsProcessor(approval: Approval, userId: number): boolean {
+    if (!approval.fullData) return false;
+    
+    // Buscar en los procesadores asignados (pueden venir en diferentes formatos)
+    const procesadores = approval.fullData.procesadores || 
+                        approval.fullData.procesadoresAsignados || 
+                        approval.fullData.procesadoresPostAprobacion ||
+                        [];
+    
+    // Si no hay procesadores, no está asignado
+    if (!Array.isArray(procesadores) || procesadores.length === 0) {
+      return false;
+    }
+    
+    // Verificar si el usuario está en la lista de procesadores
+    return procesadores.some((proc: any) => {
+      // El procesador puede venir como objeto con usuarioId, idUsuario, noUsuario, o directamente como número
+      const procId = proc?.usuarioId || proc?.idUsuario || proc?.noUsuario || proc?.id || proc;
+      const procIdNum = typeof procId === 'number' ? procId : parseInt(String(procId), 10);
+      return !isNaN(procIdNum) && procIdNum === userId;
     });
   }
 

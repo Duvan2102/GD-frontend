@@ -122,11 +122,15 @@ export function applyApprovalDetailsViewLogic(
     console.log(`🔍 Filtro por área aplicado: ${originalCount} -> ${filteredCount} solicitudes del área ${currentUser.cargo.area.idArea}`);
   }
 
+  // Excluir siempre las solicitudes en estado PENDIENTE
+  result = result.filter(req => req.status !== 'PENDIENTE');
+
   if (showOnlyManaged) {
+    // CANCELADAS/RECHAZADAS: mostrar solo CANCELADA y RECHAZADO
     result = result.filter(req => ['RECHAZADO', 'CANCELADA'].includes(req.status));
   } else {
-    // Mostrar tanto aprobados como aprobados pendientes (PENDIENTE)
-    result = result.filter(req => ['APROBADO', 'PENDIENTE'].includes(req.status));
+    // APROBADOS: mostrar APROBADO, APROB-PENDIENTE y APROB-POCESADO
+    result = result.filter(req => ['APROBADO', 'APROB-PENDIENTE', 'APROB-POCESADO'].includes(req.status));
   }
 
   if (searchTerm) {

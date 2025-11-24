@@ -5,7 +5,7 @@ import { RouterModule } from '@angular/router';
 import { Controls } from '../approvals/controls/controls';
 import { RequestsTable } from '../approvals/requests-table/requests-table';
 import { FooterControls } from '../approvals/footer-controls/footer-controls';
-import { RequestSuccessModal, SuccessModalData } from '../create-request/request-success-modal/request-success-modal';
+import { RequestSuccessModal, SuccessModalData, ProcessUpdatePayload } from '../create-request/request-success-modal/request-success-modal';
 import { DocumentView, DocumentViewData } from '../create-request/document-view/document-view';
 import { ApprovalService } from '../../services/approval.service';
 import { SuccessModalService } from '../../services/success-modal.service';
@@ -332,5 +332,42 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   closeDocumentView(): void {
     this.isDocumentViewVisible = false;
     this.documentViewData = null;
+  }
+
+  handleAssignProcess(payload: ProcessUpdatePayload): void {
+    if (!this.currentUserId || !payload.requestId) {
+      alert('Error: No se puede asignar el proceso. Usuario o solicitud no disponible.');
+      return;
+    }
+
+    const procesadores = payload.procesadores || [];
+    if (procesadores.length === 0) {
+      alert('Debe seleccionar al menos un procesador');
+      return;
+    }
+
+    this.approvalService.agregarProcesadores(
+      payload.requestId,
+      this.currentUserId,
+      procesadores
+    ).subscribe({
+      next: () => {
+        alert('Procesadores asignados exitosamente');
+        // Recargar los detalles de la solicitud
+        if (payload.requestId) {
+          this.showDetailsModal(String(payload.requestId));
+        }
+      },
+      error: (error) => {
+        console.error('Error al asignar procesadores:', error);
+        if (error.status === 400) {
+          alert('Error: ' + (error.error?.message || 'Datos inválidos'));
+        } else if (error.status === 403) {
+          alert('Error: No tiene permisos para asignar procesadores');
+        } else {
+          alert('Error al asignar los procesadores. Por favor, inténtelo de nuevo.');
+        }
+      }
+    });
   }
 }

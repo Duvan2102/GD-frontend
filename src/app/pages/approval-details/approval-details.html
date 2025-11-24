@@ -43,7 +43,8 @@
   [isApprovalFlow]="true"
   [hideManageButton]="true"
   (close)="closeDetailModal()"
-  (viewApprovedDocument)="handleViewApprovedDocument($event)">
+  (viewApprovedDocument)="handleViewApprovedDocument($event)"
+  (processUpdate)="handleAssignProcess($event)">
 </app-request-success-modal>
 
 <app-document-view

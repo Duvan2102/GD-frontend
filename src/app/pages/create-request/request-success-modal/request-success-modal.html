@@ -156,6 +156,74 @@
                 </button>
               </div>
 
+              <!-- Sección de Asignación de Proceso Post-Aprobación -->
+              <div *ngIf="isAprobPendiente() && data.requiereProceso === true" class="post-approval-process-section">
+                <h3 class="section-subtitle">ASIGNAR PROCESO POST-APROBACIÓN</h3>
+                <p class="post-approval-description">
+                  Asigne procesadores que realizarán el proceso post-aprobación de esta solicitud. El proceso se realizará en orden.
+                </p>
+
+                <!-- Selector de Procesadores -->
+                <div class="procesadores-section">
+                  <label class="form-label mb-1">Procesadores</label>
+                  <div class="procesadores-header">
+                    <div class="header-orden">Orden</div>
+                    <div class="header-usuario">Usuario</div>
+                    <div class="header-actions"></div>
+                  </div>
+                  <div class="procesadores-list-container">
+                    <div *ngFor="let procesador of procesadores; let i = index" class="procesador-item">
+                      <div class="procesador-orden">
+                        <span class="orden-badge">{{ procesador.orden }}</span>
+                      </div>
+                      <div class="procesador-input-wrapper">
+                        <input 
+                          #procesadorInput 
+                          type="text" 
+                          class="form-control procesador-input" 
+                          [placeholder]="i === 0 ? 'Escriba aquí los nombres' : 'Escriba aquí los nombres'" 
+                          [(ngModel)]="procesador.searchTerm" 
+                          (input)="onSearchProcesador($event, i, procesadorInput)" 
+                          (keydown)="onSearchProcesadorKeydown($event, i)" 
+                          (blur)="closeProcesadorDropdown()" 
+                          autocomplete="off">
+                      </div>
+                      <div class="procesador-actions">
+                        <button *ngIf="i > 0" type="button" class="btn-trash-procesador" (click)="eliminarProcesador(i)">
+                          <i class="bi bi-trash3"></i>
+                        </button>
+                        <button *ngIf="i === procesadores.length - 1" type="button" class="btn-add-procesador" (click)="agregarProcesador()">
+                          <i class="bi bi-plus"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Dropdown de usuarios para procesadores -->
+                <div *ngIf="activeProcesadorIndex !== null && filteredProcesadores.length > 0" class="user-dropdown-overlay" (click)="closeProcesadorDropdown()"></div>
+                <div *ngIf="activeProcesadorIndex !== null && filteredProcesadores.length > 0" class="user-dropdown procesador-dropdown" [ngStyle]="procesadorDropdownStyle">
+                  <ul class="dropdown-list">
+                    <li *ngFor="let user of filteredProcesadores; let j = index" 
+                        class="dropdown-item" 
+                        [class.highlighted]="j === highlightedProcesadorIndex" 
+                        (mousedown)="selectProcesador(user, activeProcesadorIndex)">
+                      <span class="user-name">{{ user.nombres }} {{ user.apellidos }}</span>
+                      <span class="user-username">{{ user.usuario }}</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <!-- Botón Asignar Proceso -->
+                <button
+                  class="btn-cancel w-100"
+                  type="button"
+                  [disabled]="!canAssignProcess()"
+                  (click)="onAssignProcess()">
+                  Asignar Proceso
+                </button>
+              </div>
+
             </div>
           </div>
 
@@ -180,10 +248,12 @@
                 <span class="section-subtitle">Estado:</span>
                 <span class="badge rounded-pill" [ngClass]="{
                   'text-bg-success': data.estado === 'Aprobada',
+                  'text-bg-info': data.estado === 'APROB-PENDIENTE',
+                  'text-bg-primary': data.estado === 'APROB-POCESADO',
                   'text-bg-warning': data.estado === 'Pendiente',
                   'text-bg-danger': data.estado === 'Rechazada',
                   'text-bg-secondary': data.estado === 'Cancelada'
-                }">{{ data.estado }}</span>
+                }">{{ getEstadoDisplayName(data.estado) }}</span>
               </div>
 
               <!-- Información de cancelación -->

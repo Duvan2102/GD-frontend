@@ -101,7 +101,9 @@ export class ApprovalService {
   private mapServerToApproval(item: any): Approval {
     // Use proper ID from server, fallback to a more descriptive ID if needed
     const id = item?.id ?? item?.numeroRadicado ?? item?.solicitudId ?? `temp-${Date.now()}`;
-    const estado = (item?.estado || 'PENDIENTE').toUpperCase();
+    const estadoRaw = (item?.estado || 'PENDIENTE').toUpperCase();
+    // Mapear estados del servidor a estados válidos
+    const estado = this.mapEstadoToStatus(estadoRaw);
     const createdAt = item?.createdAt || item?.fechaCreacion || new Date().toISOString();
     
     // Obtener la fecha de última actualización real del historial de gestiones
@@ -163,7 +165,7 @@ export class ApprovalService {
       creatorFullName: creatorFullName,
       position: position,
       lastUpdate: updatedAt,
-      status: ['APROBADO', 'RECHAZADO', 'PENDIENTE', 'CANCELADA'].includes(estado) ? estado : 'PENDIENTE',
+      status: ['PENDIENTE', 'APROBADO', 'RECHAZADO', 'CANCELADA', 'APROB-PENDIENTE', 'APROB-POCESADO'].includes(estado) ? estado : 'PENDIENTE',
       approvers: approvers,
       priority: item?.prioridad === true,  // Boolean del backend (true = prioritaria)
       fullData: item,
@@ -504,11 +506,16 @@ export class ApprovalService {
     const createdAt = item?.createdAt || item?.fechaCreacion || new Date().toISOString();
     const estadoBack = String(item?.estado || 'Pendiente');
     const estado = (() => {
-      const up = estadoBack.toUpperCase();
+      const up = estadoBack.toUpperCase().trim();
+      // Estados específicos primero
+      if (up === 'APROB-PENDIENTE' || up === 'APROB_PENDIENTE') return 'APROB-PENDIENTE';
+      if (up === 'APROB-POCESADO' || up === 'APROB_POCESADO' || up === 'APROB-PROCESADO') return 'APROB-POCESADO';
+      // Estados tradicionales
       if (up === 'APROBADO') return 'Aprobada';
       if (up === 'RECHAZADO') return 'Rechazada';
       if (up === 'CANCELADA') return 'Cancelada';
       if (up === 'ENVIADA') return 'Enviada';
+      if (up === 'PENDIENTE') return 'Pendiente';
       return 'Pendiente';
     })();
 
@@ -595,7 +602,9 @@ export class ApprovalService {
       // Campos adicionales para documentos aprobados
       documentoAprobado: item?.documentoAprobado || item?.documentoAprobacion,
       urlDocumentoAprobado: item?.urlDocumentoAprobado || item?.documentoAprobadoUrl,
-      nombreDocumentoAprobado: item?.nombreDocumentoAprobado || item?.documentoAprobadoFileName
+      nombreDocumentoAprobado: item?.nombreDocumentoAprobado || item?.documentoAprobadoFileName,
+      // Campo para determinar si requiere proceso post-aprobación
+      requiereProceso: Boolean(item?.requiereProceso)
     };
     
     return result;
@@ -933,6 +942,32 @@ export class ApprovalService {
     );
   }
 
+  /**
+   * Agrega procesadores para el proceso post-aprobación de una solicitud
+   */
+  agregarProcesadores(
+    solicitudId: string | number,
+    usuarioId: number,
+    procesadores: number[]
+  ): Observable<any> {
+    const headers = this.headersForUser(usuarioId);
+    const body = {
+      procesadores: procesadores
+    };
+    
+    return this.http.post<any>(
+      `${this.baseUrl}/solicitudes/${solicitudId}/agregar-procesadores`,
+      body,
+      { headers }
+    ).pipe(
+      tap(() => console.log(`Procesadores agregados para solicitud ${solicitudId}`)),
+      catchError(error => {
+        console.error('Error al agregar procesadores:', error);
+        throw error;
+      })
+    );
+  }
+
   getApprovalDocument(approvalId: string | number, userId: number): Observable<{ url: string, fileName: string }> {
     const headers = this.headersForUser(userId);
     
@@ -1246,11 +1281,19 @@ export class ApprovalService {
     };
   }
 
-  private mapEstadoToStatus(estado: string): 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA' {
-    const estadoUpper = estado.toUpperCase();
-    if (estadoUpper.includes('APROBADO')) return 'APROBADO';
+  private mapEstadoToStatus(estado: string): 'PENDIENTE' | 'APROBADO' | 'RECHAZADO' | 'CANCELADA' | 'APROB-PENDIENTE' | 'APROB-POCESADO' {
+    const estadoUpper = estado.toUpperCase().trim();
+    
+    // Estados específicos primero
+    if (estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE') return 'APROB-PENDIENTE';
+    if (estadoUpper === 'APROB-POCESADO' || estadoUpper === 'APROB_POCESADO' || estadoUpper === 'APROB-PROCESADO') return 'APROB-POCESADO';
+    
+    // Estados tradicionales
+    if (estadoUpper.includes('APROBADO') && !estadoUpper.includes('PENDIENTE') && !estadoUpper.includes('POCESADO')) return 'APROBADO';
     if (estadoUpper.includes('RECHAZADO')) return 'RECHAZADO';
     if (estadoUpper.includes('CANCELADO') || estadoUpper.includes('CANCELADA')) return 'CANCELADA';
+    if (estadoUpper.includes('PENDIENTE')) return 'PENDIENTE';
+    
     return 'PENDIENTE';
   }
 

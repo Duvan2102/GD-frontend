@@ -9,7 +9,7 @@ export interface Approval {
   creatorFullName: string;
   position: string;
   lastUpdate: string;
-  status: 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA';
+  status: 'PENDIENTE' | 'APROBADO' | 'RECHAZADO' | 'CANCELADA' | 'APROB-PENDIENTE' | 'APROB-POCESADO';
   approvers: { initials: string; fullName: string }[];
   priority: boolean;
   fullData?: any;
