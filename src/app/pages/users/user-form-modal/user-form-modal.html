@@ -24,6 +24,9 @@
           <div class="col-md-4">
             <label class="form-label">Identificación <span class="text-danger">*</span></label>
             <input type="text" class="form-control" formControlName="identificacion"
+            (keypress)="onIdentificacionKeyPress($event)"
+            (input)="onIdentificacionInput($event)"
+            inputmode="numeric"
                    [class.is-invalid]="userForm.get('identificacion')?.invalid && userForm.get('identificacion')?.touched">
             <div *ngIf="getErrorMessage('identificacion')" class="invalid-feedback">
               {{ getErrorMessage('identificacion') }}
@@ -212,7 +215,7 @@
         <h6 class="mb-3">Permisos y Acceso</h6>
         
         <small class="form-text text-muted d-block mb-3">
-          Las vistas de <strong>Creación solicitudes</strong>, <strong>Aprobaciones</strong> y <strong>Detalles Aprobaciones</strong> siempre están disponibles.
+          Las vistas <strong>Creación solicitudes</strong>, <strong>Aprobaciones</strong>, <strong>Detalles Aprobaciones</strong> y <strong>Procesos de Aprobaciones</strong> están disponibles.
           <br>Selecciona las vistas adicionales a las que tendrá acceso:
         </small>
         
