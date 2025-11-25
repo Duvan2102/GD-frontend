@@ -71,10 +71,17 @@ export class ApprovalProcess implements OnInit, OnDestroy {
   documentToApproveData: ApprovalDocumentViewData | null = null;
   isLoadingDetails = false;
   currentUser: UsuarioData | null = null;
-  isProcessorMode = false; // Indica si el usuario actual es procesador
+  isProcessorMode = false;
 
   isDocumentViewVisible = false;
   documentViewData: DocumentViewData | null = null;
+
+  externalAlerts: Array<{
+    type: 'success' | 'danger' | 'info' | 'warning';
+    title: string;
+    message: string;
+  }> = [];
+
 
   constructor(
     private userService: UserService,
@@ -384,19 +391,13 @@ export class ApprovalProcess implements OnInit, OnDestroy {
     const solicitudId = ev.id;
     const comentario = ev.comentario?.trim() || '';
 
-    // Aprobar directamente el proceso usando el endpoint /api/solicitudes/{id}/aprobar
     this.aprobarProcesoConValidacion(solicitudId, uid, comentario);
   }
 
-  /**
-   * Aprueba el proceso y valida que el estado cambie correctamente
-   */
   private aprobarProcesoConValidacion(solicitudId: string | number, usuarioId: number, comentario: string, closeDetailModal: boolean = false): void {
-    // Aprobar el proceso usando el endpoint /api/solicitudes/{id}/aprobar
     this.approvalService.aprobarSolicitud(solicitudId, usuarioId, comentario).subscribe({
       next: (appr) => {
         if (appr) {
-          // Cerrar la modal de documento después del éxito
           this.isApprovalDocumentViewVisible = false;
           
           // Si viene desde Cargar Proceso, cerrar también el modal de detalles
@@ -446,7 +447,6 @@ export class ApprovalProcess implements OnInit, OnDestroy {
   }
 
   private updateRequestStatus(id: string | number, approvalStatus: 'APROBADO' | 'RECHAZADO', fullDataStatus: 'Aprobada' | 'Rechazada') {
-    // Obtener los detalles más actualizados del servidor
     this.approvalService.getApprovalDetails(id, this.allUsers, this.currentUser?.idUsuario).subscribe({
       next: (request) => {
         if (request) {
@@ -458,7 +458,6 @@ export class ApprovalProcess implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        // Fallback: actualizar localmente si falla la consulta al servidor
         const currentApprovals = this.approvalService.approvalsSubject.getValue();
         const approval = currentApprovals.find(a => a.id.toString() === id.toString());
         if (approval) {
@@ -493,7 +492,6 @@ export class ApprovalProcess implements OnInit, OnDestroy {
     const archivos = update.attachments || [];
     const comentario = update.comment?.trim() || '';
 
-    // Validar que haya al menos archivos o comentario
     if (archivos.length === 0 && !comentario) {
       this.successModalService.showSuccess(
         'Información',
@@ -505,12 +503,9 @@ export class ApprovalProcess implements OnInit, OnDestroy {
     const solicitudId = update.requestId;
     const hasFiles = archivos.length > 0;
 
-    // Los endpoints se consumen por separado: primero adjuntos (si hay), luego aprobar
     if (hasFiles) {
-      // Primero: Adjuntar archivos usando el endpoint /api/solicitudes/{id}/adjuntos
       this.approvalService.agregarAdjuntos(solicitudId, uid, archivos, comentario).subscribe({
         next: () => {
-          // Segundo: Aprobar el proceso usando el endpoint /api/solicitudes/{id}/aprobar
           this.aprobarProcesoDesdeCargarProceso(solicitudId, uid, comentario);
         },
         error: (error) => {
@@ -526,10 +521,8 @@ export class ApprovalProcess implements OnInit, OnDestroy {
         }
       });
     } else if (comentario) {
-      // Si solo hay comentario, adjuntarlo primero y luego aprobar
       this.approvalService.agregarAdjuntos(solicitudId, uid, [], comentario).subscribe({
         next: () => {
-          // Segundo: Aprobar el proceso usando el endpoint /api/solicitudes/{id}/aprobar
           this.aprobarProcesoDesdeCargarProceso(solicitudId, uid, comentario);
         },
         error: (error) => {
@@ -543,9 +536,6 @@ export class ApprovalProcess implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Aprueba el proceso desde el botón "Cargar Proceso" después de adjuntar archivos
-   */
   private aprobarProcesoDesdeCargarProceso(solicitudId: string | number, usuarioId: number, comentario: string): void {
     this.aprobarProcesoConValidacion(solicitudId, usuarioId, comentario, true);
   }
@@ -556,4 +546,23 @@ export class ApprovalProcess implements OnInit, OnDestroy {
   onSearchChange(term: string): void { this.searchTerm = term; this.currentPage = 1; this.applyViewLogic(); }
   onChangePage(newPage: number): void { this.currentPage = newPage; this.applyViewLogic(); }
   sortBy(field: string): void { if (this.currentOrder === field) { this.ascendingOrder = !this.ascendingOrder; } else { this.currentOrder = field; this.ascendingOrder = true; } this.applyViewLogic(); }
+
+
+  showExternalAlert(type: 'success' | 'danger' | 'info' | 'warning', title: string, message: string, duration: number = 5000): void {
+    const alertItem = { type, title, message };
+    this.externalAlerts.push(alertItem);
+
+    if (duration > 0) {
+      setTimeout(() => {
+        const index = this.externalAlerts.indexOf(alertItem);
+        if (index > -1) {
+          this.closeExternalAlert(index);
+        }
+      }, duration);
+    }
+  }
+
+  closeExternalAlert(index: number): void {
+    this.externalAlerts.splice(index, 1);
+  }
 }

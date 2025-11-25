@@ -144,6 +144,37 @@ export class UserFormRegister implements OnInit, OnDestroy {
     el?.focus();
   }
 
+  private translateErrorMessage(message: string): string {
+    if (!message) return message;
+
+    const translations: { [key: string]: string } = {
+      'Transaction silently rolled back because it has been marked as rollback-only': 
+        'La transacción fue revertida porque ha sido marcada como solo reversión. Por favor, verifica los datos e intenta nuevamente.',
+      'Transaction silently rolled back': 
+        'La transacción fue revertida. Por favor, verifica los datos e intenta nuevamente.',
+      'rollback-only': 
+        'La transacción fue revertida. Por favor, verifica los datos e intenta nuevamente.',
+      'Error al crear usuario': 
+        'Error al crear usuario',
+      'Error al actualizar usuario': 
+        'Error al actualizar usuario'
+    };
+
+    if (translations[message]) {
+      return translations[message];
+    }
+
+    const lowerMessage = message.toLowerCase();
+    for (const [key, value] of Object.entries(translations)) {
+      if (lowerMessage.includes(key.toLowerCase())) {
+        return value;
+      }
+    }
+
+    return message;
+  }
+
+
   onSubmit(): void {
     this.apiError = undefined;
     this.successMessage = '';
@@ -158,7 +189,7 @@ export class UserFormRegister implements OnInit, OnDestroy {
     const formValue = this.form.getRawValue();
 
     const registerPayload: RegisterRequest = {
-      identificacion: formValue.identification, // El form control se llama 'identification'
+      identificacion: formValue.identification,
       nombres: formValue.nombres,
       apellidos: formValue.apellidos,
       usuario: formValue.usuario,
@@ -187,7 +218,6 @@ export class UserFormRegister implements OnInit, OnDestroy {
       error: (err: any) => {
         this.loading = false;
         
-        // Manejo detallado de errores similar a user-form-modal
         let errorMsg = '';
         const errorResponse = err?.error as RegisterErrorResponse;
         const code = errorResponse?.code;
@@ -195,7 +225,7 @@ export class UserFormRegister implements OnInit, OnDestroy {
         if (errorResponse && errorResponse.message) {
           errorMsg = errorResponse.message;
         } else if (err.error && typeof err.error === 'string') {
-          errorMsg = err.error;
+          errorMsg = this.translateErrorMessage(err.error);
         } else if (err.message) {
           errorMsg = err.message;
         } else {
@@ -254,5 +284,30 @@ export class UserFormRegister implements OnInit, OnDestroy {
     this.modalSuccessVisible = false;
     this.successMessage = '';
     this.closeModal();
+  }
+
+  onIdentificacionKeyPress(event: KeyboardEvent): boolean {
+    if (event.key === 'Backspace' || event.key === 'Delete' || event.key === 'Tab' || 
+        event.key === 'Escape' || event.key === 'Enter' || event.key === 'ArrowLeft' || 
+        event.key === 'ArrowRight' || event.key === 'Home' || event.key === 'End' ||
+        (event.ctrlKey || event.metaKey) && (event.key === 'a' || event.key === 'c' || 
+        event.key === 'v' || event.key === 'x')) {
+      return true;
+    }
+    
+    if (!/[0-9]/.test(event.key)) {
+      event.preventDefault();
+      return false;
+    }
+    return true;
+  }
+
+  onIdentificacionInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value.replace(/[^0-9]/g, '');
+    if (value !== input.value) {
+      input.value = value;
+      this.form.get('identification')?.setValue(value, { emitEvent: false });
+    }
   }
 }

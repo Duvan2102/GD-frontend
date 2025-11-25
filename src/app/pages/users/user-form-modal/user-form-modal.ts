@@ -508,10 +508,39 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
     this.confirmModalVisible = true;
   }
 
+  private translateErrorMessage(message: string): string {
+    if (!message) return message;
+
+    const translations: { [key: string]: string } = {
+      'Transaction silently rolled back because it has been marked as rollback-only': 
+        'La transacción fue revertida porque ha sido marcada como solo reversión. Por favor, verifica los datos e intenta nuevamente.',
+      'Transaction silently rolled back': 
+        'La transacción fue revertida. Por favor, verifica los datos e intenta nuevamente.',
+      'rollback-only': 
+        'La transacción fue revertida. Por favor, verifica los datos e intenta nuevamente.',
+      'Error al crear usuario': 
+        'Error al crear usuario',
+      'Error al actualizar usuario': 
+        'Error al actualizar usuario'
+    };
+
+    if (translations[message]) {
+      return translations[message];
+    }
+
+    const lowerMessage = message.toLowerCase();
+    for (const [key, value] of Object.entries(translations)) {
+      if (lowerMessage.includes(key.toLowerCase())) {
+        return value;
+      }
+    }
+
+    return message;
+  }
+
   onAceptarConfirmacion(): void {
     this.confirmModalVisible = false;
 
-    // Manejar el rechazo de usuario
     if (this.pendingAction === 'reject') {
       this.ejecutarRechazoUsuario();
       return;
@@ -544,7 +573,6 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
           switchMap((updateResponse) => {
             console.log('✅ Usuario actualizado exitosamente:', updateResponse);
             
-            // Validar que tenemos el ID del usuario para la activación
             const userId = this.user?.idUsuario || this.user?.noUsuario;
             if (!userId) {
               console.error('❌ Error: ID de usuario no disponible para activación');
@@ -603,11 +631,11 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
             let errorMsg = '';
             if (error.error && error.error.mensaje) {
-              errorMsg = error.error.mensaje;
+              errorMsg = this.translateErrorMessage(error.error.mensaje);
             } else if (error.error && typeof error.error === 'string') {
-              errorMsg = error.error;
+              errorMsg = this.translateErrorMessage(error.error);
             } else if (error.message) {
-              errorMsg = error.message;
+              errorMsg = this.translateErrorMessage(error.message);
             } else {
               errorMsg = 'Error inesperado al procesar la solicitud';
             }
@@ -667,11 +695,13 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
           let errorMsg = '';
           if (error.error && error.error.mensaje) {
-            errorMsg = error.error.mensaje;
+            errorMsg = this.translateErrorMessage(error.error.mensaje);
+          } else if (error.error && error.error.error && error.error.error.mensaje) {
+            errorMsg = this.translateErrorMessage(error.error.error.mensaje);
           } else if (error.error && typeof error.error === 'string') {
-            errorMsg = error.error;
+            errorMsg = this.translateErrorMessage(error.error);
           } else if (error.message) {
-            errorMsg = error.message;
+            errorMsg = this.translateErrorMessage(error.message);
           } else {
             errorMsg = 'Error inesperado al procesar la solicitud';
           }
@@ -747,11 +777,11 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
 
           let errorMsg = '';
           if (error.error && error.error.mensaje) {
-            errorMsg = error.error.mensaje;
+            errorMsg = this.translateErrorMessage(error.error.mensaje);
           } else if (error.error && typeof error.error === 'string') {
-            errorMsg = error.error;
+            errorMsg = this.translateErrorMessage(error.error);
           } else if (error.message) {
-            errorMsg = error.message;
+            errorMsg = this.translateErrorMessage(error.message);
           } else {
             errorMsg = 'Error inesperado al rechazar la solicitud';
           }
@@ -1144,5 +1174,31 @@ export class UserFormModal implements OnInit, OnChanges, OnDestroy {
   trackByCargo(index: number, item: any): any {
     return item?.idCargo || index;
   }
+
+  onIdentificacionKeyPress(event: KeyboardEvent): boolean {
+    if (event.key === 'Backspace' || event.key === 'Delete' || event.key === 'Tab' || 
+        event.key === 'Escape' || event.key === 'Enter' || event.key === 'ArrowLeft' || 
+        event.key === 'ArrowRight' || event.key === 'Home' || event.key === 'End' ||
+        (event.ctrlKey || event.metaKey) && (event.key === 'a' || event.key === 'c' || 
+        event.key === 'v' || event.key === 'x')) {
+      return true;
+    }
+    
+    if (!/[0-9]/.test(event.key)) {
+      event.preventDefault();
+      return false;
+    }
+    return true;
+  }
+
+  onIdentificacionInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value.replace(/[^0-9]/g, '');
+    if (value !== input.value) {
+      input.value = value;
+      this.userForm.get('identificacion')?.setValue(value, { emitEvent: false });
+    }
+  }
+
 
 }

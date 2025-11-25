@@ -1,8 +1,11 @@
 import { Component, Input, Output, EventEmitter, OnDestroy, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { AuthTokenService, TokenValidationRequest, TokenValidationResponse, UserAuthType } from '../../services/auth-token.service';
+import { AuthService } from '../../services/auth.service';
 import { DobleAutenticacionTipo } from '../../interfaces/common.interfaces';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-auth-approval-modal',
@@ -23,11 +26,10 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
   tokenCode = '';
   timeRemaining = 90;
   private timerInterval?: number;
-  private readonly TIMER_DURATION = 90; // segundos
+  private readonly TIMER_DURATION = 90;
   private failedAttempts = 0;
   private readonly MAX_FAILED_ATTEMPTS = 3;
 
-  // Dynamic UI state (based on user auth type)
   authType: DobleAutenticacionTipo = DobleAutenticacionTipo.TOKEN_SEGURIDAD;
   instructions: string[] = [];
   buttonText = 'Validar Código';
@@ -35,8 +37,11 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
   errorMessage = '';
   infoMessage = '';
 
-  constructor(private authTokenService: AuthTokenService) {}
-
+  constructor(
+    private authTokenService: AuthTokenService,
+    private http: HttpClient,
+    private authService: AuthService
+  ) {}
 
   ngOnInit(): void {
     if (this.isVisible) {
@@ -139,31 +144,47 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
       return;
     }
 
+    if (!this.documentId) {
+      this.errorMessage = 'Error: No se encontró el ID de la solicitud';
+      return;
+    }
+
+    const currentUser = this.authService.getCurrentUserValue();
+    if (!currentUser || !currentUser.idUsuario) {
+      this.errorMessage = 'Error: Usuario no autenticado';
+      return;
+    }
+
+
     this.isLoading = true;
     this.errorMessage = '';
     this.infoMessage = '';
 
-    const request: TokenValidationRequest = {
-      token: this.tokenCode.trim(),
-      action: this.action,
-      documentId: this.documentId ?? undefined
+    const endpoint = `${environment.apiUrl}/solicitudes/${this.documentId}/validar-2fa`;
+    const payload = {
+      usuarioId: currentUser.idUsuario,
+      codigo2FA: this.tokenCode.trim()
     };
 
-    this.authTokenService.validateToken(request).subscribe({
-      next: (response: TokenValidationResponse) => {
+    const token = this.authService.getToken();
+    const headers: { [key: string]: string } = {
+      'Content-Type': 'application/json'
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    this.http.post<any>(endpoint, payload, { headers }).subscribe({
+      next: (response) => {
         this.isLoading = false;
         
-        if (response.success && response.valid) {
-          // Código válido, resetear contador
+        if (response.valido === true) {
           this.failedAttempts = 0;
           this.validate.emit({ token: this.tokenCode.trim(), action: this.action });
         } else {
-          // Código inválido, incrementar contador de intentos fallidos
           this.failedAttempts++;
           
-          // Si es el 4to intento fallido, mostrar alerta de sesión expirada y cerrar sesión
           if (this.failedAttempts >= this.MAX_FAILED_ATTEMPTS + 1) {
-            // Mostrar mensaje de límite excedido solo en el último intento
             this.errorMessage = 'Ha excedido el límite de intentos para ingresar el código, por seguridad esta sesión será finalizada y será redirigido a inicio de sesión.';
             this.infoMessage = '';
             alert('Límite de intentos excedido por seguridad. Esta sesión será finalizada.');
@@ -172,22 +193,24 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
               this.logoutRequired.emit();
             }, 5000);
           } else {
-            // Mostrar mensaje de error con información de intentos restantes en el mensaje rojo
             const remainingAttempts = (this.MAX_FAILED_ATTEMPTS + 1) - this.failedAttempts;
-            this.errorMessage = `Código inválido. Valídelo e inténtelo de nuevo. Intentos restantes: ${remainingAttempts}`;
-            this.infoMessage = ''; // Limpiar mensaje informativo cuando hay error
+            const errorMsg = response.message || 'Código inválido';
+            this.errorMessage = `${errorMsg}. Valídelo e inténtelo de nuevo. Intentos restantes: ${remainingAttempts}`;
+            this.infoMessage = '';
           }
         }
       },
       error: (error) => {
         this.isLoading = false;
-        // Solo incrementar contador si es un error de validación (no de conexión)
-        if (error.status === 400 || error.status === 401) {
+                
+        const errorResponse = error.error;
+        const isInvalidCode = errorResponse?.code === 'CODIGO_2FA_INVALIDO' || 
+                             error.status === 400 || 
+                             error.status === 401;
+                             if (isInvalidCode) {
           this.failedAttempts++;
           
-          // Si es el 4to intento fallido, mostrar alerta de sesión expirada y cerrar sesión
           if (this.failedAttempts >= this.MAX_FAILED_ATTEMPTS + 1) {
-            // Mostrar mensaje de límite excedido solo en el último intento
             this.errorMessage = 'Ha excedido el límite de intentos para ingresar el código, por seguridad esta sesión será finalizada y será redirigido a inicio de sesión.';
             this.infoMessage = '';
             alert('Límite de intentos excedido por seguridad. Esta sesión será finalizada.');
@@ -196,13 +219,12 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
               this.logoutRequired.emit();
             }, 5000);
           } else {
-            // Mostrar mensaje de error con información de intentos restantes en el mensaje rojo
             const remainingAttempts = (this.MAX_FAILED_ATTEMPTS + 1) - this.failedAttempts;
-            this.errorMessage = `Código inválido. Valídelo e inténtelo de nuevo. Intentos restantes: ${remainingAttempts}`;
-            this.infoMessage = ''; // Limpiar mensaje informativo cuando hay error
+            const errorMsg = errorResponse?.message || 'Código inválido';
+            this.errorMessage = `${errorMsg}. Valídelo e inténtelo de nuevo. Intentos restantes: ${remainingAttempts}`;
+            this.infoMessage = '';
           }
         } else {
-          // Error de conexión, no incrementar contador
           this.errorMessage = 'Error de conexión. Intente nuevamente.';
         }
       }

@@ -460,7 +460,17 @@ export class Users implements OnInit, OnDestroy {
 
     if (this.currentAction === 'eliminarQR') {
       if (this.currentUser && this.currentUser.usuario) {
-        this.authService.removeUserQR(this.currentUser.usuario, password)
+        const usuarioConectado = this.authService.getCurrentUserValue();
+        if (!usuarioConectado || !usuarioConectado.usuario) {
+          alert('Error: No se encontró la información del usuario conectado. Por favor, intente de nuevo.');
+          this.isPasswordModalVisible = false;
+          this.userStateService.clearPendingOperation();
+          this.currentUser = null;
+          this.currentAction = '';
+          return;
+        }
+
+        this.authService.removeUserQR(this.currentUser.usuario, password, usuarioConectado.usuario)
           .pipe(takeUntil(this.destroy$))
           .subscribe({
             next: (response: any) => {
@@ -508,6 +518,37 @@ export class Users implements OnInit, OnDestroy {
 
   handlePasswordValidationError(error: string): void {}
 
+  private translateErrorMessage(message: string): string {
+    if (!message) return message;
+
+    const translations: { [key: string]: string } = {
+      'Transaction silently rolled back because it has been marked as rollback-only': 
+        'La transacción fue revertida porque ha sido marcada como solo reversión. Por favor, verifica los datos e intenta nuevamente.',
+      'Transaction silently rolled back': 
+        'La transacción fue revertida. Por favor, verifica los datos e intenta nuevamente.',
+      'rollback-only': 
+        'La transacción fue revertida. Por favor, verifica los datos e intenta nuevamente.',
+      'Error al crear usuario': 
+        'Error al crear usuario',
+      'Error al actualizar usuario': 
+        'Error al actualizar usuario'
+    };
+
+    if (translations[message]) {
+      return translations[message];
+    }
+
+    const lowerMessage = message.toLowerCase();
+    for (const [key, value] of Object.entries(translations)) {
+      if (lowerMessage.includes(key.toLowerCase())) {
+        return value;
+      }
+    }
+
+    return message;
+  }
+
+
   confirmAction(password: string): void {
     this.passwordModalError = '';
     
@@ -541,7 +582,17 @@ export class Users implements OnInit, OnDestroy {
                 this.userStateService.clearPendingOperation();
               },
               error: (error: any) => {
-                alert('Error al crear el usuario: ' + (error.message || 'Error desconocido'));
+                let errorMsg = '';
+                if (error.error && error.error.mensaje) {
+                  errorMsg = this.translateErrorMessage(error.error.mensaje);
+                } else if (error.error && error.error.message) {
+                  errorMsg = this.translateErrorMessage(error.error.message);
+                } else if (error.message) {
+                  errorMsg = this.translateErrorMessage(error.message);
+                } else {
+                  errorMsg = 'Error desconocido al crear el usuario';
+                }
+                alert('Error al crear el usuario: ' + errorMsg);
                 this.isPasswordModalVisible = false;
                 this.userStateService.clearPendingOperation();
               }
@@ -561,7 +612,17 @@ export class Users implements OnInit, OnDestroy {
                 this.userStateService.clearPendingOperation();
               },
               error: (error: any) => {
-                alert('Error al actualizar el usuario: ' + (error.message || 'Error desconocido'));
+                let errorMsg = '';
+                if (error.error && error.error.mensaje) {
+                  errorMsg = this.translateErrorMessage(error.error.mensaje);
+                } else if (error.error && error.error.message) {
+                  errorMsg = this.translateErrorMessage(error.error.message);
+                } else if (error.message) {
+                  errorMsg = this.translateErrorMessage(error.message);
+                } else {
+                  errorMsg = 'Error desconocido al actualizar el usuario';
+                }
+                alert('Error al actualizar el usuario: ' + errorMsg);
                 this.isPasswordModalVisible = false;
                 this.userStateService.clearPendingOperation();
               }
@@ -849,7 +910,17 @@ export class Users implements OnInit, OnDestroy {
           },
           error: (error: any) => {
             console.error('Error cambiando contraseña:', error);
-            alert('Error al cambiar la contraseña: ' + (error.message || 'Error desconocido'));
+            let errorMsg = '';
+            if (error.error && error.error.mensaje) {
+              errorMsg = this.translateErrorMessage(error.error.mensaje);
+            } else if (error.error && error.error.message) {
+              errorMsg = this.translateErrorMessage(error.error.message);
+            } else if (error.message) {
+              errorMsg = this.translateErrorMessage(error.message);
+            } else {
+              errorMsg = 'Error desconocido al cambiar la contraseña';
+            }
+            alert('Error al cambiar la contraseña: ' + errorMsg);
           }
         });
     }
