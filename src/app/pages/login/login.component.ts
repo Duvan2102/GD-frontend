@@ -68,6 +68,7 @@ export class LoginComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error en login:', error);
+          this.authService.clear2FAState();
           this.handleLoginError(error);
           this.isLoading = false;
         }
@@ -135,7 +136,19 @@ export class LoginComponent implements OnInit {
           this.errorMessage = 'El correo electrónico no está configurado. Contacta al administrador.';
           break;
         default:
-          this.errorMessage = error.error.message || 'Error de autenticación';
+          const errorMsg = error.error.message || '';
+          if (errorMsg.toLowerCase().includes('user is disabled')) {
+            this.errorMessage = 'Usuario deshabilitado. Contacta al administrador.';
+          } else {
+            this.errorMessage = errorMsg || 'Error de autenticación';
+          }
+      }
+    } else if (error.error?.message) {
+      const errorMsg = error.error.message;
+      if (errorMsg.toLowerCase().includes('user is disabled')) {
+        this.errorMessage = 'Usuario deshabilitado. Contacta al administrador.';
+      } else {
+        this.errorMessage = errorMsg;
       }
     } else if (error.status === 500) {
       this.errorMessage = 'Error del servidor. Si el problema persiste, contacta al administrador del sistema.';
