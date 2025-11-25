@@ -34,7 +34,7 @@ export class RequestsTable {
   @Input() itemsPerPage: number = 10;
   @Input() detailedView: boolean = false;
   @Input() isToggleActive: boolean = false;
-  @Input() viewType: 'approvals' | 'create-request' | 'approval-details' = 'approvals';
+  @Input() viewType: 'approvals' | 'approval-process' | 'create-request' | 'approval-details' = 'approvals';
 
   @ViewChild('tooltipElement') tooltipElement!: ElementRef;
 

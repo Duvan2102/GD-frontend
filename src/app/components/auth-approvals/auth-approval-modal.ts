@@ -1,8 +1,11 @@
 import { Component, Input, Output, EventEmitter, OnDestroy, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { AuthTokenService, TokenValidationRequest, TokenValidationResponse, UserAuthType } from '../../services/auth-token.service';
+import { AuthService } from '../../services/auth.service';
 import { DobleAutenticacionTipo } from '../../interfaces/common.interfaces';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-auth-approval-modal',
@@ -35,7 +38,11 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
   errorMessage = '';
   infoMessage = '';
 
-  constructor(private authTokenService: AuthTokenService) {}
+  constructor(
+    private authTokenService: AuthTokenService,
+    private http: HttpClient,
+    private authService: AuthService
+  ) {}
 
 
   ngOnInit(): void {
@@ -139,21 +146,40 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
       return;
     }
 
+    if (!this.documentId) {
+      this.errorMessage = 'Error: No se encontró el ID de la solicitud';
+      return;
+    }
+
+    const currentUser = this.authService.getCurrentUserValue();
+    if (!currentUser || !currentUser.idUsuario) {
+      this.errorMessage = 'Error: Usuario no autenticado';
+      return;
+    }
+
     this.isLoading = true;
     this.errorMessage = '';
     this.infoMessage = '';
 
-    const request: TokenValidationRequest = {
-      token: this.tokenCode.trim(),
-      action: this.action,
-      documentId: this.documentId ?? undefined
+    const endpoint = `${environment.apiUrl}/solicitudes/${this.documentId}/validar-2fa`;
+    const payload = {
+      usuarioId: currentUser.idUsuario,
+      codigo2FA: this.tokenCode.trim()
     };
 
-    this.authTokenService.validateToken(request).subscribe({
-      next: (response: TokenValidationResponse) => {
+    const token = this.authService.getToken();
+    const headers: { [key: string]: string } = {
+      'Content-Type': 'application/json'
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    this.http.post<any>(endpoint, payload, { headers }).subscribe({
+      next: (response) => {
         this.isLoading = false;
         
-        if (response.success && response.valid) {
+        if (response.valido === true) {
           // Código válido, resetear contador
           this.failedAttempts = 0;
           this.validate.emit({ token: this.tokenCode.trim(), action: this.action });
@@ -174,15 +200,22 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
           } else {
             // Mostrar mensaje de error con información de intentos restantes en el mensaje rojo
             const remainingAttempts = (this.MAX_FAILED_ATTEMPTS + 1) - this.failedAttempts;
-            this.errorMessage = `Código inválido. Valídelo e inténtelo de nuevo. Intentos restantes: ${remainingAttempts}`;
+            const errorMsg = response.message || 'Código inválido';
+            this.errorMessage = `${errorMsg}. Valídelo e inténtelo de nuevo. Intentos restantes: ${remainingAttempts}`;
             this.infoMessage = ''; // Limpiar mensaje informativo cuando hay error
           }
         }
       },
       error: (error) => {
         this.isLoading = false;
+        
+        const errorResponse = error.error;
+        const isInvalidCode = errorResponse?.code === 'CODIGO_2FA_INVALIDO' || 
+                             error.status === 400 || 
+                             error.status === 401;
+        
         // Solo incrementar contador si es un error de validación (no de conexión)
-        if (error.status === 400 || error.status === 401) {
+        if (isInvalidCode) {
           this.failedAttempts++;
           
           // Si es el 4to intento fallido, mostrar alerta de sesión expirada y cerrar sesión
@@ -198,7 +231,8 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
           } else {
             // Mostrar mensaje de error con información de intentos restantes en el mensaje rojo
             const remainingAttempts = (this.MAX_FAILED_ATTEMPTS + 1) - this.failedAttempts;
-            this.errorMessage = `Código inválido. Valídelo e inténtelo de nuevo. Intentos restantes: ${remainingAttempts}`;
+            const errorMsg = errorResponse?.message || 'Código inválido';
+            this.errorMessage = `${errorMsg}. Valídelo e inténtelo de nuevo. Intentos restantes: ${remainingAttempts}`;
             this.infoMessage = ''; // Limpiar mensaje informativo cuando hay error
           }
         } else {

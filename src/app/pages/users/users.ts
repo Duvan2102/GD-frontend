@@ -66,9 +66,8 @@ export class Users implements OnInit, OnDestroy {
   passwordModalError: string = '';
   confirmModalVisible = false;
   confirmModalMessage = '';
-  confirmModalAction: 'inactivar' | 'activar' | 'eliminarQR' | 'rechazar' | null = null;
+  confirmModalAction: 'inactivar' | 'activar' | 'eliminarQR' | 'rechazar' | 'marcarEliminado' | null = null;
 
-  // Sistema de alertas externas
   externalAlerts: Array<{
     type: 'success' | 'danger' | 'info' | 'warning';
     title: string;
@@ -88,7 +87,7 @@ export class Users implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    this.userStateService.clearPendingOperation(); // Limpiar al destruir
+    this.userStateService.clearPendingOperation();
   }
 
   cargarUsuarios(): void {
@@ -149,17 +148,17 @@ export class Users implements OnInit, OnDestroy {
 
   filtrarUsuarios() {
     let filtrados = this.usuarios.filter(u => {
-      if (this.activos) {
-        const estadoDescripcion = typeof u.estado === 'object'
-          ? (u.estado.descripcion || '').toString().trim().toUpperCase()
-          : String(u.estado || '').trim().toUpperCase();
+      const estadoDescripcion = typeof u.estado === 'object'
+        ? (u.estado.descripcion || '').toString().trim().toUpperCase()
+        : String(u.estado || '').trim().toUpperCase();
 
+      if (estadoDescripcion === 'ELIMINADO') {
+        return false;
+      }
+
+      if (this.activos) {
         return estadoDescripcion === 'ACTIVO' || estadoDescripcion === 'PENDIENTE';
       } else {
-        const estadoDescripcion = typeof u.estado === 'object'
-          ? (u.estado.descripcion || '').toString().trim().toUpperCase()
-          : String(u.estado || '').trim().toUpperCase();
-
         return estadoDescripcion === 'INACTIVO';
       }
     });
@@ -242,6 +241,10 @@ export class Users implements OnInit, OnDestroy {
         this.mensajePasswordModal = 'Ingrese su contraseña para eliminar el código QR del usuario.';
         this.passwordModalError = '';
         this.isPasswordModalVisible = true;
+        break;
+
+      case 'marcarEliminado':
+        this.abrirConfirmModal('marcarEliminado', u);
         break;
 
       default:
@@ -457,7 +460,17 @@ export class Users implements OnInit, OnDestroy {
 
     if (this.currentAction === 'eliminarQR') {
       if (this.currentUser && this.currentUser.usuario) {
-        this.authService.removeUserQR(this.currentUser.usuario, password)
+        const usuarioConectado = this.authService.getCurrentUserValue();
+        if (!usuarioConectado || !usuarioConectado.usuario) {
+          alert('Error: No se encontró la información del usuario conectado. Por favor, intente de nuevo.');
+          this.isPasswordModalVisible = false;
+          this.userStateService.clearPendingOperation();
+          this.currentUser = null;
+          this.currentAction = '';
+          return;
+        }
+
+        this.authService.removeUserQR(this.currentUser.usuario, password, usuarioConectado.usuario)
           .pipe(takeUntil(this.destroy$))
           .subscribe({
             next: (response: any) => {
@@ -505,6 +518,36 @@ export class Users implements OnInit, OnDestroy {
 
   handlePasswordValidationError(error: string): void {}
 
+  private translateErrorMessage(message: string): string {
+    if (!message) return message;
+
+    const translations: { [key: string]: string } = {
+      'Transaction silently rolled back because it has been marked as rollback-only': 
+        'La transacción fue revertida porque ha sido marcada como solo reversión. Por favor, verifica los datos e intenta nuevamente.',
+      'Transaction silently rolled back': 
+        'La transacción fue revertida. Por favor, verifica los datos e intenta nuevamente.',
+      'rollback-only': 
+        'La transacción fue revertida. Por favor, verifica los datos e intenta nuevamente.',
+      'Error al crear usuario': 
+        'Error al crear usuario',
+      'Error al actualizar usuario': 
+        'Error al actualizar usuario'
+    };
+
+    if (translations[message]) {
+      return translations[message];
+    }
+
+    const lowerMessage = message.toLowerCase();
+    for (const [key, value] of Object.entries(translations)) {
+      if (lowerMessage.includes(key.toLowerCase())) {
+        return value;
+      }
+    }
+
+    return message;
+  }
+
   confirmAction(password: string): void {
     this.passwordModalError = '';
     
@@ -538,7 +581,17 @@ export class Users implements OnInit, OnDestroy {
                 this.userStateService.clearPendingOperation();
               },
               error: (error: any) => {
-                alert('Error al crear el usuario: ' + (error.message || 'Error desconocido'));
+                let errorMsg = '';
+                if (error.error && error.error.mensaje) {
+                  errorMsg = this.translateErrorMessage(error.error.mensaje);
+                } else if (error.error && error.error.message) {
+                  errorMsg = this.translateErrorMessage(error.error.message);
+                } else if (error.message) {
+                  errorMsg = this.translateErrorMessage(error.message);
+                } else {
+                  errorMsg = 'Error desconocido al crear el usuario';
+                }
+                alert('Error al crear el usuario: ' + errorMsg);
                 this.isPasswordModalVisible = false;
                 this.userStateService.clearPendingOperation();
               }
@@ -558,7 +611,17 @@ export class Users implements OnInit, OnDestroy {
                 this.userStateService.clearPendingOperation();
               },
               error: (error: any) => {
-                alert('Error al actualizar el usuario: ' + (error.message || 'Error desconocido'));
+                let errorMsg = '';
+                if (error.error && error.error.mensaje) {
+                  errorMsg = this.translateErrorMessage(error.error.mensaje);
+                } else if (error.error && error.error.message) {
+                  errorMsg = this.translateErrorMessage(error.error.message);
+                } else if (error.message) {
+                  errorMsg = this.translateErrorMessage(error.message);
+                } else {
+                  errorMsg = 'Error desconocido al actualizar el usuario';
+                }
+                alert('Error al actualizar el usuario: ' + errorMsg);
                 this.isPasswordModalVisible = false;
                 this.userStateService.clearPendingOperation();
               }
@@ -694,6 +757,47 @@ export class Users implements OnInit, OnDestroy {
         }
         break;
 
+      case 'marcarEliminado':
+        if (this.currentUser && this.currentUser.idUsuario) {
+          this.userService.marcarUsuarioEliminado(this.currentUser.idUsuario)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (response: any) => {
+                this.mostrarModalSuccess('Usuario marcado como eliminado con éxito', 'Aceptar');
+                this.userService.clearUsersCache();
+                this.cargarUsuarios();
+                this.isPasswordModalVisible = false;
+                this.userStateService.clearPendingOperation();
+                this.currentUser = null;
+                this.currentAction = '';
+              },
+              error: (error: any) => {
+                let mensajeError = 'Error al marcar el usuario como eliminado';
+                
+                if (error.status === 0) {
+                  mensajeError = 'Error de conexión con el servidor. Verifica tu conexión a internet.';
+                } else if (error.status === 401) {
+                  mensajeError = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
+                } else if (error.status === 403) {
+                  mensajeError = 'No tienes permisos para realizar esta operación.';
+                } else if (error.status === 404) {
+                  mensajeError = 'Usuario no encontrado.';
+                } else if (error.error?.message) {
+                  mensajeError = error.error.message;
+                } else if (error.message) {
+                  mensajeError = error.message;
+                }
+                
+                this.isPasswordModalVisible = false;
+                this.mostrarModalSuccess(mensajeError, 'Entendido');
+                this.userStateService.clearPendingOperation();
+                this.currentUser = null;
+                this.currentAction = '';
+              }
+            });
+        }
+        break;
+
       default:
         this.isPasswordModalVisible = false;
         this.userStateService.clearPendingOperation();
@@ -714,7 +818,7 @@ export class Users implements OnInit, OnDestroy {
   this.cargarUsuarios();
 }
 
-  abrirConfirmModal(tipo: 'inactivar' | 'activar' | 'eliminarQR' | 'rechazar', usuario: Usuario) {
+  abrirConfirmModal(tipo: 'inactivar' | 'activar' | 'eliminarQR' | 'rechazar' | 'marcarEliminado', usuario: Usuario) {
     this.confirmModalAction = tipo;
     this.currentUser = usuario;
     this.passwordModalError = '';
@@ -732,6 +836,9 @@ export class Users implements OnInit, OnDestroy {
         break;
       case 'rechazar':
         this.confirmModalMessage = '¿Está seguro de que desea rechazar la solicitud de este usuario? El usuario quedará en estado INACTIVO.';
+        break;
+      case 'marcarEliminado':
+        this.confirmModalMessage = '¿Está seguro de que desea marcar este usuario como eliminado? El usuario será ocultado de la lista.';
         break;
     }
 
@@ -772,6 +879,12 @@ export class Users implements OnInit, OnDestroy {
         this.currentAction = 'rechazar';
         this.isPasswordModalVisible = true;
         break;
+        
+      case 'marcarEliminado':
+        this.mensajePasswordModal = 'Ingrese su contraseña para marcar el usuario como eliminado.';
+        this.currentAction = 'marcarEliminado';
+        this.isPasswordModalVisible = true;
+        break;
     }
   }
 
@@ -796,18 +909,26 @@ export class Users implements OnInit, OnDestroy {
           },
           error: (error: any) => {
             console.error('Error cambiando contraseña:', error);
-            alert('Error al cambiar la contraseña: ' + (error.message || 'Error desconocido'));
+            let errorMsg = '';
+            if (error.error && error.error.mensaje) {
+              errorMsg = this.translateErrorMessage(error.error.mensaje);
+            } else if (error.error && error.error.message) {
+              errorMsg = this.translateErrorMessage(error.error.message);
+            } else if (error.message) {
+              errorMsg = this.translateErrorMessage(error.message);
+            } else {
+              errorMsg = 'Error desconocido al cambiar la contraseña';
+            }
+            alert('Error al cambiar la contraseña: ' + errorMsg);
           }
         });
     }
   }
 
-  // Métodos para alertas externas
   showExternalAlert(type: 'success' | 'danger' | 'info' | 'warning', title: string, message: string, duration: number = 5000): void {
     const alertItem = { type, title, message };
     this.externalAlerts.push(alertItem);
 
-    // Auto-cerrar después de la duración especificada
     if (duration > 0) {
       setTimeout(() => {
         const index = this.externalAlerts.indexOf(alertItem);
@@ -852,6 +973,18 @@ export class Users implements OnInit, OnDestroy {
         case 'identificacion':
           valueA = a.identificacion || '';
           valueB = b.identificacion || '';
+          break;
+        case 'nombres':
+          valueA = (a.nombres || '').toLowerCase();
+          valueB = (b.nombres || '').toLowerCase();
+          break;
+        case 'apellidos':
+          valueA = (a.apellidos || '').toLowerCase();
+          valueB = (b.apellidos || '').toLowerCase();
+          break;
+        case 'usuario':
+          valueA = (a.usuario || '').toLowerCase();
+          valueB = (b.usuario || '').toLowerCase();
           break;
         case 'estado':
           valueA = typeof a.estado === 'object' 

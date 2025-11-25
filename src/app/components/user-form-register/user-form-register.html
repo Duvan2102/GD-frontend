@@ -45,6 +45,9 @@
                 type="text" 
                 class="form-control" 
                 formControlName="identification"
+                (keypress)="onIdentificacionKeyPress($event)"
+                (input)="onIdentificacionInput($event)"
+                inputmode="numeric"
                 [class.is-invalid]="form.get('identification')?.invalid && form.get('identification')?.touched"
                 aria-describedby="identificacion-error"
                 aria-invalid="form.get('identification')?.invalid">
