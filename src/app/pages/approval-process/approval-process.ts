@@ -73,6 +73,7 @@ export class ApprovalProcess implements OnInit, OnDestroy {
   documentToApproveData: ApprovalDocumentViewData | null = null;
   isLoadingDetails = false;
   currentUser: UsuarioData | null = null;
+  isProcessorMode = false; // Indica si el usuario actual es procesador
 
   isDocumentViewVisible = false;
   documentViewData: DocumentViewData | null = null;
@@ -122,23 +123,25 @@ export class ApprovalProcess implements OnInit, OnDestroy {
     if (!this.currentUser) return;
     const uid = this.currentUser.idUsuario;
     
-    // Obtener todas las aprobaciones asignadas al usuario como aprobador
-    this.approvalService.getApprovalsForApprover(uid, this.allUsers).subscribe({
+    // Obtener todas las solicitudes asignadas al usuario como procesador (estado APROB_PENDIENTE)
+    // getAll=true obtiene todas las páginas automáticamente
+    this.approvalService.getApprovalsForProcessor(uid, this.allUsers, 0, 100, true).subscribe({
       next: (list) => {
-        // Filtrar solo las que están en estados APROB-PENDIENTE o APROB-POCESADO
-        // y que estén asignadas al usuario como procesador
-        this.pendingApprovals = (list || []).filter(approval => {
-          const status = approval.status;
-          const isProcessState = status === 'APROB-PENDIENTE' || status === 'APROB-POCESADO';
-          
-          // Verificar que el usuario esté asignado como procesador
-          const isAssignedAsProcessor = this.isUserAssignedAsProcessor(approval, uid);
-          
-          return isProcessState && isAssignedAsProcessor;
-        });
+        // El endpoint ya devuelve solo las asignadas al usuario como procesador
+        const solicitudes = list || [];
+        console.log(`[Approval Process] Solicitudes para procesar recibidas: ${solicitudes.length}`);
+        if (solicitudes.length > 0) {
+          console.log(`[Approval Process] Estados de las solicitudes:`, solicitudes.map(s => ({ id: s.id, status: s.status })));
+          // Verificar que todas tengan el estado correcto
+          const estados = solicitudes.map(s => s.status);
+          const estadosUnicos = [...new Set(estados)];
+          console.log(`[Approval Process] Estados únicos encontrados:`, estadosUnicos);
+        }
+        this.pendingApprovals = solicitudes;
         this.refreshApprovalsSource();
       },
       error: (error) => {
+        console.error('[Approval Process] Error al obtener solicitudes para procesar:', error);
         this.pendingApprovals = [];
         this.refreshApprovalsSource();
       }
@@ -160,34 +163,13 @@ export class ApprovalProcess implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Verifica si el usuario está asignado como procesador en la solicitud
-   */
-  private isUserAssignedAsProcessor(approval: Approval, userId: number): boolean {
-    if (!approval.fullData) return false;
-    
-    // Buscar en los procesadores asignados (pueden venir en diferentes formatos)
-    const procesadores = approval.fullData.procesadores || 
-                        approval.fullData.procesadoresAsignados || 
-                        approval.fullData.procesadoresPostAprobacion ||
-                        [];
-    
-    // Si no hay procesadores, no está asignado
-    if (!Array.isArray(procesadores) || procesadores.length === 0) {
-      return false;
-    }
-    
-    // Verificar si el usuario está en la lista de procesadores
-    return procesadores.some((proc: any) => {
-      // El procesador puede venir como objeto con usuarioId, idUsuario, noUsuario, o directamente como número
-      const procId = proc?.usuarioId || proc?.idUsuario || proc?.noUsuario || proc?.id || proc;
-      const procIdNum = typeof procId === 'number' ? procId : parseInt(String(procId), 10);
-      return !isNaN(procIdNum) && procIdNum === userId;
-    });
-  }
 
   private refreshApprovalsSource(): void {
     this.approvalsList = this.showOnlyManaged ? this.managedApprovals : this.pendingApprovals;
+    console.log(`[Approval Process] refreshApprovalsSource - showOnlyManaged: ${this.showOnlyManaged}, approvalsList.length: ${this.approvalsList.length}`);
+    if (this.approvalsList.length > 0) {
+      console.log(`[Approval Process] Estados en approvalsList:`, [...new Set(this.approvalsList.map(a => a.status))]);
+    }
     this.applyViewLogic();
   }
 
@@ -205,13 +187,48 @@ export class ApprovalProcess implements OnInit, OnDestroy {
             this.approvalService.updateApproval(requestDetails);
         }
         this.successModalData = requestDetails.fullData;
+        // Detectar si el usuario es procesador
+        this.isProcessorMode = this.detectProcessorMode(requestDetails.fullData, uid);
         this.isDetailModalVisible = true;
       }
       this.isLoadingDetails = false;
     });
   }
 
+  /**
+   * Detecta si el usuario actual es procesador de la solicitud
+   */
+  private detectProcessorMode(data: SuccessModalData | null, userId: number | undefined): boolean {
+    if (!data || !userId) return false;
+    
+    // Verificar si el estado es APROB_PENDIENTE
+    const estado = data.estado;
+    const estadoUpper = estado ? String(estado).toUpperCase().trim() : '';
+    const isAprobPendiente = estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE';
+    
+    if (!isAprobPendiente) return false;
+    
+    // Verificar si el usuario está asignado como procesador
+    const fullData = (data as any).fullData || data;
+    const procesadores = fullData.procesadores || 
+                        fullData.procesadoresAsignados || 
+                        fullData.procesadoresPostAprobacion ||
+                        [];
+    
+    if (!Array.isArray(procesadores) || procesadores.length === 0) {
+      return false;
+    }
+    
+    // Verificar si el usuario está en la lista de procesadores
+    return procesadores.some((proc: any) => {
+      const procId = proc?.usuarioId || proc?.idUsuario || proc?.noUsuario || proc?.id || proc;
+      const procIdNum = typeof procId === 'number' ? procId : parseInt(String(procId), 10);
+      return !isNaN(procIdNum) && procIdNum === userId;
+    });
+  }
+
   applyViewLogic(): void {
+    console.log(`[Approval Process] applyViewLogic - approvalsList.length: ${this.approvalsList.length}, showOnlyManaged: ${this.showOnlyManaged}`);
     const { displayedRequests, totalFiltered } = applyViewLogic(
       this.approvalsList,
       this.showOnlyManaged,
@@ -223,6 +240,7 @@ export class ApprovalProcess implements OnInit, OnDestroy {
       this.tipologias,
       this.allUsers
     );
+    console.log(`[Approval Process] applyViewLogic - totalFiltered: ${totalFiltered}, displayedRequests.length: ${displayedRequests.length}`);
     this.displayedRequests = displayedRequests;
     this.totalFiltered = totalFiltered;
   }
@@ -551,6 +569,12 @@ export class ApprovalProcess implements OnInit, OnDestroy {
   }
 
   handleOpenDocumentToApprove(data: SuccessModalData) {
+    // Detectar si es procesador antes de abrir el documento
+    const uid = this.currentUser?.idUsuario;
+    if (uid) {
+      this.isProcessorMode = this.detectProcessorMode(data, uid);
+    }
+    
     if (data && data.documentoAprobacion) {
       this.documentToApproveData = {
         id: data.id!,
@@ -615,13 +639,23 @@ export class ApprovalProcess implements OnInit, OnDestroy {
       next: (appr) => {
         if (appr) {
           this.isApprovalDocumentViewVisible = false;
-          this.updateRequestStatus(appr.id, 'APROBADO', 'Aprobada');
+          // El endpoint unificado maneja tanto aprobadores como procesadores
+          const status = this.isProcessorMode ? 'APROB-POCESADO' : 'APROBADO';
+          const statusText = this.isProcessorMode ? 'Procesado' : 'Aprobada';
+          this.updateRequestStatus(appr.id, status as any, statusText as any);
           this.subscribeToApprovals();
-          this.successModalService.showSuccess('Aprobación completada', 'La solicitud ha sido aprobada exitosamente y notificada a los usuarios correspondientes.');
+          const message = this.isProcessorMode 
+            ? 'El proceso ha sido completado exitosamente y notificado a los usuarios correspondientes.'
+            : 'La solicitud ha sido aprobada exitosamente y notificada a los usuarios correspondientes.';
+          const title = this.isProcessorMode ? 'Proceso completado' : 'Aprobación completada';
+          this.successModalService.showSuccess(title, message);
         }
       },
       error: (error) => {
-        alert('Error al aprobar la solicitud. Por favor, inténtelo de nuevo.');
+        const errorMessage = this.isProcessorMode 
+          ? 'Error al completar el proceso. Por favor, inténtelo de nuevo.'
+          : 'Error al aprobar la solicitud. Por favor, inténtelo de nuevo.';
+        alert(errorMessage);
         this.isApprovalDocumentViewVisible = true;
       }
     });
@@ -646,7 +680,7 @@ export class ApprovalProcess implements OnInit, OnDestroy {
     });
   }
 
-  private updateRequestStatus(id: string | number, approvalStatus: 'APROBADO' | 'RECHAZADO', fullDataStatus: 'Aprobada' | 'Rechazada') {
+  private updateRequestStatus(id: string | number, approvalStatus: 'APROBADO' | 'RECHAZADO' | 'APROB-POCESADO', fullDataStatus: 'Aprobada' | 'Rechazada' | 'Procesado') {
     this.approvalService.getApprovalDetails(id, this.allUsers, this.currentUser?.idUsuario).subscribe({
       next: (request) => {
         if (request) {
@@ -683,11 +717,136 @@ export class ApprovalProcess implements OnInit, OnDestroy {
   }
 
   handleProcessUpdate(update: ProcessUpdatePayload): void {
-    console.debug('Actualización manual del proceso', update);
-    this.successModalService.showSuccess(
-      'Actualización registrada',
-      'La información se actualizó correctamente y quedó trazada en el proceso.'
-    );
+    if (!this.currentUser?.idUsuario || !update.requestId) {
+      this.successModalService.showSuccess('Error', 'No se puede cargar el proceso. Usuario o solicitud no disponible.');
+      return;
+    }
+
+    const uid = this.currentUser.idUsuario;
+    const archivos = update.attachments || [];
+    const comentario = update.comment?.trim() || '';
+
+    // Validar que haya al menos archivos o comentario
+    if (archivos.length === 0 && !comentario) {
+      this.successModalService.showSuccess(
+        'Información',
+        'Debe proporcionar al menos un archivo o un comentario para cargar el proceso.'
+      );
+      return;
+    }
+
+    // Obtener los detalles de la solicitud para verificar si es el último procesador
+    this.approvalService.getApprovalDetails(update.requestId, this.allUsers, uid).subscribe({
+      next: (requestDetails) => {
+        if (!requestDetails || !requestDetails.fullData) {
+          this.successModalService.showSuccess('Error', 'No se pudieron obtener los detalles de la solicitud.');
+          return;
+        }
+
+        const fullData = requestDetails.fullData;
+        const procesadores = fullData.procesadores || 
+                            fullData.procesadoresAsignados || 
+                            fullData.procesadoresPostAprobacion ||
+                            [];
+
+        // Verificar si el usuario actual es el último procesador
+        const isLastProcessor = this.isLastProcessor(procesadores, uid);
+
+        // Cargar archivos y comentario
+        if (!update.requestId) {
+          this.successModalService.showSuccess('Error', 'ID de solicitud no disponible.');
+          return;
+        }
+
+        const hasFiles = archivos.length > 0;
+        const uploadObservable = hasFiles
+          ? this.approvalService.agregarAdjuntos(update.requestId, uid, archivos, comentario)
+          : this.approvalService.agregarAdjuntos(update.requestId, uid, [], comentario);
+
+        uploadObservable.subscribe({
+          next: () => {
+            // Si es el último procesador, aprobar la solicitud (cambiar estado a APROB-POCESADO)
+            if (isLastProcessor && update.requestId) {
+              this.approvalService.aprobarSolicitud(update.requestId, uid, comentario || 'Proceso completado').subscribe({
+                next: (appr) => {
+                  if (appr) {
+                    this.successModalService.showSuccess(
+                      'Proceso completado',
+                      'El proceso ha sido completado exitosamente. La solicitud ha cambiado a estado APROB-POCESADO.'
+                    );
+                    // Cerrar el modal y recargar la lista
+                    this.isDetailModalVisible = false;
+                    this.successModalData = null;
+                    this.subscribeToApprovals();
+                  }
+                },
+                error: (error) => {
+                  console.error('Error al completar el proceso:', error);
+                  this.successModalService.showSuccess(
+                    'Error',
+                    'Los archivos y comentario se cargaron, pero hubo un error al completar el proceso. Por favor, inténtelo de nuevo.'
+                  );
+                  // Recargar los detalles
+                  if (update.requestId) {
+                    this.onManage(String(update.requestId));
+                  }
+                }
+              });
+            } else {
+              // No es el último procesador, solo mostrar mensaje de éxito
+              this.successModalService.showSuccess(
+                'Proceso cargado',
+                'El proceso se cargó correctamente. El siguiente procesador puede continuar con el proceso.'
+              );
+              // Cerrar el modal y recargar la lista
+              this.isDetailModalVisible = false;
+              this.successModalData = null;
+              this.subscribeToApprovals();
+            }
+          },
+          error: (error) => {
+            console.error('Error al cargar el proceso:', error);
+            let errorMessage = 'Error al cargar el proceso. Por favor, inténtelo de nuevo.';
+            if (error.status === 400) {
+              errorMessage = error.error?.message || 'Datos inválidos';
+            } else if (error.status === 413) {
+              errorMessage = 'Los archivos son demasiado grandes. El tamaño total no debe exceder el límite permitido.';
+            }
+            this.successModalService.showSuccess('Error', errorMessage);
+          }
+        });
+      },
+      error: (error) => {
+        console.error('Error al obtener detalles de la solicitud:', error);
+        this.successModalService.showSuccess('Error', 'No se pudieron obtener los detalles de la solicitud.');
+      }
+    });
+  }
+
+  /**
+   * Verifica si el usuario actual es el último procesador en la lista
+   */
+  private isLastProcessor(procesadores: any[], userId: number): boolean {
+    if (!Array.isArray(procesadores) || procesadores.length === 0) {
+      return false;
+    }
+
+    // Normalizar los IDs de procesadores
+    const procesadorIds = procesadores.map((proc: any) => {
+      const procId = proc?.usuarioId || proc?.idUsuario || proc?.noUsuario || proc?.id || proc;
+      return typeof procId === 'number' ? procId : parseInt(String(procId), 10);
+    }).filter(id => !isNaN(id));
+
+    // Encontrar el índice del usuario actual
+    const currentUserIndex = procesadorIds.findIndex(id => id === userId);
+    
+    // Si no se encuentra el usuario, no es el último
+    if (currentUserIndex === -1) {
+      return false;
+    }
+
+    // Verificar si es el último en la lista
+    return currentUserIndex === procesadorIds.length - 1;
   }
 
   onToggleManaged(value: boolean): void { this.showOnlyManaged = value; this.currentPage = 1; this.refreshApprovalsSource(); }

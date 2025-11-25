@@ -763,6 +763,118 @@ export class ApprovalService {
     );
   }
 
+  /**
+   * Obtiene las solicitudes asignadas al usuario como procesador (estado APROB_PENDIENTE)
+   * Si se especifica getAll=true, obtiene todas las páginas automáticamente
+   */
+  getApprovalsForProcessor(userId: number, users: Usuario[], page = 0, size = 10, getAll = false): Observable<Approval[]> {
+    const params = new HttpParams()
+      .set('usuarioId', String(userId))
+      .set('page', String(page))
+      .set('size', String(size));
+    const url = `${this.baseUrl}/solicitudes/para-procesar`;
+    return this.http.get<any>(url, { headers: this.headersForUser(userId), params }).pipe(
+      switchMap(res => {
+        // Detectar si la respuesta es paginada
+        let allItems: any[] = [];
+        let totalPages = 1;
+        let currentPage = 0;
+        
+        if (Array.isArray(res)) {
+          allItems = res;
+        } else {
+          const data = res?.data ?? res;
+          if (Array.isArray(data?.content)) {
+            allItems = data.content;
+            totalPages = data.totalPages || 1;
+            currentPage = data.number || 0;
+          } else if (Array.isArray(data)) {
+            allItems = data;
+          }
+        }
+        
+        // Si getAll es true y hay más páginas, obtener todas
+        if (getAll && totalPages > 1 && currentPage < totalPages - 1) {
+          const remainingPages: Observable<any>[] = [];
+          for (let p = currentPage + 1; p < totalPages; p++) {
+            const pageParams = new HttpParams()
+              .set('usuarioId', String(userId))
+              .set('page', String(p))
+              .set('size', String(size));
+            remainingPages.push(
+              this.http.get<any>(url, { headers: this.headersForUser(userId), params: pageParams }).pipe(
+                map(pageRes => {
+                  if (Array.isArray(pageRes)) return pageRes;
+                  const pageData = pageRes?.data ?? pageRes;
+                  return Array.isArray(pageData?.content) ? pageData.content : (Array.isArray(pageData) ? pageData : []);
+                }),
+                catchError(() => of([]))
+              )
+            );
+          }
+          
+          return forkJoin(remainingPages).pipe(
+            map((pages: any[][]) => {
+              // Combinar todas las páginas
+              pages.forEach(pageItems => {
+                allItems = [...allItems, ...pageItems];
+              });
+              return allItems;
+            })
+          );
+        }
+        
+        return of(allItems);
+      }),
+      switchMap((list: any[]) => {
+        const approvals = list.map((item: any) => this.mapServerToApproval(item));
+        
+        // Obtener IDs únicos de creadores que necesitan resolución
+        const creatorIds = [...new Set(approvals
+          .filter((approval: any) => approval._creadorId)
+          .map((approval: any) => approval._creadorId!))];
+        
+        if (creatorIds.length === 0) {
+          return of(approvals);
+        }
+        
+        // Resolver información de usuarios creadores
+        const userRequests = creatorIds.map(creatorId => 
+          this.userService.obtenerUsuarioPorId(creatorId).pipe(
+            catchError(() => of(null))
+          )
+        );
+        
+        return forkJoin(userRequests).pipe(
+          map(resolvedUsers => {
+            const userMap = new Map<number, Usuario>();
+            resolvedUsers.forEach(user => {
+              if (user) {
+                userMap.set(user.noUsuario || (user as any).idUsuario, user);
+              }
+            });
+            
+            // Actualizar approvals con información resuelta
+            return approvals.map((approval: any) => {
+              if (approval._creadorId && userMap.has(approval._creadorId)) {
+                const user = userMap.get(approval._creadorId)!;
+                return {
+                  ...approval,
+                  creatorUser: user.usuario || 'Usuario no encontrado',
+                  creatorFullName: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario no encontrado',
+                  position: this.extractAreaString(user) || 'Funcionario'
+                };
+              }
+              return approval;
+            });
+          })
+        );
+      }),
+      tap(list => this.approvalsSubject.next(list)),
+      catchError(() => of([]))
+    );
+  }
+
   getApprovalDetails(approvalId: string | number, users: Usuario[], userId?: number): Observable<Approval | undefined> {
     const local = this.approvalsSubject.getValue().find(a => a.id.toString() === approvalId.toString());
     const headers = userId ? this.headersForUser(userId) : undefined;
@@ -963,6 +1075,45 @@ export class ApprovalService {
       tap(() => console.log(`Procesadores agregados para solicitud ${solicitudId}`)),
       catchError(error => {
         console.error('Error al agregar procesadores:', error);
+        throw error;
+      })
+    );
+  }
+
+  /**
+   * Agrega adjuntos (archivos) a una solicitud
+   * Opcionalmente puede incluir un comentario para registrar en el proceso
+   */
+  agregarAdjuntos(
+    solicitudId: string | number,
+    usuarioId: number,
+    archivos: File[],
+    comentario?: string
+  ): Observable<any> {
+    const headers = this.headersForUser(usuarioId);
+    const formData = new FormData();
+    
+    // Agregar cada archivo al FormData
+    archivos.forEach((archivo, index) => {
+      formData.append('archivos', archivo);
+    });
+    
+    // Agregar usuarioId como parte del FormData
+    formData.append('usuarioId', String(usuarioId));
+    
+    // Agregar comentario si se proporciona
+    if (comentario && comentario.trim()) {
+      formData.append('comentario', comentario.trim());
+    }
+    
+    return this.http.post<any>(
+      `${this.baseUrl}/solicitudes/${solicitudId}/adjuntos`,
+      formData,
+      { headers }
+    ).pipe(
+      tap(() => console.log(`Adjuntos agregados para solicitud ${solicitudId}`)),
+      catchError(error => {
+        console.error('Error al agregar adjuntos:', error);
         throw error;
       })
     );

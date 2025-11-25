@@ -26,9 +26,10 @@ export function applyViewLogic(
   let result = [...approvalsList];
 
   if (showOnlyManaged) {
-    result = result.filter(req => ['APROBADO', 'RECHAZADO', 'CANCELADA'].includes(req.status));
+    result = result.filter(req => ['APROBADO', 'RECHAZADO', 'CANCELADA', 'APROB-POCESADO'].includes(req.status));
   } else {
-    result = result.filter(req => req.status === 'PENDIENTE');
+    // Incluir tanto PENDIENTE (aprobadores) como APROB-PENDIENTE (procesadores)
+    result = result.filter(req => req.status === 'PENDIENTE' || req.status === 'APROB-PENDIENTE');
   }
 
   if (searchTerm) {

@@ -152,12 +152,12 @@
                   type="button"
                   [disabled]="!canSubmitProcessUpdate()"
                   (click)="onProcessUpdateClick()">
-                  Actualizar
+                  Cargar Proceso
                 </button>
               </div>
 
               <!-- Sección de Asignación de Proceso Post-Aprobación -->
-              <div *ngIf="isAprobPendiente() && data.requiereProceso === true" class="post-approval-process-section">
+              <div *ngIf="!hideAssignProcessors && isAprobPendiente() && data.requiereProceso === true" class="post-approval-process-section">
                 <h3 class="section-subtitle">ASIGNAR PROCESO POST-APROBACIÓN</h3>
                 <p class="post-approval-description">
                   Asigne procesadores que realizarán el proceso post-aprobación de esta solicitud. El proceso se realizará en orden.

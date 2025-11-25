@@ -64,6 +64,7 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   isDetailModalVisible = false;
   successModalData: SuccessModalData | null = null;
   isLoadingDetails = false;
+  isProcessorMode = false; // Indica si el usuario actual es procesador
 
   constructor(
     private approvalService: ApprovalService,
@@ -228,10 +229,48 @@ export class ApprovalDetails implements OnInit, OnDestroy {
       .subscribe(requestDetails => {
         if (requestDetails) {
           this.successModalData = requestDetails.fullData;
+          // Detectar si el usuario es procesador
+          if (uid) {
+            this.isProcessorMode = this.detectProcessorMode(requestDetails.fullData, uid);
+          } else {
+            this.isProcessorMode = false;
+          }
           this.isDetailModalVisible = true;
         }
         this.isLoadingDetails = false;
       });
+  }
+
+  /**
+   * Detecta si el usuario actual es procesador de la solicitud
+   */
+  private detectProcessorMode(data: SuccessModalData | null, userId: number): boolean {
+    if (!data) return false;
+    
+    // Verificar si el estado es APROB_PENDIENTE
+    const estado = data.estado;
+    const estadoUpper = estado ? String(estado).toUpperCase().trim() : '';
+    const isAprobPendiente = estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE';
+    
+    if (!isAprobPendiente) return false;
+    
+    // Verificar si el usuario está asignado como procesador
+    const fullData = (data as any).fullData || data;
+    const procesadores = fullData.procesadores || 
+                        fullData.procesadoresAsignados || 
+                        fullData.procesadoresPostAprobacion ||
+                        [];
+    
+    if (!Array.isArray(procesadores) || procesadores.length === 0) {
+      return false;
+    }
+    
+    // Verificar si el usuario está en la lista de procesadores
+    return procesadores.some((proc: any) => {
+      const procId = proc?.usuarioId || proc?.idUsuario || proc?.noUsuario || proc?.id || proc;
+      const procIdNum = typeof procId === 'number' ? procId : parseInt(String(procId), 10);
+      return !isNaN(procIdNum) && procIdNum === userId;
+    });
   }
 
   closeDetailModal(): void {
@@ -336,37 +375,78 @@ export class ApprovalDetails implements OnInit, OnDestroy {
 
   handleAssignProcess(payload: ProcessUpdatePayload): void {
     if (!this.currentUserId || !payload.requestId) {
-      alert('Error: No se puede asignar el proceso. Usuario o solicitud no disponible.');
+      this.successModalService.showSuccess('Error', 'No se puede asignar el proceso. Usuario o solicitud no disponible.');
       return;
     }
 
     const procesadores = payload.procesadores || [];
-    if (procesadores.length === 0) {
-      alert('Debe seleccionar al menos un procesador');
-      return;
+    const archivos = payload.attachments || [];
+    
+    // Si hay procesadores, asignarlos
+    if (procesadores.length > 0) {
+      this.approvalService.agregarProcesadores(
+        payload.requestId,
+        this.currentUserId,
+        procesadores
+      ).subscribe({
+        next: () => {
+          // Si también hay archivos, subirlos después de asignar procesadores
+          if (archivos.length > 0 && payload.requestId) {
+            this.uploadAttachments(payload.requestId, archivos);
+          } else {
+            this.successModalService.showSuccess('Éxito', 'Procesadores asignados exitosamente');
+            // Recargar los detalles de la solicitud
+            if (payload.requestId) {
+              this.showDetailsModal(String(payload.requestId));
+            }
+          }
+        },
+        error: (error) => {
+          console.error('Error al asignar procesadores:', error);
+          let errorMessage = 'Error al asignar los procesadores. Por favor, inténtelo de nuevo.';
+          if (error.status === 400) {
+            errorMessage = error.error?.message || 'Datos inválidos';
+          } else if (error.status === 403) {
+            errorMessage = 'No tiene permisos para asignar procesadores';
+          }
+          this.successModalService.showSuccess('Error', errorMessage);
+        }
+      });
+    } else if (archivos.length > 0 && payload.requestId) {
+      // Si solo hay archivos (sin procesadores), subirlos directamente
+      this.uploadAttachments(payload.requestId, archivos);
+    } else if (payload.comment && payload.comment.trim()) {
+      // Si solo hay comentario, solo mostrar mensaje (no hay endpoint para solo comentario)
+      this.successModalService.showSuccess('Información', 'Comentario registrado localmente');
     }
+  }
 
-    this.approvalService.agregarProcesadores(
-      payload.requestId,
+  /**
+   * Sube archivos adjuntos a una solicitud
+   */
+  private uploadAttachments(requestId: string | number, archivos: File[]): void {
+    if (!this.currentUserId || archivos.length === 0) return;
+
+    this.approvalService.agregarAdjuntos(
+      requestId,
       this.currentUserId,
-      procesadores
+      archivos,
+      undefined // No hay comentario en este contexto
     ).subscribe({
       next: () => {
-        alert('Procesadores asignados exitosamente');
+        this.successModalService.showSuccess('Éxito', 'Archivos adjuntos cargados exitosamente');
         // Recargar los detalles de la solicitud
-        if (payload.requestId) {
-          this.showDetailsModal(String(payload.requestId));
-        }
+        this.showDetailsModal(String(requestId));
       },
       error: (error) => {
-        console.error('Error al asignar procesadores:', error);
+        console.error('Error al cargar adjuntos:', error);
+        let errorMessage = 'Error al cargar los archivos adjuntos. Por favor, inténtelo de nuevo.';
         if (error.status === 400) {
-          alert('Error: ' + (error.error?.message || 'Datos inválidos'));
-        } else if (error.status === 403) {
-          alert('Error: No tiene permisos para asignar procesadores');
-        } else {
-          alert('Error al asignar los procesadores. Por favor, inténtelo de nuevo.');
+          errorMessage = error.error?.message || 'Datos inválidos';
+        } else if (error.status === 413) {
+          errorMessage = 'Los archivos son demasiado grandes. El tamaño total no debe exceder el límite permitido.';
         }
+        this.successModalService.showSuccess('Error', errorMessage);
       }
     });
   }

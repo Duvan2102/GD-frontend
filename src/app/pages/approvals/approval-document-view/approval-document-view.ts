@@ -26,6 +26,7 @@ export interface ApprovalDocumentViewData {
 export class ApprovalDocumentView implements OnChanges, OnDestroy {
   @Input() isVisible = false;
   @Input() documentData: ApprovalDocumentViewData | null = null;
+  @Input() isProcessorMode = false; // Indica si el usuario es procesador (oculta botón rechazar)
   @Output() close = new EventEmitter<void>();
   @Output() approve = new EventEmitter<{ id: string | number, comentario?: string }>();
   @Output() reject = new EventEmitter<{ id: string | number, comentario?: string }>();

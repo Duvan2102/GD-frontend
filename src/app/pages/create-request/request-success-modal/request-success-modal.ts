@@ -107,6 +107,7 @@ export class RequestSuccessModal implements OnChanges {
   @Input() hideViewDocumentButton = false;
   @Input() currentUser: UsuarioData | null = null;
   @Input() enableProcessUpdate = false;
+  @Input() hideAssignProcessors = false; // Controla si se muestra la sección de asignación de procesadores
 
   @Output() close = new EventEmitter<void>();
   @Output() cancelRequest = new EventEmitter<{ solicitudId: string | number, comentario?: string }>();

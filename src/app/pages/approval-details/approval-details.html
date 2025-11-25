@@ -42,6 +42,7 @@
   [currentUser]="currentUser"
   [isApprovalFlow]="true"
   [hideManageButton]="true"
+  [enableProcessUpdate]="isProcessorMode"
   (close)="closeDetailModal()"
   (viewApprovedDocument)="handleViewApprovedDocument($event)"
   (processUpdate)="handleAssignProcess($event)">
