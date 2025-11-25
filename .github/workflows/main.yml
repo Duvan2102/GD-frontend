@@ -1,0 +1,40 @@
+name: Deploy Frontend (Dev)
+on:
+  push:
+    branches: ["pre-prod"]
+
+concurrency:
+  group: deploy-frontend-preprod
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+    env:
+      APP_DIR: /var/www/docmanager-frontend
+      DIST_DIR: dist/gd-frontend/browser   # antes: dist/gd-frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Build Angular prod
+        run: npx ng build --configuration=production
+
+      - name: Publicar en Nginx
+        run: |
+          sudo -n /usr/bin/mkdir -p "$APP_DIR"
+          sudo -n /usr/bin/rsync -a --delete "$DIST_DIR/" "$APP_DIR/"
+          if command -v getenforce >/dev/null && [ "$(getenforce)" = "Enforcing" ]; then
+            sudo -n /usr/sbin/semanage fcontext -a -t httpd_sys_content_t "$APP_DIR(/.*)?" || true
+            sudo -n /usr/sbin/restorecon -Rv "$APP_DIR" || true
+          fi
+          sudo -n /usr/bin/chown -R nginx:nginx "$APP_DIR" || true
+          sudo -n /usr/bin/systemctl reload nginx || sudo -n /usr/bin/systemctl restart nginx
+
