@@ -26,9 +26,10 @@ export function applyViewLogic(
   let result = [...approvalsList];
 
   if (showOnlyManaged) {
-    result = result.filter(req => ['APROBADO', 'RECHAZADO', 'CANCELADA'].includes(req.status));
+    result = result.filter(req => ['APROBADO', 'RECHAZADO', 'CANCELADA', 'APROB-POCESADO'].includes(req.status));
   } else {
-    result = result.filter(req => req.status === 'PENDIENTE');
+    // Incluir tanto PENDIENTE (aprobadores) como APROB-PENDIENTE (procesadores)
+    result = result.filter(req => req.status === 'PENDIENTE' || req.status === 'APROB-PENDIENTE');
   }
 
   if (searchTerm) {
@@ -91,41 +92,33 @@ export function applyApprovalDetailsViewLogic(
   // Función para verificar si una tipología pertenece al área del usuario actual
   const isTypologyInUserArea = (typeId: string): boolean => {
     if (!currentUser || !currentUser.cargo?.area?.idArea) {
-      console.log('🔍 Filtro por área: Usuario sin área definida, mostrando todas las solicitudes');
       return true; // Si no hay usuario o área, mostrar todas
     }
 
     const typology = typologies.find(t => t.idTipologia.toString() === typeId);
     if (!typology || !typology.cargo?.area?.idArea) {
-      console.log(`🔍 Filtro por área: Tipología ${typeId} sin área definida, mostrando`);
       return true; // Si no se encuentra la tipología o no tiene área, mostrar
     }
 
     const userAreaId = currentUser.cargo.area.idArea;
     const typologyAreaId = typology.cargo.area.idArea;
-    const isInSameArea = typologyAreaId === userAreaId;
-    
-    console.log(`🔍 Filtro por área: Usuario área ${userAreaId}, Tipología área ${typologyAreaId}, Coincide: ${isInSameArea}`);
-    
-    return isInSameArea;
+    return typologyAreaId === userAreaId;
   };
 
   let result = [...approvalsList];
 
   // Filtrar por área del usuario: mostrar solo solicitudes cuya tipología pertenece al área del usuario
-  // Esto incluye todas las solicitudes del área (creadas por otros, aprobadas por otros, etc.)
-  const originalCount = result.length;
   result = result.filter(req => isTypologyInUserArea(req.type));
-  const filteredCount = result.length;
-  
-  if (currentUser && currentUser.cargo?.area?.idArea) {
-    console.log(`🔍 Filtro por área aplicado: ${originalCount} -> ${filteredCount} solicitudes del área ${currentUser.cargo.area.idArea}`);
-  }
+
+  // Excluir siempre las solicitudes en estado PENDIENTE
+  result = result.filter(req => req.status !== 'PENDIENTE');
 
   if (showOnlyManaged) {
+    // CANCELADAS/RECHAZADAS: mostrar solo CANCELADA y RECHAZADO
     result = result.filter(req => ['RECHAZADO', 'CANCELADA'].includes(req.status));
   } else {
-    result = result.filter(req => req.status === 'APROBADO');
+    // APROBADOS: mostrar APROBADO, APROB-PENDIENTE y APROB-POCESADO
+    result = result.filter(req => ['APROBADO', 'APROB-PENDIENTE', 'APROB-POCESADO'].includes(req.status));
   }
 
   if (searchTerm) {

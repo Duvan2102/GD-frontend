@@ -40,7 +40,7 @@ export interface DestinatarioData {
   fechaDecision?: string;
   comentario?: string;
 }
-export type EstadoSolicitud = 'Cancelada' | 'Aprobada' | 'Rechazada' | 'Pendiente' | 'Enviada';
+export type EstadoSolicitud = 'Cancelada' | 'Aprobada' | 'Rechazada' | 'Pendiente' | 'Enviada' | 'APROB-PENDIENTE' | 'APROB-POCESADO';
 export interface GestionHistorial {
   id: string;
   tipo: 'ENVIO' | 'APROBACION' | 'RECHAZO' | 'CANCELACION' | 'COMENTARIO';
@@ -79,6 +79,7 @@ export interface SuccessModalData {
   pdfSizeBytes?: number;
   adjuntos?: any[];
   ordenFirma?: boolean;
+  requiereProceso?: boolean;
 }
 
 
@@ -134,6 +135,42 @@ export class RequestSuccessModal implements OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if ((changes['data'] || changes['usuariosDisponibles']) && this.data) {
       this.loadApprovers();
+      // Inicializar procesadores si la solicitud está en estado APROB-PENDIENTE y requiere proceso
+      if (this.isAprobPendiente() && this.data.requiereProceso === true && this.procesadores.length === 0) {
+        this.procesadores = [{ usuario: null, searchTerm: '', originalSearchTerm: '', orden: 1 }];
+      }
+    }
+  }
+
+  get hasProcessUpdateData(): boolean {
+    return this.processUpdateComment.trim().length > 0 || this.processUpdateAttachments.length > 0;
+  }
+
+  canSubmitProcessUpdate(): boolean {
+    if (!this.enableProcessUpdate || !this.data?.id) {
+      return false;
+    }
+    return this.hasProcessUpdateData;
+  }
+
+  onProcessAttachmentClick(input: HTMLInputElement): void {
+    if (!this.enableProcessUpdate) return;
+    input.click();
+  }
+
+  onProcessAttachmentsSelected(event: Event): void {
+    if (!this.enableProcessUpdate) return;
+    const target = event.target as HTMLInputElement;
+    const files = target.files ? Array.from(target.files) : [];
+    this.processUpdateAttachments = files;
+    if (target) {
+      target.value = '';
+    }
+  }
+
+  removeProcessAttachment(index: number): void {
+    if (index >= 0 && index < this.processUpdateAttachments.length) {
+      this.processUpdateAttachments = this.processUpdateAttachments.filter((_, i) => i !== index);
     }
   }
 
@@ -523,6 +560,30 @@ export class RequestSuccessModal implements OnChanges {
 
   isApproved(): boolean {
     return this.data?.estado === 'Aprobada';
+  }
+
+  isAprobPendiente(): boolean {
+    // Verificar si el estado es APROB-PENDIENTE
+    const estado = this.data?.estado;
+    if (!estado) return false;
+    
+    const estadoUpper = String(estado).toUpperCase().trim();
+    return estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE';
+  }
+
+  getEstadoDisplayName(estado?: string): string {
+    if (!estado) return 'Pendiente';
+    
+    const estadoUpper = String(estado).toUpperCase().trim();
+    if (estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE') return 'Aprobado - Pendiente';
+    if (estadoUpper === 'APROB-POCESADO' || estadoUpper === 'APROB_POCESADO' || estadoUpper === 'APROB-PROCESADO') return 'Aprobado - Procesado';
+    if (estadoUpper === 'APROBADO' || estado === 'Aprobada') return 'Aprobada';
+    if (estadoUpper === 'RECHAZADO' || estado === 'Rechazada') return 'Rechazada';
+    if (estadoUpper === 'CANCELADA' || estado === 'Cancelada') return 'Cancelada';
+    if (estadoUpper === 'PENDIENTE' || estado === 'Pendiente') return 'Pendiente';
+    if (estadoUpper === 'ENVIADA' || estado === 'Enviada') return 'Enviada';
+    
+    return estado;
   }
 
   isRejected(): boolean {
@@ -928,5 +989,178 @@ export class RequestSuccessModal implements OnChanges {
     } else {
       alert('No se puede visualizar el documento. El archivo no es válido.');
     }
+  }
+
+  // ========== MÉTODOS PARA ASIGNACIÓN DE PROCESO POST-APROBACIÓN ==========
+
+  private getUserId(user: Usuario | null): number | null {
+    if (!user) return null;
+    if ('noUsuario' in user && user.noUsuario) return user.noUsuario;
+    if ('idUsuario' in user && user.idUsuario) return user.idUsuario;
+    return null;
+  }
+
+  onSearchProcesador(event: Event, index: number, inputElement: HTMLInputElement): void {
+    const searchTerm = (event.target as HTMLInputElement).value.toLowerCase();
+    this.procesadores[index].searchTerm = searchTerm;
+    this.procesadores[index].originalSearchTerm = searchTerm;
+    this.activeProcesadorIndex = index;
+    this.highlightedProcesadorIndex = -1;
+
+    this.filteredProcesadores = this.filterProcesadoresLocally(searchTerm, index);
+
+    if (this.filteredProcesadores.length > 0) {
+      this.calculateProcesadorDropdownPosition(inputElement);
+    }
+  }
+
+  private filterProcesadoresLocally(searchTerm: string, currentIndex: number): Usuario[] {
+    if (!searchTerm || searchTerm.length <= 1) return [];
+    if (!this.usuariosDisponibles || this.usuariosDisponibles.length === 0) return [];
+
+    const selectedUserIds = this.procesadores
+      .map((p, i) => i !== currentIndex && p.usuario ? this.getUserId(p.usuario) : null)
+      .filter(id => id != null) as number[];
+
+    const searchTermLower = searchTerm.toLowerCase();
+
+    // Permitir autoasignación - no excluir al usuario actual
+    return this.usuariosDisponibles.filter(user => {
+      const userId = this.getUserId(user);
+      const matchesSearch = user.nombres?.toLowerCase().includes(searchTermLower) ||
+                           user.apellidos?.toLowerCase().includes(searchTermLower) ||
+                           user.usuario?.toLowerCase().includes(searchTermLower);
+
+      if (!matchesSearch) return false;
+      // Solo excluir si ya está seleccionado en otro campo
+      if (userId && selectedUserIds.includes(userId)) return false;
+
+      return true;
+    });
+  }
+
+  calculateProcesadorDropdownPosition(inputElement: HTMLInputElement): void {
+    const rect = inputElement.getBoundingClientRect();
+    this.procesadorDropdownStyle = {
+      position: 'fixed',
+      bottom: `${window.innerHeight - rect.top + 5}px`,
+      left: `${rect.left}px`,
+      width: `${rect.width}px`,
+      top: 'auto',
+    };
+  }
+
+  onSearchProcesadorKeydown(event: KeyboardEvent, index: number): void {
+    if (this.filteredProcesadores.length === 0) return;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.highlightedProcesadorIndex = (this.highlightedProcesadorIndex + 1) % this.filteredProcesadores.length;
+      this.updateProcesadorSearchTermWithHighlighted(index);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.highlightedProcesadorIndex = (this.highlightedProcesadorIndex - 1 + this.filteredProcesadores.length) % this.filteredProcesadores.length;
+      this.updateProcesadorSearchTermWithHighlighted(index);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      if (this.highlightedProcesadorIndex > -1) {
+        this.selectProcesador(this.filteredProcesadores[this.highlightedProcesadorIndex], index);
+      }
+    } else if (event.key === 'Escape') {
+      this.closeProcesadorDropdown();
+    }
+  }
+
+  private updateProcesadorSearchTermWithHighlighted(index: number): void {
+    if (this.highlightedProcesadorIndex > -1) {
+      const highlightedUser = this.filteredProcesadores[this.highlightedProcesadorIndex];
+      this.procesadores[index].searchTerm = `${highlightedUser.nombres} ${highlightedUser.apellidos} (${highlightedUser.usuario})`;
+    }
+  }
+
+  selectProcesador(user: Usuario, index: number): void {
+    const userId = this.getUserId(user);
+    const isAlreadySelected = this.procesadores.some((p, i) =>
+      i !== index && p.usuario && this.getUserId(p.usuario) === userId
+    );
+
+    if (isAlreadySelected) {
+      alert('Este usuario ya está seleccionado como procesador');
+      return;
+    }
+
+    this.procesadores[index].usuario = user;
+    this.procesadores[index].searchTerm = `${user.nombres} ${user.apellidos}`;
+    this.procesadores[index].originalSearchTerm = `${user.nombres} ${user.apellidos}`;
+    this.filteredProcesadores = [];
+    this.activeProcesadorIndex = null;
+    this.highlightedProcesadorIndex = -1;
+
+    if (index === this.procesadores.length - 1) {
+      this.agregarProcesador();
+    }
+  }
+
+  agregarProcesador(): void {
+    const nuevoOrden = this.procesadores.length + 1;
+    this.procesadores.push({ usuario: null, searchTerm: '', originalSearchTerm: '', orden: nuevoOrden });
+  }
+
+  eliminarProcesador(index: number): void {
+    if (this.procesadores.length > 1) {
+      this.procesadores.splice(index, 1);
+      // Recalcular órdenes después de eliminar
+      this.procesadores.forEach((p, i) => {
+        p.orden = i + 1;
+      });
+    }
+  }
+
+  closeProcesadorDropdown(): void {
+    if (this.activeProcesadorIndex !== null) {
+      const procesador = this.procesadores[this.activeProcesadorIndex];
+      if (procesador && !procesador.usuario) {
+        procesador.searchTerm = procesador.originalSearchTerm || '';
+      }
+    }
+    this.activeProcesadorIndex = null;
+    this.filteredProcesadores = [];
+    this.highlightedProcesadorIndex = -1;
+  }
+
+  canAssignProcess(): boolean {
+    // Debe tener al menos un procesador seleccionado
+    const hasProcesadores = this.procesadores.some(p => p.usuario !== null);
+    return hasProcesadores && !!this.data?.id;
+  }
+
+  onAssignProcess(): void {
+    // Obtener IDs de procesadores seleccionados (en orden)
+    const procesadorIds = this.procesadores
+      .filter(p => p.usuario !== null)
+      .sort((a, b) => a.orden - b.orden) // Asegurar orden correcto
+      .map(p => this.getUserId(p.usuario))
+      .filter(id => id !== null) as number[];
+
+    if (procesadorIds.length === 0) {
+      alert('Debe seleccionar al menos un procesador');
+      return;
+    }
+
+    // Emitir evento para asignar proceso
+    this.processUpdate.emit({
+      requestId: this.data?.id,
+      comment: '', // Ya no se requiere comentario
+      attachments: [], // Ya no se requieren documentos
+      password: '',
+      procesadores: procesadorIds
+    });
+
+    // Limpiar formulario después de asignar
+    this.resetPostApprovalForm();
+  }
+
+  private resetPostApprovalForm(): void {
+    this.procesadores = [{ usuario: null, searchTerm: '', originalSearchTerm: '', orden: 1 }];
   }
 }

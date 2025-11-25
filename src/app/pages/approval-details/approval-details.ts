@@ -5,7 +5,7 @@ import { RouterModule } from '@angular/router';
 import { Controls } from '../approvals/controls/controls';
 import { RequestsTable } from '../approvals/requests-table/requests-table';
 import { FooterControls } from '../approvals/footer-controls/footer-controls';
-import { RequestSuccessModal, SuccessModalData } from '../create-request/request-success-modal/request-success-modal';
+import { RequestSuccessModal, SuccessModalData, ProcessUpdatePayload } from '../create-request/request-success-modal/request-success-modal';
 import { DocumentView, DocumentViewData } from '../create-request/document-view/document-view';
 import { ApprovalService } from '../../services/approval.service';
 import { SuccessModalService } from '../../services/success-modal.service';
@@ -15,7 +15,7 @@ import { Approval } from '../approvals/approvals';
 import { Typology, TypologyService } from '../../services/typology.service';
 import { UsuarioData } from '../../interfaces/common.interfaces';
 import { AuthService } from '../../services/auth.service';
-import { Usuario, UsuarioRequest, ApiResponse, ErrorResponse, DobleAutenticacionTipo } from '../../interfaces/common.interfaces';
+import { Usuario } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
 import { applyApprovalDetailsViewLogic } from '../../utils/view.utils';
 import { delay } from 'rxjs/operators';
@@ -64,6 +64,7 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   isDetailModalVisible = false;
   successModalData: SuccessModalData | null = null;
   isLoadingDetails = false;
+  isProcessorMode = false; // Indica si el usuario actual es procesador
 
   constructor(
     private approvalService: ApprovalService,
@@ -122,7 +123,7 @@ export class ApprovalDetails implements OnInit, OnDestroy {
 
   applyViewLogic(): void {
     const currentUserData = this.authService.getCurrentUserValue();
-    const currentUser = currentUserData ? this.convertUsuarioDataToUsuario(currentUserData) : undefined;
+    const currentUser = currentUserData ? this.allUsers.find(u => u.noUsuario === currentUserData.idUsuario) : undefined;
     const { displayedRequests, totalFiltered } = applyApprovalDetailsViewLogic(
       this.approvalsList,
       this.showOnlyManaged,
@@ -137,49 +138,6 @@ export class ApprovalDetails implements OnInit, OnDestroy {
     );
     this.displayedRequests = displayedRequests;
     this.totalFiltered = totalFiltered;
-  }
-
-  private convertUsuarioDataToUsuario(usuarioData: any): Usuario {
-    // Buscar el área real en la lista de áreas disponibles
-    const areaReal = this.findAreaByName(usuarioData.cargo?.area || '');
-    
-    return {
-      noUsuario: usuarioData.idUsuario,
-      idUsuario: usuarioData.idUsuario,
-      identificacion: usuarioData.identificacion,
-      nombres: usuarioData.nombres,
-      apellidos: usuarioData.apellidos,
-      usuario: usuarioData.usuario,
-      estado: {
-        idEstado: 1,
-        descripcion: usuarioData.estado || 'Activo'
-      },
-      activo: usuarioData.estado === 'Activo',
-      cargo: {
-        idCargo: usuarioData.cargo?.idCargo || 0,
-        descripcion: usuarioData.cargo?.descripcion || '',
-        area: {
-          idArea: areaReal?.idArea || 0,
-          descripcion: usuarioData.cargo?.area || '',
-          departamento: {
-            idDepartamento: 0,
-            descripcion: usuarioData.cargo?.departamento || ''
-          }
-        }
-      },
-      rol: Array.isArray(usuarioData.rol) ? usuarioData.rol : [0],
-      correoEmpresarial: usuarioData.correoEmpresarial,
-      correoPersonal: usuarioData.correoPersonal,
-      telefono1: usuarioData.telefono1,
-      telefono2: usuarioData.telefono2,
-      direccion: usuarioData.direccion,
-      dobleAutenticacion: false
-    };
-  }
-
-  private findAreaByName(areaName: string): any {
-    const typology = this.tipologias.find(t => t.cargo?.area?.descripcion === areaName);
-    return typology?.cargo?.area;
   }
 
   onToggleManaged(value: boolean): void {
@@ -228,10 +186,48 @@ export class ApprovalDetails implements OnInit, OnDestroy {
       .subscribe(requestDetails => {
         if (requestDetails) {
           this.successModalData = requestDetails.fullData;
+          // Detectar si el usuario es procesador
+          if (uid) {
+            this.isProcessorMode = this.detectProcessorMode(requestDetails.fullData, uid);
+          } else {
+            this.isProcessorMode = false;
+          }
           this.isDetailModalVisible = true;
         }
         this.isLoadingDetails = false;
       });
+  }
+
+  /**
+   * Detecta si el usuario actual es procesador de la solicitud
+   */
+  private detectProcessorMode(data: SuccessModalData | null, userId: number): boolean {
+    if (!data) return false;
+    
+    // Verificar si el estado es APROB_PENDIENTE
+    const estado = data.estado;
+    const estadoUpper = estado ? String(estado).toUpperCase().trim() : '';
+    const isAprobPendiente = estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE';
+    
+    if (!isAprobPendiente) return false;
+    
+    // Verificar si el usuario está asignado como procesador
+    const fullData = (data as any).fullData || data;
+    const procesadores = fullData.procesadores || 
+                        fullData.procesadoresAsignados || 
+                        fullData.procesadoresPostAprobacion ||
+                        [];
+    
+    if (!Array.isArray(procesadores) || procesadores.length === 0) {
+      return false;
+    }
+    
+    // Verificar si el usuario está en la lista de procesadores
+    return procesadores.some((proc: any) => {
+      const procId = proc?.usuarioId || proc?.idUsuario || proc?.noUsuario || proc?.id || proc;
+      const procIdNum = typeof procId === 'number' ? procId : parseInt(String(procId), 10);
+      return !isNaN(procIdNum) && procIdNum === userId;
+    });
   }
 
   closeDetailModal(): void {
@@ -261,7 +257,6 @@ export class ApprovalDetails implements OnInit, OnDestroy {
         this.isDocumentViewVisible = true;
         return;
       } catch (error) {
-        console.error('Error creating object URL:', error);
       }
     }
 
@@ -292,7 +287,6 @@ export class ApprovalDetails implements OnInit, OnDestroy {
           this.isLoadingDetails = false;
         },
         error: (error) => {
-          console.error('Error al cargar el documento desde el servidor:', error);
           this.isLoadingDetails = false;
           
           this.documentViewData = {
@@ -332,5 +326,81 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   closeDocumentView(): void {
     this.isDocumentViewVisible = false;
     this.documentViewData = null;
+  }
+
+  handleAssignProcess(payload: ProcessUpdatePayload): void {
+    if (!this.currentUserId || !payload.requestId) {
+      this.successModalService.showSuccess('Error', 'No se puede asignar el proceso. Usuario o solicitud no disponible.');
+      return;
+    }
+
+    const procesadores = payload.procesadores || [];
+    const archivos = payload.attachments || [];
+    
+    // Si hay procesadores, asignarlos
+    if (procesadores.length > 0) {
+      this.approvalService.agregarProcesadores(
+        payload.requestId,
+        this.currentUserId,
+        procesadores
+      ).subscribe({
+        next: () => {
+          // Si también hay archivos, subirlos después de asignar procesadores
+          if (archivos.length > 0 && payload.requestId) {
+            this.uploadAttachments(payload.requestId, archivos);
+          } else {
+            this.successModalService.showSuccess('Éxito', 'Procesadores asignados exitosamente');
+            // Recargar los detalles de la solicitud
+            if (payload.requestId) {
+              this.showDetailsModal(String(payload.requestId));
+            }
+          }
+        },
+        error: (error) => {
+          let errorMessage = 'Error al asignar los procesadores. Por favor, inténtelo de nuevo.';
+          if (error.status === 400) {
+            errorMessage = error.error?.message || 'Datos inválidos';
+          } else if (error.status === 403) {
+            errorMessage = 'No tiene permisos para asignar procesadores';
+          }
+          this.successModalService.showSuccess('Error', errorMessage);
+        }
+      });
+    } else if (archivos.length > 0 && payload.requestId) {
+      // Si solo hay archivos (sin procesadores), subirlos directamente
+      this.uploadAttachments(payload.requestId, archivos);
+    } else if (payload.comment && payload.comment.trim()) {
+      // Si solo hay comentario, solo mostrar mensaje (no hay endpoint para solo comentario)
+      this.successModalService.showSuccess('Información', 'Comentario registrado localmente');
+    }
+  }
+
+  /**
+   * Sube archivos adjuntos a una solicitud
+   */
+  private uploadAttachments(requestId: string | number, archivos: File[]): void {
+    if (!this.currentUserId || archivos.length === 0) return;
+
+    this.approvalService.agregarAdjuntos(
+      requestId,
+      this.currentUserId,
+      archivos,
+      undefined // No hay comentario en este contexto
+    ).subscribe({
+      next: () => {
+        this.successModalService.showSuccess('Éxito', 'Archivos adjuntos cargados exitosamente');
+        // Recargar los detalles de la solicitud
+        this.showDetailsModal(String(requestId));
+      },
+      error: (error) => {
+        let errorMessage = 'Error al cargar los archivos adjuntos. Por favor, inténtelo de nuevo.';
+        if (error.status === 400) {
+          errorMessage = error.error?.message || 'Datos inválidos';
+        } else if (error.status === 413) {
+          errorMessage = 'Los archivos son demasiado grandes. El tamaño total no debe exceder el límite permitido.';
+        }
+        this.successModalService.showSuccess('Error', errorMessage);
+      }
+    });
   }
 }
