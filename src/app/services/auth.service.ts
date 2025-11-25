@@ -509,7 +509,11 @@ export class AuthService {
             } else if (errorCode === 'TOKEN_INVALIDO') {
               error.userMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
             } else if (errorMessage) {
-              error.userMessage = errorMessage;
+              if (errorMessage.toLowerCase().includes('user is disabled')) {
+                error.userMessage = 'Usuario deshabilitado. Contacta al administrador.';
+              } else {
+                error.userMessage = errorMessage;
+              }
             }
           }
           
@@ -556,7 +560,11 @@ export class AuthService {
             error.userMessage = errorMessage || 'Demasiados intentos. Por favor, espera unos minutos.';
             error.rateLimited = true;
           } else {
-            error.userMessage = errorMessage || 'Error enviando código por email';
+            if (errorMessage && errorMessage.toLowerCase().includes('user is disabled')) {
+              error.userMessage = 'Usuario deshabilitado. Contacta al administrador.';
+            } else {
+              error.userMessage = errorMessage || 'Error enviando código por email';
+            }
           }
           
           return throwError(() => error);
@@ -689,16 +697,25 @@ export class AuthService {
     );
   }
 
-  removeUserQR(usuario: string, password: string): Observable<{ message: string }> {
+  removeUserQR(usuarioEditado: string, password: string, usuarioConectado?: string): Observable<{ message: string }> {
     const token = this.getToken();
     if (!token) {
       return throwError(() => new Error('Token no encontrado'));
     }
 
-    const request = {
-      usuario: usuario,
+    const usuarioParaValidacion = usuarioConectado || this.getCurrentUserValue()?.usuario;
+    if (!usuarioParaValidacion) {
+      return throwError(() => new Error('Usuario conectado no encontrado'));
+    }
+
+    const request: any = {
+      usuario: usuarioParaValidacion,
       password: password
     };
+
+    if (usuarioEditado) {
+      request.usuarioEditado = usuarioEditado;
+    }
 
     return this.http.post<{ message: string }>(`${this.apiUrl}/auth/remove-google-auth`, request, {
       headers: {

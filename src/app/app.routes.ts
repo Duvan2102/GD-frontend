@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { Layout } from './layout/layout';
 import { PageMain } from './pages/page-main/page-main';
 import { Approvals } from './pages/approvals/approvals';
+import { ApprovalProcess } from './pages/approval-process/approval-process';
 import { Administration } from './pages/administration/administration';
 import { ReportsAudits } from './pages/reports-audits/reports-audits';
 import { Users } from './pages/users/users';
@@ -61,6 +62,7 @@ export const routes: Routes = [
       { path: 'page-main', component: PageMain },
       { path: 'create-request', component: CreateRequest },
       { path: 'approvals', component: Approvals },
+      { path: 'approval-process', component: ApprovalProcess },
       { path: 'approval-details', component: ApprovalDetails },
       {
         path: 'users',

@@ -52,9 +52,15 @@
             <th style="width: 14%;" (click)="sortBy('identificacion')" class="sortable-header">
               Identificación <i class="bi" [ngClass]="getSortIcon('identificacion')"></i>
             </th>
-            <th style="width: 21%;">Nombres</th>
-            <th style="width: 21%;">Apellidos</th>
-            <th style="width: 17%;">Usuario</th>
+            <th style="width: 21%;" (click)="sortBy('nombres')" class="sortable-header">
+              Nombres <i class="bi" [ngClass]="getSortIcon('nombres')"></i>
+            </th>
+            <th style="width: 21%;" (click)="sortBy('apellidos')" class="sortable-header">
+              Apellidos <i class="bi" [ngClass]="getSortIcon('apellidos')"></i>
+            </th>
+            <th style="width: 17%;" (click)="sortBy('usuario')" class="sortable-header">
+              Usuario <i class="bi" [ngClass]="getSortIcon('usuario')"></i>
+            </th>
             <th style="width: 14%;" (click)="sortBy('estado')" class="sortable-header">
               Estado <i class="bi" [ngClass]="getSortIcon('estado')"></i>
             </th>
@@ -97,8 +103,8 @@
                     <a href="#" *ngIf="u.activo && !(u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE')" (click)="abrirConfirmModal('inactivar', u); $event.preventDefault()"> ㊀ Inactivar usuario</a>
                     <a href="#" *ngIf="!u.activo && !(u.estado && u.estado.descripcion && u.estado.descripcion.toUpperCase() === 'PENDIENTE')" (click)="abrirConfirmModal('activar', u); $event.preventDefault()"> 🗹 Activar usuario</a>
                     <a href="#" (click)="accion('editar', u, $event)"> ✎ Editar usuario</a>
-                    <!-- Botón Rechazar eliminado -->
                     <a href="#" (click)="accion('cambiarContraseña', u, $event)"> ⚷ Cambiar contraseña</a>
+                    <a href="#" (click)="accion('marcarEliminado', u, $event)"> 🗑️ Borrar usuario</a>
                     <a href="#" (click)="accion('cambiar2FA', u, $event)"> ⚠ Cambiar método 2FA</a>
                     <a href="#" *ngIf="u.dobleAutenticacion === 'GOOGLE_AUTH' || u.tokenQr === true" (click)="abrirConfirmModal('eliminarQR', u); $event.preventDefault()"> ✖︎ Eliminar QR</a>
 
@@ -140,7 +146,7 @@
   [isVisible]="isPasswordModalVisible"
   [mensajeModal]="mensajePasswordModal"
   [user]="currentUser"
-  [skipValidation]="currentAction === 'eliminarQR' || currentAction === 'rechazar'"
+  [skipValidation]="currentAction === 'eliminarQR' || currentAction === 'rechazar' || currentAction === 'marcarEliminado'"
   [externalError]="passwordModalError"
   (close)="closePasswordModal()"
   (validate)="handlePasswordValidation($event)"

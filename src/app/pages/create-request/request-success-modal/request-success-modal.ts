@@ -1,10 +1,12 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { SolicitudData } from '../create-form/create-form';
 import { Usuario, UsuarioData } from '../../../interfaces/common.interfaces';
 import { ConfirmationModal, ConfirmationModalData } from '../../approvals/confirmation-modal/confirmation-modal';
 import { CommentModal, CommentModalData } from './comment-modal';
 import { ApprovalService } from '../../../services/approval.service';
+import { PasswordModal } from '../../users/password-modal/password-modal';
 
 export interface AprobadorState {
   usuarioId: string;
@@ -80,10 +82,17 @@ export interface SuccessModalData {
 }
 
 
+export interface ProcessUpdatePayload {
+  requestId?: string | number;
+  comment: string;
+  attachments: File[];
+  password: string;
+}
+
 @Component({
   selector: 'app-request-success-modal',
   standalone: true,
-  imports: [CommonModule, ConfirmationModal, CommentModal],
+  imports: [CommonModule, FormsModule, ConfirmationModal, CommentModal, PasswordModal],
   templateUrl: './request-success-modal.html',
   styleUrls: ['./request-success-modal.css']
 })
@@ -95,11 +104,13 @@ export class RequestSuccessModal implements OnChanges {
   @Input() hideManageButton = false;
   @Input() hideViewDocumentButton = false;
   @Input() currentUser: UsuarioData | null = null;
+  @Input() enableProcessUpdate = false;
 
   @Output() close = new EventEmitter<void>();
   @Output() cancelRequest = new EventEmitter<{ solicitudId: string | number, comentario?: string }>();
   @Output() manageRequest = new EventEmitter<SuccessModalData>();
   @Output() viewApprovedDocument = new EventEmitter<SuccessModalData>();
+  @Output() processUpdate = new EventEmitter<ProcessUpdatePayload>();
 
   approvers: AprobadorTabla[] = [];
 
@@ -108,10 +119,15 @@ export class RequestSuccessModal implements OnChanges {
   confirmationModalData: ConfirmationModalData | null = null;
   isCommentModalVisible = false;
   commentModalData: CommentModalData | null = null;
+  isPasswordModalVisible = false;
+  passwordModalError = '';
 
   // Adjuntos properties
   attachments: any[] = [];
   isLoadingAttachments = false;
+
+  processUpdateComment = '';
+  processUpdateAttachments: File[] = [];
 
   constructor(private approvalService: ApprovalService) {}
 
@@ -119,6 +135,68 @@ export class RequestSuccessModal implements OnChanges {
     if ((changes['data'] || changes['usuariosDisponibles']) && this.data) {
       this.loadApprovers();
     }
+  }
+
+  get hasProcessUpdateData(): boolean {
+    return this.processUpdateComment.trim().length > 0 || this.processUpdateAttachments.length > 0;
+  }
+
+  canSubmitProcessUpdate(): boolean {
+    if (!this.enableProcessUpdate || !this.data?.id) {
+      return false;
+    }
+    return this.hasProcessUpdateData;
+  }
+
+  onProcessAttachmentClick(input: HTMLInputElement): void {
+    if (!this.enableProcessUpdate) return;
+    input.click();
+  }
+
+  onProcessAttachmentsSelected(event: Event): void {
+    if (!this.enableProcessUpdate) return;
+    const target = event.target as HTMLInputElement;
+    const files = target.files ? Array.from(target.files) : [];
+    this.processUpdateAttachments = files;
+    if (target) {
+      target.value = '';
+    }
+  }
+
+  removeProcessAttachment(index: number): void {
+    if (index >= 0 && index < this.processUpdateAttachments.length) {
+      this.processUpdateAttachments = this.processUpdateAttachments.filter((_, i) => i !== index);
+    }
+  }
+
+  onProcessUpdateClick(input?: HTMLInputElement): void {
+    if (!this.canSubmitProcessUpdate()) return;
+    this.passwordModalError = '';
+    this.isPasswordModalVisible = true;
+  }
+
+  handlePasswordModalClose(): void {
+    this.isPasswordModalVisible = false;
+  }
+
+  handlePasswordValidated(password: string): void {
+    this.isPasswordModalVisible = false;
+    this.processUpdate.emit({
+      requestId: this.data?.id,
+      comment: this.processUpdateComment.trim(),
+      attachments: [...this.processUpdateAttachments],
+      password
+    });
+    this.resetProcessUpdateForm();
+  }
+
+  handlePasswordValidationError(message: string): void {
+    this.passwordModalError = message;
+  }
+
+  private resetProcessUpdateForm(): void {
+    this.processUpdateComment = '';
+    this.processUpdateAttachments = [];
   }
 
   private loadApprovers(): void {

@@ -24,15 +24,14 @@
   <div class="container-fluid p-4">
 
     <div class="seccion-cabecera">
-      <h2>APROBACIONES</h2>
+      <h2>PROCESO DE APROBACIONES</h2>
     </div>
 
     <app-controls
       [labelAprobados]="'GESTIONADOS'"
       [labelAprobadosInactivo]="'PENDIENTES'"
-      [toggleApproved]="showOnlyManaged"
+      [showToggleSwitch]="false"
       (quantityChange)="onQuantityChange($event)"
-      (toggleApprovedChange)="onToggleManaged($event)"
       (searchChange)="onSearchChange($event)">
     </app-controls>
 
@@ -42,7 +41,7 @@
       [currentOrder]="currentOrder"
       [ascendingOrder]="ascendingOrder"
       [isToggleActive]="showOnlyManaged"
-      [viewType]="'approvals'"
+      [viewType]="'approval-process'"
       (sort)="sortBy($event)"
       (manage)="onManage($event)">
     </app-requests-table>
@@ -65,9 +64,11 @@
   [isApprovalFlow]="true"
   [hideManageButton]="showOnlyManaged"
   [hideViewDocumentButton]="true"
+  [enableProcessUpdate]="true"
   (close)="closeDetailModal()"
   (manageRequest)="handleOpenDocumentToApprove($event)"
-  (viewApprovedDocument)="handleViewApprovedDocument($event)"> 
+  (viewApprovedDocument)="handleViewApprovedDocument($event)"
+  (processUpdate)="handleProcessUpdate($event)"> 
 </app-request-success-modal>
 
 <app-approval-document-view
@@ -97,3 +98,5 @@
     .loading-overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.6);z-index:1050}
   </style>
 </div>
+
+
