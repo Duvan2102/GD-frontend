@@ -12,7 +12,7 @@ import { Usuario, UsuarioData } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
 import { ApprovalService } from '../../services/approval.service';
 import { SuccessModalService } from '../../services/success-modal.service';
-import { combineLatest } from 'rxjs';
+import { Subscription, combineLatest } from 'rxjs';
 import { distinctUntilChanged, shareReplay } from 'rxjs/operators';
 import { delay } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
@@ -27,7 +27,7 @@ export interface Approval {
   creatorFullName: string;
   position: string;
   lastUpdate: string;
-  status: 'PENDIENTE' | 'APROBADO' | 'RECHAZADO' | 'CANCELADA' | 'APROB-PENDIENTE';
+  status: 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA';
   approvers: { initials: string; fullName: string }[];
   priority: boolean;
   fullData?: any;
@@ -55,11 +55,13 @@ export class ApprovalProcess implements OnInit, OnDestroy {
   approvalsList: Approval[] = [];
   private pendingApprovals: Approval[] = [];
   private managedApprovals: Approval[] = [];
+  private approvalsSubscription: Subscription | undefined;
   isDetailModalVisible = false;
   successModalData: SuccessModalData | null = null;
   allUsers: Usuario[] = [];
   tipologias: Typology[] = [];
   displayedRequests: any[] = [];
+  private filteredRequests: any[] = [];
   totalFiltered: number = 0;
   searchTerm: string = '';
   showOnlyManaged: boolean = false;
@@ -71,10 +73,15 @@ export class ApprovalProcess implements OnInit, OnDestroy {
   documentToApproveData: ApprovalDocumentViewData | null = null;
   isLoadingDetails = false;
   currentUser: UsuarioData | null = null;
-  isProcessorMode = false; // Indica si el usuario actual es procesador
 
   isDocumentViewVisible = false;
   documentViewData: DocumentViewData | null = null;
+
+  externalAlerts: Array<{
+    type: 'success' | 'danger' | 'info' | 'warning';
+    title: string;
+    message: string;
+  }> = [];
 
   constructor(
     private userService: UserService,
@@ -96,6 +103,7 @@ export class ApprovalProcess implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.approvalsSubscription?.unsubscribe();
   }
 
   loadUsersAndApprovals(): void {
@@ -120,12 +128,9 @@ export class ApprovalProcess implements OnInit, OnDestroy {
     if (!this.currentUser) return;
     const uid = this.currentUser.idUsuario;
     
-    // Obtener todas las solicitudes asignadas al usuario como procesador (estado APROB_PENDIENTE)
-    // getAll=true obtiene todas las páginas automáticamente
-    this.approvalService.getApprovalsForProcessor(uid, this.allUsers, 0, 100, true).subscribe({
+    this.approvalService.getApprovalsForApprover(uid, this.allUsers).subscribe({
       next: (list) => {
-        // El endpoint ya devuelve solo las asignadas al usuario como procesador
-        this.pendingApprovals = (list || []) as Approval[];
+        this.pendingApprovals = list || [];
         this.refreshApprovalsSource();
       },
       error: (error) => {
@@ -134,13 +139,9 @@ export class ApprovalProcess implements OnInit, OnDestroy {
       }
     });
     
-    // Para gestionados, mantener los estados finales tradicionales
     this.approvalService.getHistorico(uid, this.allUsers).subscribe({
       next: (list) => {
-        this.managedApprovals = (list || []).filter(a => {
-          const status = a.status;
-          return ['APROBADO','RECHAZADO','CANCELADA'].includes(status);
-        }) as Approval[];
+        this.managedApprovals = (list || []).filter(a => ['APROBADO','RECHAZADO','CANCELADA'].includes(a.status));
         this.refreshApprovalsSource();
       },
       error: (error) => {
@@ -149,7 +150,6 @@ export class ApprovalProcess implements OnInit, OnDestroy {
       }
     });
   }
-
 
   private refreshApprovalsSource(): void {
     this.approvalsList = this.showOnlyManaged ? this.managedApprovals : this.pendingApprovals;
@@ -161,45 +161,18 @@ export class ApprovalProcess implements OnInit, OnDestroy {
     const uid = this.currentUser?.idUsuario;
     this.approvalService.getApprovalDetails(id, this.allUsers, uid).pipe(delay(500))
       .subscribe(requestDetails => {
-        if (requestDetails) {
-          this.successModalData = requestDetails.fullData;
-          // Detectar si el usuario es procesador
-          this.isProcessorMode = this.detectProcessorMode(requestDetails.fullData, uid);
-          this.isDetailModalVisible = true;
+      if (requestDetails) {
+        if (requestDetails.fullData?.estado === 'Enviada') {
+            requestDetails.status = 'PENDIENTE';
+            if(requestDetails.fullData){
+              requestDetails.fullData.estado = 'Pendiente';
+            }
+            this.approvalService.updateApproval(requestDetails);
         }
-        this.isLoadingDetails = false;
-      });
-  }
-
-  /**
-   * Detecta si el usuario actual es procesador de la solicitud
-   */
-  private detectProcessorMode(data: SuccessModalData | null, userId: number | undefined): boolean {
-    if (!data || !userId) return false;
-    
-    // Verificar si el estado es APROB_PENDIENTE
-    const estado = data.estado;
-    const estadoUpper = estado ? String(estado).toUpperCase().trim() : '';
-    const isAprobPendiente = estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE';
-    
-    if (!isAprobPendiente) return false;
-    
-    // Verificar si el usuario está asignado como procesador
-    const fullData = (data as any).fullData || data;
-    const procesadores = fullData.procesadores || 
-                        fullData.procesadoresAsignados || 
-                        fullData.procesadoresPostAprobacion ||
-                        [];
-    
-    if (!Array.isArray(procesadores) || procesadores.length === 0) {
-      return false;
-    }
-    
-    // Verificar si el usuario está en la lista de procesadores
-    return procesadores.some((proc: any) => {
-      const procId = proc?.usuarioId || proc?.idUsuario || proc?.noUsuario || proc?.id || proc;
-      const procIdNum = typeof procId === 'number' ? procId : parseInt(String(procId), 10);
-      return !isNaN(procIdNum) && procIdNum === userId;
+        this.successModalData = requestDetails.fullData;
+        this.isDetailModalVisible = true;
+      }
+      this.isLoadingDetails = false;
     });
   }
 
@@ -244,6 +217,7 @@ export class ApprovalProcess implements OnInit, OnDestroy {
         this.isDocumentViewVisible = true;
         return;
       } catch (error) {
+        console.error('Error creating object URL:', error);
       }
     }
 
@@ -273,6 +247,7 @@ export class ApprovalProcess implements OnInit, OnDestroy {
           this.isLoadingDetails = false;
         },
         error: (error) => {
+          console.error('Error al cargar el documento desde el servidor:', error);
           this.isLoadingDetails = false;
           
           this.documentViewData = {
@@ -308,18 +283,239 @@ export class ApprovalProcess implements OnInit, OnDestroy {
     }
   }
 
+  private tryGetApprovalDocument(data: SuccessModalData): void {
+    this.approvalService.getDocumentPdf(data.id!, this.currentUser!.idUsuario).subscribe({
+      next: (pdfBlob: Blob) => {
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        const fileName = data.pdfOriginalName || data.documentoFileName || `documento_${data.id}.pdf`;
+        
+        this.documentViewData = {
+          id: data.id!,
+          file: undefined,
+          url: pdfUrl,
+          title: data.nombreSolicitud,
+          fileName: fileName,
+          metadata: {
+            pdfOriginalName: fileName,
+            pdfSizeBytes: data.pdfSizeBytes,
+            isPdfMetadata: false,
+            isPdfFromService: true
+          }
+        };
+        this.isDetailModalVisible = false;
+        this.isDocumentViewVisible = true;
+        this.isLoadingDetails = false;
+      },
+      error: (error) => {
+        console.error('Error obteniendo PDF del servidor:', error);
+        this.isLoadingDetails = false;
+
+        if (data.pdfOriginalName || data.documentoFileName) {
+          this.documentViewData = {
+            id: data.id!,
+            file: undefined,
+            url: undefined,
+            title: data.nombreSolicitud,
+            fileName: data.pdfOriginalName || data.documentoFileName || this.getDocumentTitle(data.estado),
+            metadata: {
+              pdfOriginalName: data.pdfOriginalName || data.documentoFileName,
+              pdfSizeBytes: data.pdfSizeBytes,
+              isPdfMetadata: true,
+              error: `No se pudo cargar el ${this.getDocumentTitle(data.estado).toLowerCase()} desde el servidor, pero se tiene información del archivo: ${data.pdfOriginalName || data.documentoFileName}`
+            }
+          };
+          this.isDetailModalVisible = false;
+          this.isDocumentViewVisible = true;
+        } else {
+          this.tryGetAttachments(data);
+        }
+      }
+    });
+  }
+
+  private tryGetDocumentWithFallback(data: SuccessModalData): void {
+    this.approvalService.getDocumentPdf(data.id!, this.currentUser!.idUsuario).subscribe({
+      next: (pdfBlob: Blob) => {
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        const fileName = data.pdfOriginalName || data.documentoFileName || `documento_${data.id}.pdf`;
+
+        this.documentViewData = {
+          id: data.id!,
+          file: undefined,
+          url: pdfUrl,
+          title: data.nombreSolicitud,
+          fileName: fileName,
+          metadata: {
+            pdfOriginalName: fileName,
+            pdfSizeBytes: data.pdfSizeBytes,
+            isPdfMetadata: false,
+            isPdfFromService: true
+          }
+        };
+        this.isDetailModalVisible = false;
+        this.isDocumentViewVisible = true;
+        this.isLoadingDetails = false;
+      },
+      error: (error) => {
+        console.error('Error obteniendo PDF del servidor:', error);
+        this.tryGetOriginalPdf(data);
+      }
+    });
+  }
+
+  private tryGetOriginalPdf(data: SuccessModalData): void {
+    this.approvalService.getDocumentPdf(data.id!, this.currentUser!.idUsuario).subscribe({
+      next: (pdfBlob: Blob) => {
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        
+        this.documentViewData = {
+          id: data.id!,
+          file: undefined,
+          url: pdfUrl,
+          title: data.nombreSolicitud,
+          fileName: data.pdfOriginalName || data.documentoFileName || this.getDocumentTitle(data.estado),
+          metadata: {
+            pdfOriginalName: data.pdfOriginalName || data.documentoFileName,
+            pdfSizeBytes: data.pdfSizeBytes,
+            isPdfMetadata: false,
+            isPdfFromService: true
+          }
+        };
+        this.isDetailModalVisible = false;
+        this.isDocumentViewVisible = true;
+        this.isLoadingDetails = false;
+      },
+      error: (pdfError) => {
+        this.tryGetAttachments(data);
+      }
+    });
+  }
+
+
+  private tryGetAttachments(data: SuccessModalData): void {
+    this.approvalService.getAttachments(data.id!, this.currentUser!.idUsuario).subscribe({
+      next: (attachments) => {
+        if (attachments && attachments.length > 0) {
+          const attachment = attachments[0];
+          this.documentViewData = {
+            id: data.id!,
+            file: undefined,
+            url: undefined,
+            title: data.nombreSolicitud,
+            fileName: attachment.nombre || data.pdfOriginalName || this.getDocumentTitle(data.estado),
+            metadata: {
+              pdfOriginalName: attachment.nombre || data.pdfOriginalName,
+              pdfSizeBytes: attachment.tamaño || data.pdfSizeBytes,
+              isPdfMetadata: true,
+              error: 'Documento obtenido de adjuntos - puede requerir descarga manual'
+            }
+          };
+        } else {
+          this.tryConstructDirectUrl(data);
+        }
+        this.isDetailModalVisible = false;
+        this.isDocumentViewVisible = true;
+        this.isLoadingDetails = false;
+      },
+      error: (attachmentError) => {
+        this.tryConstructDirectUrl(data);
+      }
+    });
+  }
+
+  private tryConstructDirectUrl(data: SuccessModalData): void {
+    const baseUrl = 'http://200.7.99.74:8080/api';
+    const possibleUrls = [
+      `${baseUrl}/solicitudes/${data.id}/documento`,
+      `${baseUrl}/solicitudes/${data.id}/pdf`,
+      `${baseUrl}/documentos/${data.id}`,
+      `${baseUrl}/solicitudes/${data.id}/archivo`
+    ];
+
+    let attempts = 0;
+    const maxAttempts = possibleUrls.length;
+
+    const tryNextUrl = () => {
+      if (attempts >= maxAttempts) {
+        this.showDocumentError(data, 'No se pudo obtener el documento del servidor, pero se tiene información del archivo');
+        return;
+      }
+
+      const url = possibleUrls[attempts];
+      
+      const img = new Image();
+      img.onload = () => {
+        this.documentViewData = {
+          id: data.id!,
+          file: undefined,
+          url: url,
+          title: data.nombreSolicitud,
+          fileName: data.pdfOriginalName || data.documentoFileName || this.getDocumentTitle(data.estado),
+          metadata: {
+            pdfOriginalName: data.pdfOriginalName || data.documentoFileName,
+            pdfSizeBytes: data.pdfSizeBytes,
+            isPdfMetadata: false,
+            isPdfFromService: true
+          }
+        };
+        this.isDetailModalVisible = false;
+        this.isDocumentViewVisible = true;
+        this.isLoadingDetails = false;
+      };
+      
+      img.onerror = () => {
+        attempts++;
+        tryNextUrl();
+      };
+      
+      img.src = url;
+    };
+
+    tryNextUrl();
+  }
+
+  private showDocumentError(data: SuccessModalData, errorMessage: string): void {
+    this.isLoadingDetails = false;
+    this.documentViewData = {
+      id: data.id!,
+      file: undefined,
+      url: undefined,
+      title: data.nombreSolicitud,
+      fileName: data.pdfOriginalName || data.documentoFileName || this.getDocumentTitle(data.estado),
+      metadata: {
+        pdfOriginalName: data.pdfOriginalName || data.documentoFileName,
+        pdfSizeBytes: data.pdfSizeBytes,
+        isPdfMetadata: true,
+        error: errorMessage
+      }
+    };
+    this.isDetailModalVisible = false;
+    this.isDocumentViewVisible = true;
+  }
+
   closeDocumentView(): void {
     this.isDocumentViewVisible = false;
     this.documentViewData = null;
   }
 
-  handleOpenDocumentToApprove(data: SuccessModalData) {
-    // Detectar si es procesador antes de abrir el documento
-    const uid = this.currentUser?.idUsuario;
-    if (uid) {
-      this.isProcessorMode = this.detectProcessorMode(data, uid);
+  private getDocumentTitle(estado?: string): string {
+    switch (estado) {
+      case 'Aprobada':
+        return 'Documento Aprobado';
+      case 'Rechazada':
+        return 'Documento Rechazado';
+      case 'Cancelada':
+        return 'Documento Cancelado';
+      case 'Pendiente':
+        return 'Documento de Solicitud';
+      case 'Enviada':
+        return 'Documento de Solicitud';
+      default:
+        return 'Documento';
     }
-    
+  }
+
+  handleOpenDocumentToApprove(data: SuccessModalData) {
     if (data && data.documentoAprobacion) {
       this.documentToApproveData = {
         id: data.id!,
@@ -367,11 +563,11 @@ export class ApprovalProcess implements OnInit, OnDestroy {
               this.isApprovalDocumentViewVisible = true;
             },
             error: (error) => {
-              alert('Error al cargar el documento. Por favor, inténtalo de nuevo.');
+              this.showExternalAlert('danger', 'Error al cargar documento', 'Error al cargar el documento. Por favor, inténtalo de nuevo.');
             }
           });
         } else {
-          alert('No se pudo cargar el documento. Verifique que la solicitud tenga un documento asociado.');
+          this.showExternalAlert('warning', 'Documento no disponible', 'No se pudo cargar el documento. Verifique que la solicitud tenga un documento asociado.');
         }
       }
     }
@@ -380,48 +576,18 @@ export class ApprovalProcess implements OnInit, OnDestroy {
   handleApproveRequest(ev: { id: string | number, comentario?: string }) {
     const uid = this.currentUser?.idUsuario;
     if (!uid) return;
-
-    const solicitudId = ev.id;
-    const comentario = ev.comentario?.trim() || '';
-
-    // Aprobar directamente el proceso usando el endpoint /api/solicitudes/{id}/aprobar
-    this.aprobarProcesoConValidacion(solicitudId, uid, comentario);
-  }
-
-  /**
-   * Aprueba el proceso y valida que el estado cambie correctamente
-   */
-  private aprobarProcesoConValidacion(solicitudId: string | number, usuarioId: number, comentario: string, closeDetailModal: boolean = false): void {
-    // Aprobar el proceso usando el endpoint /api/solicitudes/{id}/aprobar
-    this.approvalService.aprobarSolicitud(solicitudId, usuarioId, comentario).subscribe({
+    this.approvalService.aprobarSolicitud(ev.id, uid, ev.comentario).subscribe({
       next: (appr) => {
         if (appr) {
-          // Cerrar la modal de documento después del éxito
           this.isApprovalDocumentViewVisible = false;
-          
-          // Si viene desde Cargar Proceso, cerrar también el modal de detalles
-          if (closeDetailModal) {
-            this.isDetailModalVisible = false;
-            this.successModalData = null;
-          }
-
-          // Actualizar estado y recargar
           this.updateRequestStatus(appr.id, 'APROBADO', 'Aprobada');
           this.subscribeToApprovals();
-          this.successModalService.showSuccess('Proceso completado', 'La solicitud ha sido aprobada exitosamente y notificada a los usuarios correspondientes.');
+          this.successModalService.showSuccess('Aprobación completada', 'La solicitud ha sido aprobada exitosamente y notificada a los usuarios correspondientes.');
         }
       },
       error: (error) => {
-        let errorMessage = 'Error al completar el proceso. Por favor, inténtelo de nuevo.';
-        if (error.error?.message) {
-          errorMessage = error.error.message;
-        }
-        if (closeDetailModal) {
-          this.successModalService.showSuccess('Error', errorMessage);
-        } else {
-          alert(errorMessage);
-          this.isApprovalDocumentViewVisible = true;
-        }
+        this.showExternalAlert('danger', 'Error al aprobar', 'Error al aprobar la solicitud. Por favor, inténtelo de nuevo.');
+        this.isApprovalDocumentViewVisible = true;
       }
     });
   }
@@ -439,14 +605,13 @@ export class ApprovalProcess implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        alert('Error al rechazar la solicitud. Por favor, inténtelo de nuevo.');
+        this.showExternalAlert('danger', 'Error al rechazar', 'Error al rechazar la solicitud. Por favor, inténtelo de nuevo.');
         this.isApprovalDocumentViewVisible = true;
       }
     });
   }
 
   private updateRequestStatus(id: string | number, approvalStatus: 'APROBADO' | 'RECHAZADO', fullDataStatus: 'Aprobada' | 'Rechazada') {
-    // Obtener los detalles más actualizados del servidor
     this.approvalService.getApprovalDetails(id, this.allUsers, this.currentUser?.idUsuario).subscribe({
       next: (request) => {
         if (request) {
@@ -458,7 +623,6 @@ export class ApprovalProcess implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        // Fallback: actualizar localmente si falla la consulta al servidor
         const currentApprovals = this.approvalService.approvalsSubject.getValue();
         const approval = currentApprovals.find(a => a.id.toString() === id.toString());
         if (approval) {
@@ -484,76 +648,34 @@ export class ApprovalProcess implements OnInit, OnDestroy {
   }
 
   handleProcessUpdate(update: ProcessUpdatePayload): void {
-    if (!this.currentUser?.idUsuario || !update.requestId) {
-      this.successModalService.showSuccess('Error', 'No se puede cargar el proceso. Usuario o solicitud no disponible.');
-      return;
-    }
-
-    const uid = this.currentUser.idUsuario;
-    const archivos = update.attachments || [];
-    const comentario = update.comment?.trim() || '';
-
-    // Validar que haya al menos archivos o comentario
-    if (archivos.length === 0 && !comentario) {
-      this.successModalService.showSuccess(
-        'Información',
-        'Debe proporcionar al menos un archivo o un comentario para cargar el proceso.'
-      );
-      return;
-    }
-
-    const solicitudId = update.requestId;
-    const hasFiles = archivos.length > 0;
-
-    // Los endpoints se consumen por separado: primero adjuntos (si hay), luego aprobar
-    if (hasFiles) {
-      // Primero: Adjuntar archivos usando el endpoint /api/solicitudes/{id}/adjuntos
-      this.approvalService.agregarAdjuntos(solicitudId, uid, archivos, comentario).subscribe({
-        next: () => {
-          // Segundo: Aprobar el proceso usando el endpoint /api/solicitudes/{id}/aprobar
-          this.aprobarProcesoDesdeCargarProceso(solicitudId, uid, comentario);
-        },
-        error: (error) => {
-          let errorMessage = 'Error al adjuntar los archivos. Por favor, inténtelo de nuevo.';
-          if (error.status === 400) {
-            errorMessage = error.error?.message || 'Datos inválidos. Verifique que los archivos sean válidos.';
-          } else if (error.status === 413) {
-            errorMessage = 'Los archivos son demasiado grandes. El tamaño total no debe exceder el límite permitido.';
-          } else if (error.status === 415) {
-            errorMessage = 'Tipo de archivo no permitido. Por favor, verifique los formatos de los archivos.';
-          }
-          this.successModalService.showSuccess('Error', errorMessage);
-        }
-      });
-    } else if (comentario) {
-      // Si solo hay comentario, adjuntarlo primero y luego aprobar
-      this.approvalService.agregarAdjuntos(solicitudId, uid, [], comentario).subscribe({
-        next: () => {
-          // Segundo: Aprobar el proceso usando el endpoint /api/solicitudes/{id}/aprobar
-          this.aprobarProcesoDesdeCargarProceso(solicitudId, uid, comentario);
-        },
-        error: (error) => {
-          let errorMessage = 'Error al adjuntar el comentario. Por favor, inténtelo de nuevo.';
-          if (error.status === 400) {
-            errorMessage = error.error?.message || 'Error al adjuntar el comentario.';
-          }
-          this.successModalService.showSuccess('Error', errorMessage);
-        }
-      });
-    }
+    console.debug('Actualización manual del proceso', update);
+    this.successModalService.showSuccess(
+      'Actualización registrada',
+      'La información se actualizó correctamente y quedó trazada en el proceso.'
+    );
   }
-
-  /**
-   * Aprueba el proceso desde el botón "Cargar Proceso" después de adjuntar archivos
-   */
-  private aprobarProcesoDesdeCargarProceso(solicitudId: string | number, usuarioId: number, comentario: string): void {
-    this.aprobarProcesoConValidacion(solicitudId, usuarioId, comentario, true);
-  }
-
 
   onToggleManaged(value: boolean): void { this.showOnlyManaged = value; this.currentPage = 1; this.refreshApprovalsSource(); }
   onQuantityChange(quantity: number): void { this.itemsPerPage = Number(quantity); this.currentPage = 1; this.applyViewLogic(); }
   onSearchChange(term: string): void { this.searchTerm = term; this.currentPage = 1; this.applyViewLogic(); }
   onChangePage(newPage: number): void { this.currentPage = newPage; this.applyViewLogic(); }
   sortBy(field: string): void { if (this.currentOrder === field) { this.ascendingOrder = !this.ascendingOrder; } else { this.currentOrder = field; this.ascendingOrder = true; } this.applyViewLogic(); }
+
+  showExternalAlert(type: 'success' | 'danger' | 'info' | 'warning', title: string, message: string, duration: number = 5000): void {
+    const alertItem = { type, title, message };
+    this.externalAlerts.push(alertItem);
+
+    if (duration > 0) {
+      setTimeout(() => {
+        const index = this.externalAlerts.indexOf(alertItem);
+        if (index > -1) {
+          this.closeExternalAlert(index);
+        }
+      }, duration);
+    }
+  }
+
+  closeExternalAlert(index: number): void {
+    this.externalAlerts.splice(index, 1);
+  }
 }

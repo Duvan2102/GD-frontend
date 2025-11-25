@@ -1,0 +1,118 @@
+@import '../../styles/variables.css';
+
+.external-alerts-container {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  z-index: 2000;
+  max-width: 400px;
+  width: 90%;
+}
+
+.external-alert {
+  background: var(--color-bg-secondary);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  animation: slideInRight 0.3s ease-out;
+  border-left: 4px solid;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.external-alert.alert-success {
+  border-left-color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.external-alert.alert-danger {
+  border-left-color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.external-alert.alert-info {
+  border-left-color: var(--color-info);
+  background: var(--color-info-bg);
+}
+
+.external-alert.alert-warning {
+  border-left-color: var(--color-warning);
+  background: var(--color-warning-bg);
+}
+
+.external-alert-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.external-alert.alert-success .external-alert-icon {
+  color: var(--color-success);
+}
+
+.external-alert.alert-danger .external-alert-icon {
+  color: var(--color-danger);
+}
+
+.external-alert.alert-info .external-alert-icon {
+  color: var(--color-info);
+}
+
+.external-alert.alert-warning .external-alert-icon {
+  color: var(--color-warning);
+}
+
+.external-alert-content {
+  flex: 1;
+}
+
+.external-alert-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-text-primary);
+}
+
+.external-alert-message {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  margin: 0;
+  white-space: pre-line;
+}
+
+.external-alert-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: 18px;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.external-alert-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: var(--color-text-primary);
+}
+

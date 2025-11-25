@@ -88,7 +88,6 @@ export interface ProcessUpdatePayload {
   comment: string;
   attachments: File[];
   password: string;
-  procesadores?: number[]; // IDs de usuarios procesadores
 }
 
 @Component({
@@ -107,7 +106,6 @@ export class RequestSuccessModal implements OnChanges {
   @Input() hideViewDocumentButton = false;
   @Input() currentUser: UsuarioData | null = null;
   @Input() enableProcessUpdate = false;
-  @Input() hideAssignProcessors = false; // Controla si se muestra la sección de asignación de procesadores
 
   @Output() close = new EventEmitter<void>();
   @Output() cancelRequest = new EventEmitter<{ solicitudId: string | number, comentario?: string }>();
@@ -132,13 +130,6 @@ export class RequestSuccessModal implements OnChanges {
   processUpdateComment = '';
   processUpdateAttachments: File[] = [];
 
-  // Propiedades para asignación de proceso post-aprobación
-  procesadores: Array<{ usuario: Usuario | null, searchTerm: string, originalSearchTerm: string, orden: number }> = [];
-  filteredProcesadores: Usuario[] = [];
-  activeProcesadorIndex: number | null = null;
-  highlightedProcesadorIndex: number = -1;
-  procesadorDropdownStyle: any = {};
-
   constructor(private approvalService: ApprovalService) {}
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -148,6 +139,38 @@ export class RequestSuccessModal implements OnChanges {
       if (this.isAprobPendiente() && this.data.requiereProceso === true && this.procesadores.length === 0) {
         this.procesadores = [{ usuario: null, searchTerm: '', originalSearchTerm: '', orden: 1 }];
       }
+    }
+  }
+
+  get hasProcessUpdateData(): boolean {
+    return this.processUpdateComment.trim().length > 0 || this.processUpdateAttachments.length > 0;
+  }
+
+  canSubmitProcessUpdate(): boolean {
+    if (!this.enableProcessUpdate || !this.data?.id) {
+      return false;
+    }
+    return this.hasProcessUpdateData;
+  }
+
+  onProcessAttachmentClick(input: HTMLInputElement): void {
+    if (!this.enableProcessUpdate) return;
+    input.click();
+  }
+
+  onProcessAttachmentsSelected(event: Event): void {
+    if (!this.enableProcessUpdate) return;
+    const target = event.target as HTMLInputElement;
+    const files = target.files ? Array.from(target.files) : [];
+    this.processUpdateAttachments = files;
+    if (target) {
+      target.value = '';
+    }
+  }
+
+  removeProcessAttachment(index: number): void {
+    if (index >= 0 && index < this.processUpdateAttachments.length) {
+      this.processUpdateAttachments = this.processUpdateAttachments.filter((_, i) => i !== index);
     }
   }
 

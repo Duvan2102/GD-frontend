@@ -53,7 +53,7 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
   const isApi = isLocalhost || isApiPath || isSpecificEndpoint;
   const isSolicitudes = req.url.includes('/solicitudes');
   const isAuditoria = req.url.includes('/auditoria');
-  const isTwoFAValidation = req.url.includes('/auth/validate-2fa');
+  const isTwoFAValidation = req.url.includes('/auth/validate-2fa') || req.url.includes('/validar-2fa');
   const hasTempTokenInBody = !!req.body && typeof req.body === 'object' && 'tempToken' in req.body;
   const requiresAuth = isApi || isSolicitudes || isAuditoria;
 

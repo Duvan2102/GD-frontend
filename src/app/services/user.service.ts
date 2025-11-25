@@ -130,11 +130,13 @@ export class UserService {
   }
 
   verificarUsuarioExiste(identificacion: string): Observable<boolean> {
-    return this.http.post<Usuario[]>(`${this.apiUrl}/buscar`, { identificacion: identificacion }, this.httpOptions)
-      .pipe(
-        map(usuarios => usuarios.length > 0),
-        catchError(() => of(false))
-      );
+    return this.http.get<Usuario[]>(`${this.apiUrl}/buscar`, {
+      params: new HttpParams().set('identificacion', identificacion),
+      ...this.httpOptions
+    }).pipe(
+      map(usuarios => Array.isArray(usuarios) && usuarios.length > 0),
+      catchError(() => of(false))
+    );
   }
 
   crearUsuario(usuario: Usuario): Observable<ApiResponse> {
