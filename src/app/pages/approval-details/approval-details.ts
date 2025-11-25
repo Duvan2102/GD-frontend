@@ -15,7 +15,7 @@ import { Approval } from '../approvals/approvals';
 import { Typology, TypologyService } from '../../services/typology.service';
 import { UsuarioData } from '../../interfaces/common.interfaces';
 import { AuthService } from '../../services/auth.service';
-import { Usuario, UsuarioRequest, ApiResponse, ErrorResponse, DobleAutenticacionTipo } from '../../interfaces/common.interfaces';
+import { Usuario } from '../../interfaces/common.interfaces';
 import { UserService } from '../../services/user.service';
 import { applyApprovalDetailsViewLogic } from '../../utils/view.utils';
 import { delay } from 'rxjs/operators';
@@ -123,7 +123,7 @@ export class ApprovalDetails implements OnInit, OnDestroy {
 
   applyViewLogic(): void {
     const currentUserData = this.authService.getCurrentUserValue();
-    const currentUser = currentUserData ? this.convertUsuarioDataToUsuario(currentUserData) : undefined;
+    const currentUser = currentUserData ? this.allUsers.find(u => u.noUsuario === currentUserData.idUsuario) : undefined;
     const { displayedRequests, totalFiltered } = applyApprovalDetailsViewLogic(
       this.approvalsList,
       this.showOnlyManaged,
@@ -138,49 +138,6 @@ export class ApprovalDetails implements OnInit, OnDestroy {
     );
     this.displayedRequests = displayedRequests;
     this.totalFiltered = totalFiltered;
-  }
-
-  private convertUsuarioDataToUsuario(usuarioData: any): Usuario {
-    // Buscar el área real en la lista de áreas disponibles
-    const areaReal = this.findAreaByName(usuarioData.cargo?.area || '');
-    
-    return {
-      noUsuario: usuarioData.idUsuario,
-      idUsuario: usuarioData.idUsuario,
-      identificacion: usuarioData.identificacion,
-      nombres: usuarioData.nombres,
-      apellidos: usuarioData.apellidos,
-      usuario: usuarioData.usuario,
-      estado: {
-        idEstado: 1,
-        descripcion: usuarioData.estado || 'Activo'
-      },
-      activo: usuarioData.estado === 'Activo',
-      cargo: {
-        idCargo: usuarioData.cargo?.idCargo || 0,
-        descripcion: usuarioData.cargo?.descripcion || '',
-        area: {
-          idArea: areaReal?.idArea || 0,
-          descripcion: usuarioData.cargo?.area || '',
-          departamento: {
-            idDepartamento: 0,
-            descripcion: usuarioData.cargo?.departamento || ''
-          }
-        }
-      },
-      rol: Array.isArray(usuarioData.rol) ? usuarioData.rol : [0],
-      correoEmpresarial: usuarioData.correoEmpresarial,
-      correoPersonal: usuarioData.correoPersonal,
-      telefono1: usuarioData.telefono1,
-      telefono2: usuarioData.telefono2,
-      direccion: usuarioData.direccion,
-      dobleAutenticacion: false
-    };
-  }
-
-  private findAreaByName(areaName: string): any {
-    const typology = this.tipologias.find(t => t.cargo?.area?.descripcion === areaName);
-    return typology?.cargo?.area;
   }
 
   onToggleManaged(value: boolean): void {
@@ -300,7 +257,6 @@ export class ApprovalDetails implements OnInit, OnDestroy {
         this.isDocumentViewVisible = true;
         return;
       } catch (error) {
-        console.error('Error creating object URL:', error);
       }
     }
 
@@ -331,7 +287,6 @@ export class ApprovalDetails implements OnInit, OnDestroy {
           this.isLoadingDetails = false;
         },
         error: (error) => {
-          console.error('Error al cargar el documento desde el servidor:', error);
           this.isLoadingDetails = false;
           
           this.documentViewData = {
@@ -402,7 +357,6 @@ export class ApprovalDetails implements OnInit, OnDestroy {
           }
         },
         error: (error) => {
-          console.error('Error al asignar procesadores:', error);
           let errorMessage = 'Error al asignar los procesadores. Por favor, inténtelo de nuevo.';
           if (error.status === 400) {
             errorMessage = error.error?.message || 'Datos inválidos';
@@ -439,7 +393,6 @@ export class ApprovalDetails implements OnInit, OnDestroy {
         this.showDetailsModal(String(requestId));
       },
       error: (error) => {
-        console.error('Error al cargar adjuntos:', error);
         let errorMessage = 'Error al cargar los archivos adjuntos. Por favor, inténtelo de nuevo.';
         if (error.status === 400) {
           errorMessage = error.error?.message || 'Datos inválidos';
