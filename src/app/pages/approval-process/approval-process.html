@@ -2,15 +2,14 @@
   <div class="container-fluid p-4">
 
     <div class="seccion-cabecera">
-      <h2>DETALLES APROBACIONES</h2>
+      <h2>PROCESO DE APROBACIONES</h2>
     </div>
 
     <app-controls
-      [labelAprobados]="'CANCELADAS/RECHAZADAS'"
-      [labelAprobadosInactivo]="'APROBADOS'"
-      [toggleApproved]="showOnlyManaged"
+      [labelAprobados]="'GESTIONADOS'"
+      [labelAprobadosInactivo]="'PENDIENTES'"
+      [showToggleSwitch]="false"
       (quantityChange)="onQuantityChange($event)"
-      (toggleApprovedChange)="onToggleManaged($event)"
       (searchChange)="onSearchChange($event)">
     </app-controls>
 
@@ -20,7 +19,7 @@
       [currentOrder]="currentOrder"
       [ascendingOrder]="ascendingOrder"
       [isToggleActive]="showOnlyManaged"
-      [viewType]="'approval-details'"
+      [viewType]="'approval-process'"
       (sort)="sortBy($event)"
       (manage)="onManage($event)">
     </app-requests-table>
@@ -42,11 +41,24 @@
   [currentUser]="currentUser"
   [isApprovalFlow]="true"
   [hideManageButton]="true"
-  [enableProcessUpdate]="isProcessorMode"
+  [hideViewDocumentButton]="true"
+  [enableProcessUpdate]="true"
+  [hideAssignProcessors]="true"
   (close)="closeDetailModal()"
+  (manageRequest)="handleOpenDocumentToApprove($event)"
   (viewApprovedDocument)="handleViewApprovedDocument($event)"
-  (processUpdate)="handleAssignProcess($event)">
+  (processUpdate)="handleProcessUpdate($event)"> 
 </app-request-success-modal>
+
+<app-approval-document-view
+  [isVisible]="isApprovalDocumentViewVisible"
+  [documentData]="documentToApproveData"
+  [isProcessorMode]="isProcessorMode"
+  (close)="closeApprovalDocumentView()"
+  (back)="handleBackFromDocumentView()"
+  (approve)="handleApproveRequest($event)"
+  (reject)="handleRejectRequest($event)">
+</app-approval-document-view>
 
 <app-document-view
   [isVisible]="isDocumentViewVisible"
@@ -55,17 +67,6 @@
   [hideSendButton]="true"
   (close)="closeDocumentView()">
 </app-document-view>
-
-<!-- Loading overlay for historic fetch -->
-<div *ngIf="isLoading" class="loading-overlay">
-  <div class="spinner-border text-primary" role="status">
-    <span class="visually-hidden">Cargando...</span>
-  </div>
-  <div class="mt-2">Cargando historial...</div>
-  <style>
-    .loading-overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.6);z-index:1050}
-  </style>
-</div>
 
 <!-- Loading overlay for detail fetch -->
 <div *ngIf="isLoadingDetails" class="loading-overlay">
@@ -77,3 +78,5 @@
     .loading-overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.6);z-index:1050}
   </style>
 </div>
+
+

@@ -33,8 +33,6 @@ export class TwoFAStateComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Redirigir inmediatamente a verificación sin mostrar esta pantalla
-    // Esto elimina el flash visual de la pantalla azul
     this.router.navigate(['/two-fa-verification']);
 
   }
@@ -52,7 +50,6 @@ export class TwoFAStateComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.isLoading = false;
 
-        // Determinar qué acción tomar basado en el estado
         this.determineNextAction();
       },
       error: (error) => {
@@ -69,22 +66,16 @@ export class TwoFAStateComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Nuevo flujo basado en la documentación actualizada
     if (this.twoFAState.googleAuthPending) {
-      // Google Auth está pendiente de configuración
       this.router.navigate(['/two-fa-verification']);
     } else if (this.twoFAState.hasGoogleAuth) {
-      // Usuario tiene Google Auth configurado y confirmado
       this.router.navigate(['/two-fa-verification']);
     } else if (this.twoFAState.hasEmailBackup && !this.twoFAState.hasGoogleAuth) {
-      // Usuario tiene solo email configurado
       this.router.navigate(['/two-fa-verification']);
     } else if (!this.twoFAState.hasGoogleAuth && !this.twoFAState.hasEmailBackup && !this.twoFAState.googleAuthPending) {
-      // Usuario no tiene ningún método 2FA configurado - redirigir a verificación para configurar
       console.log('Usuario sin 2FA configurado, redirigiendo a verificación...');
       this.router.navigate(['/two-fa-verification']);
     } else {
-      // Estado inesperado - mostrar error con más detalles
       console.error('Estado 2FA no reconocido:', this.twoFAState);
       this.errorMessage = `Estado de configuración 2FA no reconocido. Por favor, contacta al administrador.`;
     }
@@ -150,14 +141,25 @@ export class TwoFAStateComponent implements OnInit, OnDestroy {
           this.errorMessage = 'Usuario bloqueado. Intenta más tarde';
           break;
         default:
-          this.errorMessage = error.error.message || 'Error desconocido';
+          const errorMsg = error.error.message || '';
+          if (errorMsg.toLowerCase().includes('user is disabled')) {
+            this.errorMessage = 'Usuario deshabilitado. Contacta al administrador.';
+          } else {
+            this.errorMessage = errorMsg || 'Error desconocido';
+          }
+      }
+    } else if (error.error?.message) {
+      const errorMsg = error.error.message;
+      if (errorMsg.toLowerCase().includes('user is disabled')) {
+        this.errorMessage = 'Usuario deshabilitado. Contacta al administrador.';
+      } else {
+        this.errorMessage = errorMsg;
       }
     } else {
       this.errorMessage = 'Error de conexión. Verifica tu conexión a internet';
     }
   }
 
-  // Getters para el template (actualizados)
   get hasGoogleAuth(): boolean {
     return this.twoFAState?.hasGoogleAuth || false;
   }

@@ -101,7 +101,9 @@ export class ApprovalService {
   private mapServerToApproval(item: any): Approval {
     // Use proper ID from server, fallback to a more descriptive ID if needed
     const id = item?.id ?? item?.numeroRadicado ?? item?.solicitudId ?? `temp-${Date.now()}`;
-    const estado = (item?.estado || 'PENDIENTE').toUpperCase();
+    const estadoRaw = (item?.estado || 'PENDIENTE').toUpperCase();
+    // Mapear estados del servidor a estados válidos
+    const estado = this.mapEstadoToStatus(estadoRaw);
     const createdAt = item?.createdAt || item?.fechaCreacion || new Date().toISOString();
     
     // Obtener la fecha de última actualización real del historial de gestiones
@@ -153,7 +155,7 @@ export class ApprovalService {
     // Información básica del creador (sin resolver aún)
     const creatorUser = 'Usuario no encontrado';
     const creatorFullName = 'Usuario no encontrado';
-    const position = 'Funcionario';
+    const position = item?.solicitanteCargo || 'Funcionario';
 
     return {
       id: String(id),
@@ -163,7 +165,7 @@ export class ApprovalService {
       creatorFullName: creatorFullName,
       position: position,
       lastUpdate: updatedAt,
-      status: ['APROBADO', 'RECHAZADO', 'PENDIENTE', 'CANCELADA'].includes(estado) ? estado : 'PENDIENTE',
+      status: ['PENDIENTE', 'APROBADO', 'RECHAZADO', 'CANCELADA', 'APROB-PENDIENTE', 'APROB-POCESADO'].includes(estado) ? estado : 'PENDIENTE',
       approvers: approvers,
       priority: item?.prioridad === true,  // Boolean del backend (true = prioritaria)
       fullData: item,
@@ -504,11 +506,16 @@ export class ApprovalService {
     const createdAt = item?.createdAt || item?.fechaCreacion || new Date().toISOString();
     const estadoBack = String(item?.estado || 'Pendiente');
     const estado = (() => {
-      const up = estadoBack.toUpperCase();
+      const up = estadoBack.toUpperCase().trim();
+      // Estados específicos primero
+      if (up === 'APROB-PENDIENTE' || up === 'APROB_PENDIENTE') return 'APROB-PENDIENTE';
+      if (up === 'APROB-POCESADO' || up === 'APROB_POCESADO' || up === 'APROB-PROCESADO') return 'APROB-POCESADO';
+      // Estados tradicionales
       if (up === 'APROBADO') return 'Aprobada';
       if (up === 'RECHAZADO') return 'Rechazada';
       if (up === 'CANCELADA') return 'Cancelada';
       if (up === 'ENVIADA') return 'Enviada';
+      if (up === 'PENDIENTE') return 'Pendiente';
       return 'Pendiente';
     })();
 
@@ -595,7 +602,9 @@ export class ApprovalService {
       // Campos adicionales para documentos aprobados
       documentoAprobado: item?.documentoAprobado || item?.documentoAprobacion,
       urlDocumentoAprobado: item?.urlDocumentoAprobado || item?.documentoAprobadoUrl,
-      nombreDocumentoAprobado: item?.nombreDocumentoAprobado || item?.documentoAprobadoFileName
+      nombreDocumentoAprobado: item?.nombreDocumentoAprobado || item?.documentoAprobadoFileName,
+      // Campo para determinar si requiere proceso post-aprobación
+      requiereProceso: Boolean(item?.requiereProceso)
     };
     
     return result;
@@ -704,6 +713,118 @@ export class ApprovalService {
         if (Array.isArray(res)) return res;
         const data = res?.data ?? res;
         return Array.isArray(data?.content) ? data.content : (Array.isArray(data) ? data : []);
+      }),
+      switchMap((list: any[]) => {
+        const approvals = list.map((item: any) => this.mapServerToApproval(item));
+        
+        // Obtener IDs únicos de creadores que necesitan resolución
+        const creatorIds = [...new Set(approvals
+          .filter((approval: any) => approval._creadorId)
+          .map((approval: any) => approval._creadorId!))];
+        
+        if (creatorIds.length === 0) {
+          return of(approvals);
+        }
+        
+        // Resolver información de usuarios creadores
+        const userRequests = creatorIds.map(creatorId => 
+          this.userService.obtenerUsuarioPorId(creatorId).pipe(
+            catchError(() => of(null))
+          )
+        );
+        
+        return forkJoin(userRequests).pipe(
+          map(resolvedUsers => {
+            const userMap = new Map<number, Usuario>();
+            resolvedUsers.forEach(user => {
+              if (user) {
+                userMap.set(user.noUsuario || (user as any).idUsuario, user);
+              }
+            });
+            
+            // Actualizar approvals con información resuelta
+            return approvals.map((approval: any) => {
+              if (approval._creadorId && userMap.has(approval._creadorId)) {
+                const user = userMap.get(approval._creadorId)!;
+                return {
+                  ...approval,
+                  creatorUser: user.usuario || 'Usuario no encontrado',
+                  creatorFullName: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario no encontrado',
+                  position: this.extractAreaString(user) || 'Funcionario'
+                };
+              }
+              return approval;
+            });
+          })
+        );
+      }),
+      tap(list => this.approvalsSubject.next(list)),
+      catchError(() => of([]))
+    );
+  }
+
+  /**
+   * Obtiene las solicitudes asignadas al usuario como procesador (estado APROB_PENDIENTE)
+   * Si se especifica getAll=true, obtiene todas las páginas automáticamente
+   */
+  getApprovalsForProcessor(userId: number, users: Usuario[], page = 0, size = 10, getAll = false): Observable<Approval[]> {
+    const params = new HttpParams()
+      .set('usuarioId', String(userId))
+      .set('page', String(page))
+      .set('size', String(size));
+    const url = `${this.baseUrl}/solicitudes/para-procesar`;
+    return this.http.get<any>(url, { headers: this.headersForUser(userId), params }).pipe(
+      switchMap(res => {
+        // Detectar si la respuesta es paginada
+        let allItems: any[] = [];
+        let totalPages = 1;
+        let currentPage = 0;
+        
+        if (Array.isArray(res)) {
+          allItems = res;
+        } else {
+          const data = res?.data ?? res;
+          if (Array.isArray(data?.content)) {
+            allItems = data.content;
+            totalPages = data.totalPages || 1;
+            currentPage = data.number || 0;
+          } else if (Array.isArray(data)) {
+            allItems = data;
+          }
+        }
+        
+        // Si getAll es true y hay más páginas, obtener todas
+        if (getAll && totalPages > 1 && currentPage < totalPages - 1) {
+          const remainingPages: Observable<any>[] = [];
+          for (let p = currentPage + 1; p < totalPages; p++) {
+            const pageParams = new HttpParams()
+              .set('usuarioId', String(userId))
+              .set('page', String(p))
+              .set('size', String(size));
+            remainingPages.push(
+              this.http.get<any>(url, { headers: this.headersForUser(userId), params: pageParams }).pipe(
+                map(pageRes => {
+                  if (Array.isArray(pageRes)) return pageRes;
+                  const pageData = pageRes?.data ?? pageRes;
+                  return Array.isArray(pageData?.content) ? pageData.content : (Array.isArray(pageData) ? pageData : []);
+                }),
+                catchError(() => of([]))
+              )
+            );
+          }
+          
+          return forkJoin(remainingPages).pipe(
+            map((pages: any[][]) => {
+              // Combinar todas las páginas
+              pages.forEach(pageItems => {
+                allItems = [...allItems, ...pageItems];
+              });
+              return allItems;
+            })
+          );
+        }
+        
+        return of(allItems);
       }),
       switchMap((list: any[]) => {
         const approvals = list.map((item: any) => this.mapServerToApproval(item));
@@ -929,6 +1050,71 @@ export class ApprovalService {
       catchError(error => {
         console.warn('Error al registrar la descarga completa (no crítico):', error);
         return of(null);
+      })
+    );
+  }
+
+  /**
+   * Agrega procesadores para el proceso post-aprobación de una solicitud
+   */
+  agregarProcesadores(
+    solicitudId: string | number,
+    usuarioId: number,
+    procesadores: number[]
+  ): Observable<any> {
+    const headers = this.headersForUser(usuarioId);
+    const body = {
+      procesadores: procesadores
+    };
+    
+    return this.http.post<any>(
+      `${this.baseUrl}/solicitudes/${solicitudId}/agregar-procesadores`,
+      body,
+      { headers }
+    ).pipe(
+      tap(() => console.log(`Procesadores agregados para solicitud ${solicitudId}`)),
+      catchError(error => {
+        console.error('Error al agregar procesadores:', error);
+        throw error;
+      })
+    );
+  }
+
+  /**
+   * Agrega adjuntos (archivos) a una solicitud
+   * Opcionalmente puede incluir un comentario para registrar en el proceso
+   */
+  agregarAdjuntos(
+    solicitudId: string | number,
+    usuarioId: number,
+    archivos: File[],
+    comentario?: string
+  ): Observable<any> {
+    const headers = this.headersForUser(usuarioId);
+    const formData = new FormData();
+    
+    // Agregar cada archivo al FormData
+    archivos.forEach((archivo, index) => {
+      formData.append('archivos', archivo);
+    });
+    
+    // Agregar usuarioId como parte del FormData
+    formData.append('usuarioId', String(usuarioId));
+    
+    // Agregar comentario si se proporciona
+    if (comentario && comentario.trim()) {
+      formData.append('comentario', comentario.trim());
+    }
+    
+    return this.http.post<any>(
+      `${this.baseUrl}/solicitudes/${solicitudId}/adjuntos`,
+      formData,
+      { headers }
+    ).pipe(
+      tap(() => console.log(`Adjuntos agregados para solicitud ${solicitudId}`)),
+      catchError(error => {
+        console.error('Error al agregar adjuntos:', error);
+        throw error;
       })
     );
   }
@@ -1246,11 +1432,19 @@ export class ApprovalService {
     };
   }
 
-  private mapEstadoToStatus(estado: string): 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA' {
-    const estadoUpper = estado.toUpperCase();
-    if (estadoUpper.includes('APROBADO')) return 'APROBADO';
+  private mapEstadoToStatus(estado: string): 'PENDIENTE' | 'APROBADO' | 'RECHAZADO' | 'CANCELADA' | 'APROB-PENDIENTE' | 'APROB-POCESADO' {
+    const estadoUpper = estado.toUpperCase().trim();
+    
+    // Estados específicos primero
+    if (estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE') return 'APROB-PENDIENTE';
+    if (estadoUpper === 'APROB-POCESADO' || estadoUpper === 'APROB_POCESADO' || estadoUpper === 'APROB-PROCESADO') return 'APROB-POCESADO';
+    
+    // Estados tradicionales
+    if (estadoUpper.includes('APROBADO') && !estadoUpper.includes('PENDIENTE') && !estadoUpper.includes('POCESADO')) return 'APROBADO';
     if (estadoUpper.includes('RECHAZADO')) return 'RECHAZADO';
     if (estadoUpper.includes('CANCELADO') || estadoUpper.includes('CANCELADA')) return 'CANCELADA';
+    if (estadoUpper.includes('PENDIENTE')) return 'PENDIENTE';
+    
     return 'PENDIENTE';
   }
 

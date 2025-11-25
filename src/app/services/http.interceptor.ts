@@ -87,9 +87,7 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
 
   return next(cloned).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 || error.status === 403) {
-        console.warn(`🔐 Error ${error.status} - Token inválido`);
-        
+      if (error.status === 401 || error.status === 403) {        
         const errorMessage = error.error?.message || error.message || '';
         const isTokenError = errorMessage.toLowerCase().includes('token') || 
                            errorMessage.toLowerCase().includes('unauthorized') ||

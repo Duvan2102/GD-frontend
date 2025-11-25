@@ -46,7 +46,8 @@
           </div>
           
           <div *ngIf="pdfSrc && !isLoading && !error" class="bottom-controls">
-            <button type="button" 
+            <button *ngIf="!isProcessorMode"
+                    type="button" 
                     class="btn-approval btn-reject" 
                     [disabled]="!isScrolledToEnd" 
                     [class.disabled]="!isScrolledToEnd"
@@ -75,9 +76,9 @@
                     class="btn-approval btn-approve" 
                     [disabled]="!isScrolledToEnd" 
                     [class.disabled]="!isScrolledToEnd"
-                    [title]="!isScrolledToEnd ? 'Debe visualizar todo el documento para poder aprobar' : 'Aprobar solicitud'"
+                    [title]="!isScrolledToEnd ? (isProcessorMode ? 'Debe visualizar todo el documento para completar el proceso' : 'Debe visualizar todo el documento para poder aprobar') : (isProcessorMode ? 'Completar proceso' : 'Aprobar solicitud')"
                     (click)="onApprove()">
-              <i class="bi bi-check-circle"></i> Aprobar
+              <i class="bi bi-check-circle"></i> {{ isProcessorMode ? 'Completar Proceso' : 'Aprobar' }}
             </button>
           </div>
           
