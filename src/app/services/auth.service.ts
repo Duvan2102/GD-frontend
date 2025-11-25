@@ -133,7 +133,6 @@ export class AuthService {
     this.currentUser = { ...this.currentUser, ...updatedUserData };
     this.currentUserSubject.next(this.currentUser);
     
-    // Guardar en localStorage para persistencia
     localStorage.setItem('current_user_data', JSON.stringify(this.currentUser));
     
     return of(this.currentUser);
@@ -697,16 +696,25 @@ export class AuthService {
     );
   }
 
-  removeUserQR(usuario: string, password: string): Observable<{ message: string }> {
+  removeUserQR(usuarioEditado: string, password: string, usuarioConectado?: string): Observable<{ message: string }> {
     const token = this.getToken();
     if (!token) {
       return throwError(() => new Error('Token no encontrado'));
     }
 
-    const request = {
-      usuario: usuario,
+    const usuarioParaValidacion = usuarioConectado || this.getCurrentUserValue()?.usuario;
+    if (!usuarioParaValidacion) {
+      return throwError(() => new Error('Usuario conectado no encontrado'));
+    }
+
+    const request: any = {
+      usuario: usuarioParaValidacion,
       password: password
     };
+
+    if (usuarioEditado) {
+      request.usuarioEditado = usuarioEditado;
+    }
 
     return this.http.post<{ message: string }>(`${this.apiUrl}/auth/remove-google-auth`, request, {
       headers: {

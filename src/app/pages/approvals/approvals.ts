@@ -74,9 +74,15 @@ export class Approvals implements OnInit, OnDestroy {
   isLoadingDetails = false;
   currentUser: UsuarioData | null = null;
 
-  // Propiedades para document-view
   isDocumentViewVisible = false;
   documentViewData: DocumentViewData | null = null;
+
+  externalAlerts: Array<{
+    type: 'success' | 'danger' | 'info' | 'warning';
+    title: string;
+    message: string;
+  }> = [];
+
 
   constructor(
     private userService: UserService,
@@ -135,7 +141,6 @@ export class Approvals implements OnInit, OnDestroy {
       }
     });
     
-    // Obtener historial de aprobaciones gestionadas
     this.approvalService.getHistorico(uid, this.allUsers).subscribe({
       next: (list) => {
         this.managedApprovals = (list || []).filter(a => {
@@ -169,7 +174,6 @@ export class Approvals implements OnInit, OnDestroy {
             }
             this.approvalService.updateApproval(requestDetails);
         }
-        // Usar directamente los datos ya procesados en lugar de mapear nuevamente
         this.successModalData = requestDetails.fullData;
         this.isDetailModalVisible = true;
       }
@@ -199,13 +203,11 @@ export class Approvals implements OnInit, OnDestroy {
   }
 
   handleViewApprovedDocument(data: SuccessModalData): void {
-    // Verificar si tenemos un File object en memoria (para solicitudes recién creadas)
     const mainDocumentFile = data?.documentoAprobacion ||
                             (data as any)?.documento ||
                             (data as any)?.archivo ||
                             (data as any)?.file;
 
-    // Si tenemos el archivo en memoria (solicitud recién creada), usarlo directamente
     if (mainDocumentFile && mainDocumentFile instanceof File) {
       try {
         const documentUrl = URL.createObjectURL(mainDocumentFile);
@@ -224,7 +226,6 @@ export class Approvals implements OnInit, OnDestroy {
       }
     }
 
-    // Para todas las demás solicitudes, obtener el PDF del servidor
     if (data.id && this.currentUser?.idUsuario) {
       this.isLoadingDetails = true;
 
@@ -272,7 +273,6 @@ export class Approvals implements OnInit, OnDestroy {
         }
       });
     } else {
-      // Si no hay ID o usuario, mostrar error
       this.documentViewData = {
         id: data.id!,
         file: undefined,
@@ -289,7 +289,6 @@ export class Approvals implements OnInit, OnDestroy {
   }
 
   private tryGetApprovalDocument(data: SuccessModalData): void {
-    // Usar el endpoint correcto del backend para obtener el PDF
     this.approvalService.getDocumentPdf(data.id!, this.currentUser!.idUsuario).subscribe({
       next: (pdfBlob: Blob) => {
         const pdfUrl = URL.createObjectURL(pdfBlob);
@@ -316,7 +315,6 @@ export class Approvals implements OnInit, OnDestroy {
         console.error('Error obteniendo PDF del servidor:', error);
         this.isLoadingDetails = false;
 
-        // Si tenemos información del documento, mostrarla aunque no se pueda cargar
         if (data.pdfOriginalName || data.documentoFileName) {
           this.documentViewData = {
             id: data.id!,
@@ -334,7 +332,6 @@ export class Approvals implements OnInit, OnDestroy {
           this.isDetailModalVisible = false;
           this.isDocumentViewVisible = true;
         } else {
-          // Como último recurso, intentar obtener adjuntos
           this.tryGetAttachments(data);
         }
       }
@@ -342,7 +339,6 @@ export class Approvals implements OnInit, OnDestroy {
   }
 
   private tryGetDocumentWithFallback(data: SuccessModalData): void {
-    // Usar el endpoint correcto del backend para obtener el PDF
     this.approvalService.getDocumentPdf(data.id!, this.currentUser!.idUsuario).subscribe({
       next: (pdfBlob: Blob) => {
         const pdfUrl = URL.createObjectURL(pdfBlob);
@@ -405,7 +401,6 @@ export class Approvals implements OnInit, OnDestroy {
     this.approvalService.getAttachments(data.id!, this.currentUser!.idUsuario).subscribe({
       next: (attachments) => {
         if (attachments && attachments.length > 0) {
-          // Usar el primer adjunto como documento
           const attachment = attachments[0];
           this.documentViewData = {
             id: data.id!,
@@ -421,7 +416,6 @@ export class Approvals implements OnInit, OnDestroy {
             }
           };
         } else {
-          // No hay adjuntos, intentar construir URL directa
           this.tryConstructDirectUrl(data);
         }
         this.isDetailModalVisible = false;
@@ -435,7 +429,6 @@ export class Approvals implements OnInit, OnDestroy {
   }
 
   private tryConstructDirectUrl(data: SuccessModalData): void {
-    // Intentar diferentes patrones de URL basándose en la estructura de la API
     const baseUrl = 'http://200.7.99.74:8080/api';
     const possibleUrls = [
       `${baseUrl}/solicitudes/${data.id}/documento`,
@@ -455,7 +448,6 @@ export class Approvals implements OnInit, OnDestroy {
 
       const url = possibleUrls[attempts];
       
-      // Crear una imagen para probar si la URL es válida
       const img = new Image();
       img.onload = () => {
         this.documentViewData = {
@@ -548,7 +540,6 @@ export class Approvals implements OnInit, OnDestroy {
       this.isDetailModalVisible = false;
       this.isApprovalDocumentViewVisible = true;
     } else if (data) {
-      // Fallback para datos legacy
       const anyData: any = data as any;
       const url = anyData.documentoUrl || anyData.pdfUrl || anyData.urlDocumento || anyData.url;
       if (url) {
@@ -561,7 +552,6 @@ export class Approvals implements OnInit, OnDestroy {
         this.isDetailModalVisible = false;
         this.isApprovalDocumentViewVisible = true;
       } else {
-        // Si no hay URL directa, intentar obtener el documento del servidor
         const userId = this.currentUser?.idUsuario;
         if (userId && data.id) {
           this.approvalService.getDocumentPdf(data.id, userId).subscribe({
@@ -578,11 +568,11 @@ export class Approvals implements OnInit, OnDestroy {
               this.isApprovalDocumentViewVisible = true;
             },
             error: (error) => {
-              alert('Error al cargar el documento. Por favor, inténtalo de nuevo.');
+              this.showExternalAlert('danger', 'Error al cargar documento', 'Error al cargar el documento. Por favor, inténtalo de nuevo.');
             }
           });
         } else {
-          alert('No se pudo cargar el documento. Verifique que la solicitud tenga un documento asociado.');
+          this.showExternalAlert('warning', 'Documento no disponible', 'No se pudo cargar el documento. Verifique que la solicitud tenga un documento asociado.');
         }
       }
     }
@@ -594,17 +584,14 @@ export class Approvals implements OnInit, OnDestroy {
     this.approvalService.aprobarSolicitud(ev.id, uid, ev.comentario).subscribe({
       next: (appr) => {
         if (appr) {
-          // Cerrar la modal de documento después del éxito
           this.isApprovalDocumentViewVisible = false;
           this.updateRequestStatus(appr.id, 'APROBADO', 'Aprobada');
-          this.subscribeToApprovals(); // Refresh the list
-          // Mostrar mensaje de éxito como última acción
+          this.subscribeToApprovals();
           this.successModalService.showSuccess('Aprobación completada', 'La solicitud ha sido aprobada exitosamente y notificada a los usuarios correspondientes.');
         }
       },
       error: (error) => {
-        alert('Error al aprobar la solicitud. Por favor, inténtelo de nuevo.');
-        // Reabrir la modal de documento para que el usuario pueda intentar nuevamente
+        this.showExternalAlert('danger', 'Error al aprobar', 'Error al aprobar la solicitud. Por favor, inténtelo de nuevo.');
         this.isApprovalDocumentViewVisible = true;
       }
     });
@@ -616,24 +603,20 @@ export class Approvals implements OnInit, OnDestroy {
     this.approvalService.rechazarSolicitud(ev.id, uid, ev.comentario).subscribe({
       next: (appr) => {
         if (appr) {
-          // Cerrar la modal de documento después del éxito
           this.isApprovalDocumentViewVisible = false;
           this.updateRequestStatus(appr.id, 'RECHAZADO', 'Rechazada');
-          this.subscribeToApprovals(); // Refresh the list
-          // Mostrar mensaje de éxito como última acción
+          this.subscribeToApprovals();
           this.successModalService.showSuccess('Rechazo completado', 'La solicitud ha sido rechazada exitosamente y notificada al solicitante.');
         }
       },
       error: (error) => {
-        alert('Error al rechazar la solicitud. Por favor, inténtelo de nuevo.');
-        // Reabrir la modal de documento para que el usuario pueda intentar nuevamente
+        this.showExternalAlert('danger', 'Error al rechazar', 'Error al rechazar la solicitud. Por favor, inténtelo de nuevo.');
         this.isApprovalDocumentViewVisible = true;
       }
     });
   }
 
   private updateRequestStatus(id: string | number, approvalStatus: 'APROBADO' | 'RECHAZADO', fullDataStatus: 'Aprobada' | 'Rechazada') {
-    // Obtener los detalles más actualizados del servidor
     this.approvalService.getApprovalDetails(id, this.allUsers, this.currentUser?.idUsuario).subscribe({
       next: (request) => {
         if (request) {
@@ -645,7 +628,6 @@ export class Approvals implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        // Fallback: actualizar localmente si falla la consulta al servidor
         const currentApprovals = this.approvalService.approvalsSubject.getValue();
         const approval = currentApprovals.find(a => a.id.toString() === id.toString());
         if (approval) {
@@ -675,4 +657,22 @@ export class Approvals implements OnInit, OnDestroy {
   onSearchChange(term: string): void { this.searchTerm = term; this.currentPage = 1; this.applyViewLogic(); }
   onChangePage(newPage: number): void { this.currentPage = newPage; this.applyViewLogic(); }
   sortBy(field: string): void { if (this.currentOrder === field) { this.ascendingOrder = !this.ascendingOrder; } else { this.currentOrder = field; this.ascendingOrder = true; } this.applyViewLogic(); }
+
+  showExternalAlert(type: 'success' | 'danger' | 'info' | 'warning', title: string, message: string, duration: number = 5000): void {
+    const alertItem = { type, title, message };
+    this.externalAlerts.push(alertItem);
+
+    if (duration > 0) {
+      setTimeout(() => {
+        const index = this.externalAlerts.indexOf(alertItem);
+        if (index > -1) {
+          this.closeExternalAlert(index);
+        }
+      }, duration);
+    }
+  }
+
+  closeExternalAlert(index: number): void {
+    this.externalAlerts.splice(index, 1);
+  }
 }
