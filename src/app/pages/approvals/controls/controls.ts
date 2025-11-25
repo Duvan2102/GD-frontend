@@ -22,6 +22,7 @@ export class Controls {
   @Input() labelBuscar: string = 'Buscar:';
   @Input() placeholderBuscar: string = 'Buscar...';
   @Input() showToggle: boolean = true;
+  @Input() showToggleSwitch: boolean = true;
 
   @Output() quantityChange = new EventEmitter<number>();
   @Output() toggleApprovedChange = new EventEmitter<boolean>();

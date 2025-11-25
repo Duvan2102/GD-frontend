@@ -53,7 +53,7 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
   const isApi = isLocalhost || isApiPath || isSpecificEndpoint;
   const isSolicitudes = req.url.includes('/solicitudes');
   const isAuditoria = req.url.includes('/auditoria');
-  const isTwoFAValidation = req.url.includes('/auth/validate-2fa');
+  const isTwoFAValidation = req.url.includes('/auth/validate-2fa') || req.url.includes('/validar-2fa');
   const hasTempTokenInBody = !!req.body && typeof req.body === 'object' && 'tempToken' in req.body;
   const requiresAuth = isApi || isSolicitudes || isAuditoria;
 
@@ -87,9 +87,7 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
 
   return next(cloned).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 || error.status === 403) {
-        console.warn(`🔐 Error ${error.status} - Token inválido`);
-        
+      if (error.status === 401 || error.status === 403) {        
         const errorMessage = error.error?.message || error.message || '';
         const isTokenError = errorMessage.toLowerCase().includes('token') || 
                            errorMessage.toLowerCase().includes('unauthorized') ||

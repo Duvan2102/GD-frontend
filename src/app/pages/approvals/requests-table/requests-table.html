@@ -72,9 +72,9 @@
         
         <td class="text-center">
             <button class="btn btn-sm btn-gestionar" (click)="manage.emit(request.id)">
-                <ng-container *ngIf="viewType === 'approvals'">
+                <ng-container *ngIf="viewType === 'approvals' || viewType === 'approval-process'">
                     <span *ngIf="isToggleActive; else gestionarSolicitud">VISUALIZAR <br> SOLICITUD</span>
-                    <ng-template #gestionarSolicitud>GESTIONAR <br>SOLICITUD</ng-template>
+                    <ng-template #gestionarSolicitud>PROCESAR <br>SOLICITUD</ng-template>
                 </ng-container>
 
                 <ng-container *ngIf="viewType === 'create-request'">

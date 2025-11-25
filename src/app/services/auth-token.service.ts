@@ -174,7 +174,7 @@ export class AuthTokenService {
     const tempToken = request.tempToken || this.authService.getTempToken();
     
     if (tempToken) {
-      return this.validateWithTempToken(request.token, tempToken, request.action);
+      return this.validateWithTempToken(request.token, tempToken, request.action, request.documentId);
     }
 
     return of({
@@ -268,15 +268,17 @@ export class AuthTokenService {
   }
 
 
-  private validateWithTempToken(code: string, tempToken: string, action: string): Observable<TokenValidationResponse> {
+  private validateWithTempToken(code: string, tempToken: string, action: string, documentId?: string | number): Observable<TokenValidationResponse> {
     const currentUser = this.authService.getCurrentUserValue();
     if (!currentUser) {
       return throwError(() => new Error('No hay usuario actual'));
     }
 
-    const endpoint = `${this.apiUrl}/auth/validate-2fa`;
+    const endpoint = documentId 
+      ? `${this.apiUrl}/${documentId}/validar-2fa`
+      : `${this.apiUrl}/auth/validate-2fa`;
     const payload = {
-      tempToken: tempToken,
+      codigo: code,
       codigo2FA: code
     };
 
