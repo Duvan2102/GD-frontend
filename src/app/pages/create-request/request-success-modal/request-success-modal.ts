@@ -200,6 +200,32 @@ export class RequestSuccessModal implements OnChanges {
     }
   }
 
+  get hasProcessUpdateData(): boolean {
+    return this.processUpdateComment.trim().length > 0 || this.processUpdateAttachments.length > 0;
+  }
+
+  canSubmitProcessUpdate(): boolean {
+    if (!this.enableProcessUpdate || !this.data?.id) {
+      return false;
+    }
+    return this.hasProcessUpdateData;
+  }
+
+  onProcessAttachmentClick(input: HTMLInputElement): void {
+    if (!this.enableProcessUpdate) return;
+    input.click();
+  }
+
+  onProcessAttachmentsSelected(event: Event): void {
+    if (!this.enableProcessUpdate) return;
+    const target = event.target as HTMLInputElement;
+    const files = target.files ? Array.from(target.files) : [];
+    this.processUpdateAttachments = files;
+    if (target) {
+      target.value = '';
+    }
+  }
+
   removeProcessAttachment(index: number): void {
     if (index >= 0 && index < this.processUpdateAttachments.length) {
       this.processUpdateAttachments = this.processUpdateAttachments.filter((_, i) => i !== index);
