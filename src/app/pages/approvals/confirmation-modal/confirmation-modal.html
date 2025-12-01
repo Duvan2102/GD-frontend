@@ -27,9 +27,11 @@
             [(ngModel)]="comment" 
             [placeholder]="data?.commentPlaceholder || 'Escriba un comentario...'"
             rows="3"
-            [class.is-invalid]="data?.commentRequired && !comment.trim()">
+            (focus)="onCommentFocus()"
+            (blur)="onCommentBlur()"
+            [class.is-invalid]="data?.commentRequired && commentTouched && !comment.trim()">
           </textarea>
-          <div *ngIf="data?.commentRequired && !comment.trim()" class="invalid-feedback">
+          <div *ngIf="data?.commentRequired && commentTouched && !comment.trim()" class="invalid-feedback">
             El comentario es obligatorio
           </div>
         </div>

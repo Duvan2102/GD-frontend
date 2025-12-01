@@ -8,6 +8,7 @@ export interface Typology {
   idTipologia: number;
   descripcion: string;
   cargo?: Position;
+  requiereProceso?: boolean;
 }
 
 @Injectable({

@@ -29,6 +29,7 @@ export class ConfirmationModal {
   @Output() cancel = new EventEmitter<void>();
 
   comment: string = '';
+  commentTouched: boolean = false;
 
   getIconClass(): string {
     if (!this.data) return 'bi-question-circle';
@@ -68,6 +69,7 @@ export class ConfirmationModal {
 
   onConfirm(): void {
     if (this.data?.showComment && this.data.commentRequired && !this.comment.trim()) {
+      this.commentTouched = true; 
       return;
     }
     
@@ -85,6 +87,15 @@ export class ConfirmationModal {
 
   private resetForm(): void {
     this.comment = '';
+    this.commentTouched = false;
+  }
+
+  onCommentFocus(): void {
+    this.commentTouched = true;
+  }
+
+  onCommentBlur(): void {
+    this.commentTouched = true;
   }
 
   canConfirm(): boolean {

@@ -35,14 +35,19 @@ import { CommonModule } from '@angular/common';
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: 1040;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 1054 !important;
       opacity: 0;
-      transition: opacity 0.15s linear;
+      visibility: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .modal-backdrop.show {
       opacity: 1;
+      visibility: visible;
+      z-index: 1054 !important;
     }
 
     .modal {
@@ -51,7 +56,7 @@ import { CommonModule } from '@angular/common';
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: 1050;
+      z-index: 1055 !important;
       display: none;
       overflow: hidden;
       outline: 0;
@@ -59,6 +64,7 @@ import { CommonModule } from '@angular/common';
 
     .modal.show {
       display: block;
+      z-index: 1055 !important;
     }
 
     .modal-dialog {

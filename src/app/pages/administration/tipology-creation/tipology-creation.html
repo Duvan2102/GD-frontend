@@ -131,6 +131,24 @@
               </div>
             </div>
           </div>
+
+          <div class="form-section" *ngIf="selectedPosition">
+            <div class="form-check">
+              <input
+                type="checkbox"
+                id="requiereProceso"
+                class="form-check-input"
+                [(ngModel)]="requiereProceso"
+                name="requiereProceso"
+              />
+              <label class="form-check-label" for="requiereProceso">
+                Requiere proceso post-aprobación
+              </label>
+            </div>
+            <small class="form-text text-muted">
+              Marque esta opción si la tipología requiere un proceso adicional después de ser aprobada.
+            </small>
+          </div>
         </div>
 
         <div class="modal-footer justify-content-center">
