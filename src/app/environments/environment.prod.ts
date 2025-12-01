@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'http://200.7.104.229:8080/api',
+  apiUrl: 'https://gestordocumental.helisa.com/api',
   apiKey: '',
   enableLogging: false
 };
