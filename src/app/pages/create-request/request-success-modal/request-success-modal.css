@@ -6,6 +6,15 @@
 
 /* contenedor principal */
 .modal-dialog { max-width: 1200px; width: 95%; max-height: 90vh; }
+
+app-request-success-modal .modal {
+  z-index: 1020 !important;
+}
+
+app-request-success-modal .custom-backdrop {
+  z-index: 1015 !important;
+}
+
 .modal-content.request-success-modal{
   background: var(--color-primary);
   border-radius: var(--border-radius-lg);
@@ -16,7 +25,7 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  z-index: 1000;
+  z-index: 1;
 }
 
 /* barra superior (estilo minimalista) */
@@ -877,7 +886,7 @@
 }
 
 .procesador-dropdown {
-  z-index: 1050;
+  z-index: 1022;
 }
 
 /* Estilos para el dropdown de usuarios (procesadores) */
@@ -887,7 +896,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1049;
+  z-index: 1021;
   background: transparent;
 }
 
@@ -899,7 +908,7 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   max-height: 200px;
   overflow-y: auto;
-  z-index: 1050;
+  z-index: 1022;
 }
 
 .dropdown-list {

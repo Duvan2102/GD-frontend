@@ -1018,13 +1018,6 @@ export class RequestSuccessModal implements OnChanges {
 
   calculateProcesadorDropdownPosition(inputElement: HTMLInputElement): void {
     const rect = inputElement.getBoundingClientRect();
-    this.procesadorDropdownStyle = {
-      position: 'fixed',
-      bottom: `${window.innerHeight - rect.top + 5}px`,
-      left: `${rect.left}px`,
-      width: `${rect.width}px`,
-      top: 'auto',
-    };
   }
 
   onSearchProcesadorKeydown(event: KeyboardEvent, index: number): void {

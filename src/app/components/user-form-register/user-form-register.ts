@@ -6,6 +6,7 @@ import { RegisterRequest, RegisterResponse, RegisterErrorResponse } from '../../
 import { Subject } from 'rxjs';
 import { phoneValidator } from '../../utils/phone-validators';
 import { SuccessModal } from '../../pages/users/success-modal/success-modal';
+import { ErrorModal } from './error-modal';
 
 @Component({
   selector: 'app-user-form-register',
@@ -13,7 +14,8 @@ import { SuccessModal } from '../../pages/users/success-modal/success-modal';
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    SuccessModal
+    SuccessModal,
+    ErrorModal
   ],
   templateUrl: './user-form-register.html',
   styleUrls: ['./user-form-register.css']
@@ -32,6 +34,11 @@ export class UserFormRegister implements OnInit, OnDestroy {
   modalSuccessMessage = '';
   modalSuccessSecondaryMessage = '';
   modalSuccessBtn = 'Aceptar';
+
+  modalErrorVisible = false;
+  modalErrorTitulo = 'Error';
+  modalErrorMessage = '';
+  modalErrorBtn = 'Aceptar';
 
   private destroy$ = new Subject<void>();
 
@@ -243,15 +250,19 @@ export class UserFormRegister implements OnInit, OnDestroy {
         // Establecer errores específicos en campos si aplica
         if (code === 'USUARIO_EXISTE') {
           this.form.get('usuario')?.setErrors({ server: 'Este nombre de usuario ya está en uso' });
-          this.apiError = 'El nombre de usuario ya existe. Por favor, contacta con el administrador.';
+          errorMsg = 'El nombre de usuario ya existe. Por favor, contacta con el administrador.';
         } else if (code === 'IDENTIFICACION_EXISTE') {
           this.form.get('identification')?.setErrors({ server: 'Esta identificación ya está registrada' });
-          this.apiError = 'La identificación ya está registrada en el sistema. Si crees que es un error, contacta con el administrador.';
+          errorMsg = 'La identificación ya está registrada en el sistema. Si crees que es un error, contacta con el administrador.';
         } else if (code === 'CORREO_EXISTE') {
           this.form.get('correoEmpresarial')?.setErrors({ server: 'Este correo ya está registrado' });
-          this.apiError = 'El correo empresarial ya está registrado en el sistema.';
+          errorMsg = 'El correo empresarial ya está registrado en el sistema.';
         }
 
+        this.modalErrorTitulo = 'Error al registrar usuario';
+        this.modalErrorMessage = errorMsg;
+        this.modalErrorVisible = true;
+        this.apiError = undefined; 
         this.focusFirstError();
         this.cdr.markForCheck();
       }
@@ -264,6 +275,13 @@ export class UserFormRegister implements OnInit, OnDestroy {
   }
 
   clearErrorMessage(): void {
+    this.apiError = undefined;
+    this.modalErrorVisible = false;
+    this.cdr.markForCheck();
+  }
+
+  cerrarModalError(): void {
+    this.modalErrorVisible = false;
     this.apiError = undefined;
     this.cdr.markForCheck();
   }

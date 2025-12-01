@@ -50,6 +50,7 @@ export class Tipology implements OnChanges {
   selectedDepartment?: Department;
   selectedArea?: Area;
   selectedPosition?: Position;
+  requiereProceso = false;
   errorMessage = '';
 
   get modalTitle(): string {
@@ -84,6 +85,7 @@ export class Tipology implements OnChanges {
       
       if (this.mode === 'update' && this.typologyToEdit) {
         this.descripcion = this.typologyToEdit.descripcion;
+        this.requiereProceso = this.typologyToEdit.requiereProceso || false;
         if (this.typologyToEdit.cargo) {
           const { cargo } = this.typologyToEdit;
           const { area } = cargo;
@@ -188,6 +190,7 @@ export class Tipology implements OnChanges {
     const payload: Partial<Typology> = {
       descripcion: this.descripcion.trim(),
       cargo: this.selectedPosition,
+      requiereProceso: this.requiereProceso,
     };
 
     if (this.mode === 'create') {
@@ -207,6 +210,7 @@ export class Tipology implements OnChanges {
     this.selectedDepartment = undefined;
     this.selectedArea = undefined;
     this.selectedPosition = undefined;
+    this.requiereProceso = false;
     this.errorMessage = '';
     
     this.showDepartmentDropdown = false;
