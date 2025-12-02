@@ -38,7 +38,15 @@
       <table class="tabla-solicitudes">
         <thead class="sticky-top">
           <tr>
-            <th></th>
+            <th>
+              <input
+                type="checkbox"
+                [checked]="areAllFilteredItemsSelected()"
+                [indeterminate]="areSomeFilteredItemsSelected()"
+                (change)="toggleAllFilteredItems($event)"
+                title="Seleccionar todos los elementos filtrados"
+              />
+            </th>
             <th (click)="sortBy('tipoSolicitud')" class="sortable-header">TIPO DE SOLICITUD <i class="bi" [ngClass]="getSortIcon('tipoSolicitud')"></i></th>
             <th (click)="sortBy('id')" class="sortable-header">ID <i class="bi" [ngClass]="getSortIcon('id')"></i></th>
             <th (click)="sortBy('fechaCreacion')" class="sortable-header">FECHA CREACIÓN <i class="bi" [ngClass]="getSortIcon('fechaCreacion')"></i></th>
@@ -59,6 +67,7 @@
               <input
                 type="checkbox"
                 [(ngModel)]="item.selected"
+                (change)="onItemSelectionChange(item)"
                 name="selected-{{item.id}}"
               />
             </td>
