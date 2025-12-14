@@ -8,22 +8,30 @@ import { CommonModule } from '@angular/common';
   template: `
     <div class="custom-backdrop" [class.show]="visible" (click)="onBackdropClick()"></div>
     
-    <div class="modal" [class.show]="visible" [style.display]="visible ? 'flex' : 'none'">
-      <div class="modal-dialog modal-dialog-centered" (click)="$event.stopPropagation()">
-        <div class="modal-content modal-content-custom error-modal-content">
+    <div class="modal" tabindex="-1" [class.show]="visible" [style.display]="visible ? 'block' : 'none'" (click)="onBackdropClick()">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content password-modal" (click)="$event.stopPropagation()">
+
+          <div class="modal-header">
+            <h5 class="modal-title">{{ titulo || 'Error' }}</h5>
+            <button type="button" class="btn-close" aria-label="Cerrar" (click)="aceptar.emit()"></button>
+          </div>
+
           <div class="modal-body text-center">
             <div class="error-icon-container mb-3">
               <i class="bi bi-exclamation-triangle-fill error-icon-large"></i>
             </div>
-            <h2 class="modal-title-custom mb-3">{{ titulo || 'Error' }}</h2>
             <div class="error-message-container">
               <p class="error-message" [innerHTML]="mensaje"></p>
             </div>
-            <button class="btn btn-error btn-lg custom-btn-accept mt-3"
-                    (click)="aceptar.emit()">
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" (click)="aceptar.emit()">
               {{ textoBtn || 'Aceptar' }}
             </button>
           </div>
+
         </div>
       </div>
     </div>
@@ -35,10 +43,10 @@ import { CommonModule } from '@angular/common';
       left: 0;
       width: 100vw;
       height: 100vh;
-      background-color: rgba(0, 0, 0, 0.5);
+      background-color: rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
-      z-index: 1060;
+      z-index: 1040;
       opacity: 0;
       transition: opacity 0.3s ease-in-out;
     }
@@ -51,12 +59,13 @@ import { CommonModule } from '@angular/common';
       position: fixed;
       top: 0;
       left: 0;
+      z-index: 1055;
       width: 100%;
       height: 100%;
-      z-index: 1070;
-      display: none;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
       outline: 0;
+      display: flex;
       align-items: center;
       justify-content: center;
     }
@@ -80,22 +89,6 @@ import { CommonModule } from '@angular/common';
       min-height: calc(100% - 3.5rem);
     }
 
-    .modal-content-custom {
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-      border: none;
-      padding: 1.5rem;
-      background: white;
-    }
-
-    .error-modal-content {
-      border-top: 4px solid #dc3545;
-    }
-
-    .modal-body {
-      padding: 2rem 1.5rem;
-    }
-
     .error-icon-container {
       display: flex;
       justify-content: center;
@@ -107,12 +100,15 @@ import { CommonModule } from '@angular/common';
       color: #dc3545;
     }
 
+    .modal-body {
+      padding: 1.5rem;
+    }
+
     .modal-title-custom {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       font-weight: 600;
-      color: #333;
+      color: #46655a;
       line-height: 1.4;
-      margin-bottom: 1rem;
     }
 
     .error-message-container {
@@ -125,6 +121,7 @@ import { CommonModule } from '@angular/common';
       border-radius: 8px;
       border-left: 4px solid #dc3545;
       border: 1px solid #f8d7da;
+      margin-top: 1rem;
     }
 
     .error-message-container::-webkit-scrollbar {
@@ -157,29 +154,6 @@ import { CommonModule } from '@angular/common';
       margin-bottom: 0.25rem;
     }
 
-    .custom-btn-accept {
-      background: #dc3545;
-      border: none;
-      font-size: 1rem;
-      font-weight: 500;
-      padding: 0.75rem 2.5rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(220, 53, 69, 0.25);
-      color: #fff;
-      transition: all 0.2s;
-      min-width: 120px;
-      cursor: pointer;
-    }
-
-    .custom-btn-accept:hover {
-      background: #c82333;
-      box-shadow: 0 4px 12px rgba(220, 53, 69, 0.35);
-      transform: translateY(-1px);
-    }
-
-    .custom-btn-accept:active {
-      transform: translateY(0);
-    }
 
     .text-center {
       text-align: center;
