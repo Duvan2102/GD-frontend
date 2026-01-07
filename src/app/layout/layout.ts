@@ -24,7 +24,6 @@ export class Layout implements OnInit, OnDestroy {
   isProfileModalVisible = false;
   isAboutModalVisible = false;
 
-  // Sistema de alertas externas
   externalAlerts: Array<{
     type: 'success' | 'danger' | 'info' | 'warning';
     title: string;
@@ -55,7 +54,6 @@ export class Layout implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Error en logout:', error);
-        // Aunque falle el logout en el backend, navegar al login
         this.router.navigate(['/login']);
       }
     });
@@ -88,12 +86,10 @@ export class Layout implements OnInit, OnDestroy {
     });
   }
 
-  // Métodos para alertas externas
   showExternalAlert(type: 'success' | 'danger' | 'info' | 'warning', title: string, message: string, duration: number = 5000): void {
     const alertItem = { type, title, message };
     this.externalAlerts.push(alertItem);
 
-    // Auto-cerrar después de la duración especificada
     if (duration > 0) {
       setTimeout(() => {
         const index = this.externalAlerts.indexOf(alertItem);

@@ -195,20 +195,27 @@ export class UserFormRegister implements OnInit, OnDestroy {
     this.loading = true;
     const formValue = this.form.getRawValue();
 
-    const registerPayload: RegisterRequest = {
+    const registerPayload: any = {
       identificacion: formValue.identification,
       nombres: formValue.nombres,
       apellidos: formValue.apellidos,
       usuario: formValue.usuario,
       password: '',
       correoEmpresarial: formValue.correoEmpresarial,
-      correoPersonal: formValue.correoPersonal || '',
       telefono1: formValue.telefono1,
-      telefono2: formValue.telefono2 || '',
-      direccion: formValue.direccion || '',
       dobleAutenticacion: 'GOOGLE_AUTH'
     };
 
+    if (formValue.correoPersonal) {
+      registerPayload.correoPersonal = formValue.correoPersonal;
+    }
+    if (formValue.telefono2) {
+      registerPayload.telefono2 = formValue.telefono2;
+    }
+    if (formValue.direccion) {
+      registerPayload.direccion = formValue.direccion;
+    }
+    
     this.authService.register(registerPayload).subscribe({
       next: (res: RegisterResponse) => {
         this.loading = false;
@@ -239,7 +246,6 @@ export class UserFormRegister implements OnInit, OnDestroy {
           errorMsg = 'Error de conexión al servidor. Por favor, intenta de nuevo más tarde.';
         }
 
-        // Si hay detalles adicionales, agregarlos
         if (errorResponse?.details && Array.isArray(errorResponse.details)) {
           const detalles = errorResponse.details.join('\n• ');
           errorMsg += '\n\nDetalles:\n• ' + detalles;
@@ -247,7 +253,6 @@ export class UserFormRegister implements OnInit, OnDestroy {
         
         this.apiError = errorMsg;
 
-        // Establecer errores específicos en campos si aplica
         if (code === 'USUARIO_EXISTE') {
           this.form.get('usuario')?.setErrors({ server: 'Este nombre de usuario ya está en uso' });
           errorMsg = 'El nombre de usuario ya existe. Por favor, contacta con el administrador.';

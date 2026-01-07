@@ -54,7 +54,6 @@ export class ProfileModal implements OnChanges {
 
     const validationResult = this.validateForm();
     if (!validationResult.isValid) {
-      // Emitir alerta externa en lugar de mostrar mensaje interno
       this.showAlert.emit({
         type: 'warning',
         title: 'Error de validación',
@@ -95,23 +94,19 @@ export class ProfileModal implements OnChanges {
         this.isLoading = false;
         
         if (response && (response.success === true || (response as any).idUsuario)) {
-          // Emitir alerta externa de éxito
           this.showAlert.emit({
             type: 'success',
             title: '¡Éxito!',
             message: 'Perfil actualizado correctamente'
           });
           
-          // Emitir los datos limpios actualizados
           const cleanedData = this.cleanUserData(this.editedUser!);
           this.save.emit(cleanedData);
           
-          // Cerrar el modal después de un breve delay
           setTimeout(() => {
             this.onClose();
           }, 500);
         } else {
-          // Emitir alerta externa de error
           this.showAlert.emit({
             type: 'danger',
             title: 'Error',
@@ -122,7 +117,6 @@ export class ProfileModal implements OnChanges {
       error: (error) => {
         this.isLoading = false;
         
-        // Emitir alerta externa de error
         this.showAlert.emit({
           type: 'danger',
           title: 'Error',
@@ -171,12 +165,10 @@ export class ProfileModal implements OnChanges {
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     
-    // Validar correo personal
     if (this.editedUser.correoPersonal && this.editedUser.correoPersonal.trim() !== '' && !emailRegex.test(this.editedUser.correoPersonal)) {
       return { isValid: false, errorMessage: 'El formato del correo personal es inválido. Por favor, ingrese un correo válido.' };
     }
     
-    // Validar teléfono móvil (telefono1)
     if (this.editedUser.telefono1 && this.editedUser.telefono1.trim() !== '') {
       const cleanPhone = this.editedUser.telefono1.replace(/\D/g, '');
       
@@ -188,18 +180,15 @@ export class ProfileModal implements OnChanges {
         return { isValid: false, errorMessage: 'El teléfono móvil debe tener exactamente 10 dígitos.' };
       }
       
-      // Validar que no todos los dígitos sean iguales
       if (/^(\d)\1{9}$/.test(cleanPhone)) {
         return { isValid: false, errorMessage: 'El teléfono móvil no puede contener todos los dígitos iguales.' };
       }
       
-      // Validar que no haya más de 3 dígitos consecutivos iguales
       if (/(\d)\1{5,}/.test(cleanPhone)) {
         return { isValid: false, errorMessage: 'El teléfono móvil no puede tener más de 5 dígitos consecutivos iguales.' };
       }
     }
     
-    // Validar teléfono (telefono2)
     if (this.editedUser.telefono2 && this.editedUser.telefono2.trim() !== '') {
       const cleanPhone = this.editedUser.telefono2.replace(/\D/g, '');
       
@@ -211,12 +200,10 @@ export class ProfileModal implements OnChanges {
         return { isValid: false, errorMessage: 'El teléfono debe tener exactamente 10 dígitos.' };
       }
       
-      // Validar que no todos los dígitos sean iguales
       if (/^(\d)\1{9}$/.test(cleanPhone)) {
         return { isValid: false, errorMessage: 'El teléfono no puede contener todos los dígitos iguales.' };
       }
       
-      // Validar que no haya más de 3 dígitos consecutivos iguales
       if (/(\d)\1{5,}/.test(cleanPhone)) {
         return { isValid: false, errorMessage: 'El teléfono no puede tener más de 5 dígitos consecutivos iguales.' };
       }

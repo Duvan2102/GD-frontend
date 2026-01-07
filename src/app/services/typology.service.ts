@@ -20,7 +20,7 @@ export class TypologyService {
   ) + '/tipologias';
   private typologiesCache: Typology[] | null = null;
   private lastCacheTime = 0;
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+  private readonly CACHE_DURATION = 5 * 60 * 1000;
 
   constructor(private http: HttpClient) { }
 

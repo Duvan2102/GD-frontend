@@ -13,7 +13,6 @@ export class AuthGuard implements CanActivate {
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot): boolean | UrlTree {
 
-    // Verificar si el usuario está autenticado
     if (!this.authService.isAuthenticated()) {
       return this.router.createUrlTree(['/login']);
     }
