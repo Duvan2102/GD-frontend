@@ -13,10 +13,12 @@ export class LoginGuard implements CanActivate {
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot): boolean | UrlTree {
 
+    // Si el usuario ya está autenticado, redirigir al inicio
     if (this.authService.isAuthenticated()) {
       return this.router.createUrlTree(['/']);
     }
 
+    // Si no está autenticado, permitir acceso al login
     return true;
   }
 }
