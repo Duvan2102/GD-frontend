@@ -4,11 +4,12 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { UserFormRegister } from '../../components/user-form-register/user-form-register';
+import { SuccessModal } from '../users/success-modal/success-modal';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, CommonModule, UserFormRegister],
+  imports: [ReactiveFormsModule, CommonModule, UserFormRegister, SuccessModal],
   templateUrl: './login.component.html',
   styleUrls: ['./shared-login-styles.css']
 })
@@ -18,6 +19,10 @@ export class LoginComponent implements OnInit {
   isLoading: boolean = false;
   isRegisterModalVisible = false;
   tokenExpiredMessage: string = '';
+  modalSuccessVisible = false;
+  modalSuccessMessage = '';
+  modalSuccessSecondaryMessage = '';
+  modalSuccessBtn = 'Aceptar';
 
   constructor(
     private fb: FormBuilder,
@@ -121,7 +126,16 @@ export class LoginComponent implements OnInit {
   handleUserRegistered(event: { idUsuario: number }): void {
     this.closeRegisterModal();
     
-    alert(`¡Usuario registrado exitosamente! ID: ${event.idUsuario}\n\nEl usuario ha sido registrado y está pendiente de activación por un administrador.`);
+    this.modalSuccessMessage = `¡Usuario registrado exitosamente! ID: ${event.idUsuario}`;
+    this.modalSuccessSecondaryMessage = 'El usuario ha sido registrado y está pendiente de activación por un administrador.';
+    this.modalSuccessBtn = 'Aceptar';
+    this.modalSuccessVisible = true;
+  }
+
+  cerrarModalSuccess(): void {
+    this.modalSuccessVisible = false;
+    this.modalSuccessMessage = '';
+    this.modalSuccessSecondaryMessage = '';
   }
 
   private handleLoginError(error: any): void {

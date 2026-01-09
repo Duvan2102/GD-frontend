@@ -744,7 +744,6 @@ export class AuthService {
       }
     }).pipe(
       map((response: Change2FAMethodResponse) => {
-        // Si el método cambió exitosamente, actualizar el usuario actual
         if (this.currentUser) {
           this.currentUser.tokenQr = nuevoMetodo === 'GOOGLE_AUTH';
           this.currentUser.tokenCorreo = nuevoMetodo === 'EMAIL';

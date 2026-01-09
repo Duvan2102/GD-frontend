@@ -119,7 +119,6 @@ export class AuthApprovalModal implements OnInit, OnDestroy, OnChanges {
     this.tokenCode = target.value;
     if (this.errorMessage) {
       this.errorMessage = '';
-      // No limpiar infoMessage aquí porque puede tener información de intentos restantes
     }
   }
 

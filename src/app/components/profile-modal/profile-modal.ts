@@ -54,7 +54,6 @@ export class ProfileModal implements OnChanges {
 
     const validationResult = this.validateForm();
     if (!validationResult.isValid) {
-      // Emitir alerta externa en lugar de mostrar mensaje interno
       this.showAlert.emit({
         type: 'warning',
         title: 'Error de validación',

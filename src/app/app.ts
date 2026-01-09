@@ -16,7 +16,6 @@ import { Subscription } from 'rxjs';
 export class App implements OnInit, OnDestroy {
   protected title = 'gd-frontend';
 
-  // Success modal properties
   isSuccessModalVisible = false;
   successModalTitle = 'Proceso completado con éxito';
   successModalMessage = 'La operación se ha realizado correctamente.';
