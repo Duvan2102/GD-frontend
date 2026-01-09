@@ -81,6 +81,78 @@ export class ChangePassword implements OnChanges {
       });
   }
 }
+  validatePasswordStrength(password: string): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    if (password.length < 10) {
+      errors.push('La contraseña debe tener al menos 10 caracteres');
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      errors.push('La contraseña debe incluir al menos una letra mayúscula');
+    }
+
+    if (!/[a-z]/.test(password)) {
+      errors.push('La contraseña debe incluir al menos una letra minúscula');
+    }
+
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      errors.push('La contraseña debe incluir al menos un signo especial');
+    }
+
+    if (this.user) {
+      const lowerPassword = password.toLowerCase();
+      const usuario = (this.user.usuario || '').toLowerCase();
+      const nombres = (this.user.nombres || '').toLowerCase();
+      const apellidos = (this.user.apellidos || '').toLowerCase();
+      const email = (this.user.correoEmpresarial || '').toLowerCase().split('@')[0];
+
+      if (usuario && lowerPassword.includes(usuario)) {
+        errors.push('La contraseña no debe contener tu nombre de usuario');
+      }
+      if (nombres && lowerPassword.includes(nombres)) {
+        errors.push('La contraseña no debe contener tus nombres');
+      }
+      if (apellidos && lowerPassword.includes(apellidos)) {
+        errors.push('La contraseña no debe contener tus apellidos');
+      }
+      if (email && lowerPassword.includes(email)) {
+        errors.push('La contraseña no debe contener tu correo electrónico');
+      }
+    }
+
+    return { valid: errors.length === 0, errors };
+  }
+
+  checkPasswordCondition(condition: string): boolean {
+    const password = this.nuevaPassword || '';
+    if (!password) return false;
+
+    switch (condition) {
+      case 'minLength':
+        return password.length >= 10;
+      case 'uppercase':
+        return /[A-Z]/.test(password);
+      case 'lowercase':
+        return /[a-z]/.test(password);
+      case 'specialChar':
+        return /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+      case 'noPersonalData':
+        if (!this.user) return true;
+        const lowerPassword = password.toLowerCase();
+        const usuario = (this.user.usuario || '').toLowerCase();
+        const nombres = (this.user.nombres || '').toLowerCase();
+        const apellidos = (this.user.apellidos || '').toLowerCase();
+        const email = (this.user.correoEmpresarial || '').toLowerCase().split('@')[0];
+        return !(usuario && lowerPassword.includes(usuario)) &&
+               !(nombres && lowerPassword.includes(nombres)) &&
+               !(apellidos && lowerPassword.includes(apellidos)) &&
+               !(email && lowerPassword.includes(email));
+      default:
+        return false;
+    }
+  }
+
   onChangePassword() {
     if (!this.nuevaPassword || !this.confirmPassword) {
       this.changePasswordError = 'Debes completar ambos campos.';
@@ -90,8 +162,10 @@ export class ChangePassword implements OnChanges {
       this.changePasswordError = 'Las contraseñas no coinciden.';
       return;
     }
-    if (this.nuevaPassword.length < 6) {
-      this.changePasswordError = 'La nueva contraseña debe tener al menos 6 caracteres.';
+
+    const validation = this.validatePasswordStrength(this.nuevaPassword);
+    if (!validation.valid) {
+      this.changePasswordError = validation.errors.join('. ');
       return;
     }
 

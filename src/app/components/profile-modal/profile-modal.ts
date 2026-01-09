@@ -67,6 +67,17 @@ export class ProfileModal implements OnChanges {
     this.errorMessage = '';
 
     const cleanedData = this.cleanUserData(this.editedUser);
+    
+    if (!cleanedData.cargo || !cleanedData.cargo.idCargo) {
+      this.showAlert.emit({
+        type: 'warning',
+        title: 'Error de validación',
+        message: 'El cargo es requerido y no puede estar vacío.'
+      });
+      this.isLoading = false;
+      return;
+    }
+    
     const usuarioToUpdate: Usuario = {
       idUsuario: cleanedData.idUsuario,
       identificacion: cleanedData.identificacion,
@@ -82,7 +93,18 @@ export class ProfileModal implements OnChanges {
         idEstado: 4,
         descripcion: 'PENDIENTE'
       },
-      cargo: undefined,
+      cargo: {
+        idCargo: cleanedData.cargo.idCargo,
+        descripcion: cleanedData.cargo.descripcion || '',
+        area: {
+          idArea: 0,
+          descripcion: cleanedData.cargo.area || '',
+          departamento: {
+            idDepartamento: 0,
+            descripcion: cleanedData.cargo.departamento || ''
+          }
+        }
+      } as Usuario['cargo'],
       rol: {
         idRol: 2,
         descripcion: 'FUNCIONARIO'
@@ -167,6 +189,10 @@ export class ProfileModal implements OnChanges {
   private validateForm(): { isValid: boolean, errorMessage: string } {
     if (!this.editedUser) {
       return { isValid: false, errorMessage: 'No hay datos de usuario para validar.' };
+    }
+    
+    if (!this.editedUser.cargo || !this.editedUser.cargo.idCargo) {
+      return { isValid: false, errorMessage: 'El cargo es requerido y no puede estar vacío.' };
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
