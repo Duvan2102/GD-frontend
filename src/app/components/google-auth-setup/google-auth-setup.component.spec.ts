@@ -106,15 +106,19 @@ describe('GoogleAuthSetupComponent', () => {
   it('should validate form fields', () => {
     const codigoControl = component.setupForm.get('codigo');
 
+    // Test required validation
     codigoControl?.setValue('');
     expect(codigoControl?.hasError('required')).toBeTruthy();
 
+    // Test minlength validation
     codigoControl?.setValue('123');
     expect(codigoControl?.hasError('minlength')).toBeTruthy();
 
+    // Test maxlength validation
     codigoControl?.setValue('1234567');
     expect(codigoControl?.hasError('maxlength')).toBeTruthy();
 
+    // Test valid value
     codigoControl?.setValue('123456');
     expect(codigoControl?.valid).toBeTruthy();
   });

@@ -54,6 +54,7 @@ export class ProfileModal implements OnChanges {
 
     const validationResult = this.validateForm();
     if (!validationResult.isValid) {
+      // Emitir alerta externa en lugar de mostrar mensaje interno
       this.showAlert.emit({
         type: 'warning',
         title: 'Error de validación',
@@ -66,6 +67,19 @@ export class ProfileModal implements OnChanges {
     this.errorMessage = '';
 
     const cleanedData = this.cleanUserData(this.editedUser);
+    
+    if (!cleanedData.cargo || !cleanedData.cargo.idCargo) {
+      this.showAlert.emit({
+        type: 'warning',
+        title: 'Error de validación',
+        message: 'El cargo es requerido y no puede estar vacío.'
+      });
+      this.isLoading = false;
+      return;
+    }
+    
+    const rolConvertido = this.convertRolToUsuarioFormat(cleanedData.rol);
+    
     const usuarioToUpdate: Usuario = {
       idUsuario: cleanedData.idUsuario,
       identificacion: cleanedData.identificacion,
@@ -81,11 +95,19 @@ export class ProfileModal implements OnChanges {
         idEstado: 4,
         descripcion: 'PENDIENTE'
       },
-      cargo: undefined,
-      rol: {
-        idRol: 2,
-        descripcion: 'FUNCIONARIO'
-      },
+      cargo: {
+        idCargo: cleanedData.cargo.idCargo,
+        descripcion: cleanedData.cargo.descripcion || '',
+        area: {
+          idArea: 0,
+          descripcion: cleanedData.cargo.area || '',
+          departamento: {
+            idDepartamento: 0,
+            descripcion: cleanedData.cargo.departamento || ''
+          }
+        }
+      } as Usuario['cargo'],
+      rol: rolConvertido,
       dobleAutenticacion: 'GOOGLE_AUTH'
     };
 
@@ -154,6 +176,43 @@ export class ProfileModal implements OnChanges {
     };
   }
 
+  private convertRolToUsuarioFormat(rol: number[] | string): number[] | { idRol: number; descripcion: string } {
+    if (Array.isArray(rol)) {
+      const rolesArray = rol.filter((r: any) => typeof r === 'number');
+      
+      if (rolesArray.includes(1) && rolesArray.includes(3)) {
+        return { idRol: 1, descripcion: 'ADMINISTRADOR' };
+      } else if (rolesArray.includes(2)) {
+        return { idRol: 3, descripcion: 'AUDITOR' };
+      } else {
+        return { idRol: 2, descripcion: 'FUNCIONARIO' };
+      }
+    }
+    
+    if (typeof rol === 'string') {
+      const rolMap: { [key: string]: { idRol: number; descripcion: string } } = {
+        'ADMINISTRADOR': { idRol: 1, descripcion: 'ADMINISTRADOR' },
+        'FUNCIONARIO': { idRol: 2, descripcion: 'FUNCIONARIO' },
+        'AUDITOR': { idRol: 3, descripcion: 'AUDITOR' }
+      };
+      
+      const rolUpper = rol.toUpperCase().trim();
+      if (rolMap[rolUpper]) {
+        return rolMap[rolUpper];
+      }
+      
+      if (rolUpper.includes('ADMIN') || rolUpper.includes('ADMINISTRADOR')) {
+        return { idRol: 1, descripcion: 'ADMINISTRADOR' };
+      } else if (rolUpper.includes('AUDITOR')) {
+        return { idRol: 3, descripcion: 'AUDITOR' };
+      } else {
+        return { idRol: 2, descripcion: 'FUNCIONARIO' };
+      }
+    }
+    
+    return { idRol: 2, descripcion: 'FUNCIONARIO' };
+  }
+
   private isFormValid(): boolean {
     return this.validateForm().isValid;
   }
@@ -161,6 +220,10 @@ export class ProfileModal implements OnChanges {
   private validateForm(): { isValid: boolean, errorMessage: string } {
     if (!this.editedUser) {
       return { isValid: false, errorMessage: 'No hay datos de usuario para validar.' };
+    }
+    
+    if (!this.editedUser.cargo || !this.editedUser.cargo.idCargo) {
+      return { isValid: false, errorMessage: 'El cargo es requerido y no puede estar vacío.' };
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

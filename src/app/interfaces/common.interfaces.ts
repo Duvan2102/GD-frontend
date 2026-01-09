@@ -262,6 +262,7 @@ export interface Sesion {
   activa: boolean;
 }
 
+// Interfaces para la autenticación con el backend
 export interface LoginRequest {
   usuario: string;
   password: string;
@@ -313,6 +314,7 @@ export interface MessageResponse {
   message: string;
 }
 
+// Interfaces para validación de contraseña
 export interface PasswordValidationRequest {
   password: string;
 }
@@ -346,6 +348,7 @@ export interface PageResponse<T> {
   empty: boolean;
 }
 
+// Interfaces para el sistema de 2FA OBLIGATORIO
 export interface TwoFARequest {
   codigo: string;
   tempToken?: string;
@@ -361,13 +364,15 @@ export interface TwoFAErrorResponse {
   message: string;
 }
 
+// Respuesta SIEMPRE después del login exitoso (nueva estructura)
 export interface TwoFARequiredResponse {
   message: string;
   usuario: string;
-  dobleAutenticacion?: boolean;
+  dobleAutenticacion?: boolean; // Deprecated: usar hasGoogleAuth y hasEmailBackup en lugar de esto
   tempToken: string;
 }
 
+// Verificar estado de configuración 2FA (actualizada)
 export interface TwoFAStatusResponse {
   hasGoogleAuth: boolean;
   hasEmailBackup: boolean;
@@ -375,12 +380,14 @@ export interface TwoFAStatusResponse {
   message: string;
 }
 
+// Obtener/Regenerar código QR
 export interface QRCodeResponse {
   qrCodeUrl: string;
   secret: string;
   message: string;
 }
 
+// Configurar Google Authenticator (primera vez)
 export interface GoogleAuthSetupResponse {
   qrCodeUrl: string;
   secret: string;
@@ -397,6 +404,7 @@ export interface GoogleAuthConfirmResponse {
   message: string;
 }
 
+// Desvincular Google Authenticator
 export interface UnlinkGoogleAuthRequest {
   usuario: string;
   password: string;
@@ -406,6 +414,7 @@ export interface UnlinkGoogleAuthResponse {
   message: string;
 }
 
+// Envío de código por email (respaldo)
 export interface EmailCodeRequest {
   usuario: string;
 }
@@ -423,6 +432,7 @@ export interface TwoFAState {
   metodoActual?: 'GOOGLE_AUTH' | 'EMAIL' | 'PENDING';
 }
 
+// Datos de configuración QR
 export interface QRSetupData {
   qrCodeUrl: string;
   secret: string;
@@ -430,6 +440,7 @@ export interface QRSetupData {
   message: string;
 }
 
+// Cambio de método 2FA por administrador (actualizada)
 export interface Change2FAMethodRequest {
   idUsuario: number;
   nuevoMetodo: 'EMAIL' | 'GOOGLE_AUTH';
@@ -443,6 +454,7 @@ export interface Change2FAMethodResponse {
   nuevoMetodo: 'GOOGLE_AUTH' | 'EMAIL';
 }
 
+// Interfaces para registro de usuarios
 export interface RegisterRequest {
   identificacion: string;
   nombres: string;

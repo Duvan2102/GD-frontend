@@ -66,15 +66,24 @@ export class UserValidationService {
 
   constructor(private http: HttpClient) { }
 
+  /**
+   * Obtiene todos los usuarios del sistema
+   */
   getAllUsers(): Observable<Usuario[]> {
     return this.http.get<UsuariosResponse>(this.API_URL).pipe(
       map(response => response.content)
     );
   }
 
+  /**
+   * Valida si un correo electrónico existe en el sistema
+   * @param email - Correo electrónico a validar
+   * @returns Observable con el resultado de la validación
+   */
   validateUserByEmail(email: string): Observable<UserValidationResult> {
     return this.getAllUsers().pipe(
       map(usuarios => {
+        // Buscar usuario por correo empresarial o personal
         const usuario = usuarios.find(u => 
           u.correoEmpresarial?.toLowerCase() === email.toLowerCase() ||
           u.correoPersonal?.toLowerCase() === email.toLowerCase()
@@ -88,6 +97,7 @@ export class UserValidationService {
           };
         }
 
+        // Verificar si el usuario está activo
         const isActive = usuario.estado?.descripcion === 'ACTIVO';
         
         if (!isActive) {
@@ -109,6 +119,11 @@ export class UserValidationService {
     );
   }
 
+  /**
+   * Valida si un usuario existe por nombre de usuario
+   * @param username - Nombre de usuario a validar
+   * @returns Observable con el resultado de la validación
+   */
   validateUserByUsername(username: string): Observable<UserValidationResult> {
     return this.getAllUsers().pipe(
       map(usuarios => {

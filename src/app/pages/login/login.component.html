@@ -361,6 +361,7 @@
                       class="input-field" required
                       [class.error]="getFieldError('usuario')"
                       placeholder="Ingrese su usuario"
+                      (input)="onUsuarioInput($event)"
                     />
                     <div *ngIf="getFieldError('usuario')">
                       {{ getFieldError('usuario') }}
@@ -411,15 +412,6 @@
       (registered)="handleUserRegistered($event)"
       (close)="closeRegisterModal()">
     </app-user-form-register>
-
-    <!-- Modal de éxito -->
-    <app-success-modal
-      [visible]="modalSuccessVisible"
-      [mensaje]="modalSuccessMessage"
-      [mensajeSecundario]="modalSuccessSecondaryMessage"
-      [textoBtn]="modalSuccessBtn"
-      (aceptar)="cerrarModalSuccess()">
-    </app-success-modal>
 
     <!-- Footer -->
     <footer>

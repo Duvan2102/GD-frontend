@@ -4,12 +4,11 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { UserFormRegister } from '../../components/user-form-register/user-form-register';
-import { SuccessModal } from '../users/success-modal/success-modal';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, CommonModule, UserFormRegister, SuccessModal],
+  imports: [ReactiveFormsModule, CommonModule, UserFormRegister],
   templateUrl: './login.component.html',
   styleUrls: ['./shared-login-styles.css']
 })
@@ -19,10 +18,6 @@ export class LoginComponent implements OnInit {
   isLoading: boolean = false;
   isRegisterModalVisible = false;
   tokenExpiredMessage: string = '';
-  modalSuccessVisible = false;
-  modalSuccessMessage = '';
-  modalSuccessSecondaryMessage = '';
-  modalSuccessBtn = 'Aceptar';
 
   constructor(
     private fb: FormBuilder,
@@ -63,8 +58,9 @@ export class LoginComponent implements OnInit {
       this.errorMessage = '';
 
       const { usuario, password } = this.loginForm.value;
+      const usuarioLowercase = usuario.toLowerCase();
 
-      this.authService.loginWith2FA(usuario, password).subscribe({
+      this.authService.loginWith2FA(usuarioLowercase, password).subscribe({
         next: (response) => {
           if (response.success && response.requires2FA) {
             this.router.navigate(['/two-fa-state']);
@@ -103,6 +99,12 @@ export class LoginComponent implements OnInit {
     return '';
   }
 
+  onUsuarioInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value.toLowerCase();
+    this.loginForm.patchValue({ usuario: value }, { emitEvent: false });
+  }
+
 
   goToForgotPassword(): void {
     this.router.navigate(['/forgot-password']);
@@ -119,16 +121,7 @@ export class LoginComponent implements OnInit {
   handleUserRegistered(event: { idUsuario: number }): void {
     this.closeRegisterModal();
     
-    this.modalSuccessMessage = `¡Usuario registrado exitosamente! ID: ${event.idUsuario}`;
-    this.modalSuccessSecondaryMessage = 'El usuario ha sido registrado y está pendiente de activación por un administrador.';
-    this.modalSuccessBtn = 'Aceptar';
-    this.modalSuccessVisible = true;
-  }
-
-  cerrarModalSuccess(): void {
-    this.modalSuccessVisible = false;
-    this.modalSuccessMessage = '';
-    this.modalSuccessSecondaryMessage = '';
+    alert(`¡Usuario registrado exitosamente! ID: ${event.idUsuario}\n\nEl usuario ha sido registrado y está pendiente de activación por un administrador.`);
   }
 
   private handleLoginError(error: any): void {

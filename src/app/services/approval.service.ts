@@ -21,10 +21,14 @@ export class ApprovalService {
 
   constructor(private http: HttpClient, private userService: UserService) { }
 
+  // Helpers
   private headersForUser(userId: number): HttpHeaders {
     return new HttpHeaders({ 'X-User-Id': String(userId) });
   }
 
+  /**
+   * Mapea el estado del aprobador a un formato estándar
+   */
   private mapApproverState(estado: any): 'APROBADO' | 'RECHAZADO' | 'PENDIENTE' | 'CANCELADA' {
     if (!estado) return 'PENDIENTE';
     
@@ -35,7 +39,11 @@ export class ApprovalService {
     return 'PENDIENTE';
   }
 
+  /**
+   * Obtiene la fecha de acción del aprobador
+   */
   private getApproverActionDate(item: any, usuarioId: string): Date {
+    // Buscar en el historial de acciones
     const historial = item?.historialAcciones || item?.approvalHistory || [];
     const accion = historial.find((h: any) => 
       h.usuarioId === usuarioId || h.usuario === usuarioId
@@ -45,9 +53,13 @@ export class ApprovalService {
       return new Date(accion.fecha);
     }
     
+    // Si no hay historial, usar fecha de creación como fallback
     return new Date(item?.createdAt || item?.fechaCreacion || new Date());
   }
 
+  /**
+   * Obtiene el comentario del aprobador
+   */
   private getApproverComment(item: any, usuarioId: string): string {
     const historial = item?.historialAcciones || item?.approvalHistory || [];
     const accion = historial.find((h: any) => 
@@ -57,6 +69,9 @@ export class ApprovalService {
     return accion?.comentario || accion?.comment || '';
   }
 
+  /**
+   * Registra metadata de una acción de aprobación
+   */
   recordApprovalAction(solicitudId: string, usuarioId: string, action: 'approve' | 'reject' | 'cancel', comentario?: string): Observable<any> {
     const metadata = {
       solicitudId,
@@ -69,21 +84,32 @@ export class ApprovalService {
     };
 
 
+    // Aquí se podría enviar al backend para persistir la metadata
+    // Por ahora, solo lo logueamos
     return of(metadata);
   }
 
+  /**
+   * Obtiene el historial de metadata para una solicitud
+   */
   getApprovalMetadata(solicitudId: string): Observable<any[]> {
+    // En una implementación real, esto vendría del backend
+    // Por ahora retornamos un array vacío
     return of([]);
   }
 
   private mapServerToApproval(item: any): Approval {
+    // Use proper ID from server, fallback to a more descriptive ID if needed
     const id = item?.id ?? item?.numeroRadicado ?? item?.solicitudId ?? `temp-${Date.now()}`;
     const estadoRaw = (item?.estado || 'PENDIENTE').toUpperCase();
+    // Mapear estados del servidor a estados válidos
     const estado = this.mapEstadoToStatus(estadoRaw);
     const createdAt = item?.createdAt || item?.fechaCreacion || new Date().toISOString();
     
+    // Obtener la fecha de última actualización real del historial de gestiones
     let updatedAt = null;
     
+    // Buscar en el historial de acciones la fecha más reciente
     if (item?.historialAcciones && Array.isArray(item.historialAcciones)) {
       const historialOrdenado = item.historialAcciones
         .filter((h: any) => h.fecha)
@@ -94,6 +120,7 @@ export class ApprovalService {
       }
     }
     
+    // Si no hay historial de acciones, buscar en destinatarios con decisiones
     if (!updatedAt && item?.destinatarios && Array.isArray(item.destinatarios)) {
       const destinatariosConDecision = item.destinatarios
         .filter((d: any) => d.fechaDecision)
@@ -104,11 +131,15 @@ export class ApprovalService {
       }
     }
     
+    // Si no se encuentra ninguna fecha en el historial, usar la fecha de creación
+    // ya que la creación es la primera gestión en el historial
     if (!updatedAt) {
       updatedAt = createdAt;
     }
 
+    // Extraer información de aprobadores únicamente del servidor
     const approvers = (item?.destinatarios || []).map((d: any) => {
+      // Extraer información directamente del objeto del servidor
       const nombres = d?.nombres || (d?.nombre?.split(' ')[0] || '');
       const apellidos = d?.apellidos || (d?.nombre?.split(' ')[1] || '');
 
@@ -118,8 +149,10 @@ export class ApprovalService {
       };
     });
 
+    // Extraer información del usuario creador del response del servidor
     const creadorId = item?.createdBy || item?.creadorId || item?.idSolicitante;
     
+    // Información básica del creador (sin resolver aún)
     const creatorUser = 'Usuario no encontrado';
     const creatorFullName = 'Usuario no encontrado';
     const position = item?.solicitanteCargo || 'Funcionario';
@@ -134,8 +167,9 @@ export class ApprovalService {
       lastUpdate: updatedAt,
       status: ['PENDIENTE', 'APROBADO', 'RECHAZADO', 'CANCELADA', 'APROB-PENDIENTE', 'APROB-POCESADO'].includes(estado) ? estado : 'PENDIENTE',
       approvers: approvers,
-      priority: item?.prioridad === true,
+      priority: item?.prioridad === true,  // Boolean del backend (true = prioritaria)
       fullData: item,
+      // Agregar el ID del creador para resolver después
       _creadorId: creadorId
     } as Approval;
   }
@@ -143,6 +177,7 @@ export class ApprovalService {
   private extractAreaString(user: Usuario | undefined): string | null {
     if (!user) return null;
     
+    // Intentar múltiples estrategias para extraer el área como string
     if (typeof user.cargo === 'string') return user.cargo;
     if (user.cargo && typeof user.cargo === 'object') {
       if ((user.cargo as any).nombre) return (user.cargo as any).nombre;
@@ -166,6 +201,7 @@ export class ApprovalService {
   }
 
   private extractRequestName(item: any, id: string | number): string {
+    // Intentar múltiples estrategias para extraer el nombre de la solicitud
     if (item?.titulo && typeof item.titulo === 'string' && item.titulo.trim()) {
       return item.titulo;
     }
@@ -191,6 +227,7 @@ export class ApprovalService {
       return item.fileName;
     }
     
+    // Si no se encuentra un nombre específico, generar uno basado en la tipología
     if (item?.tipologiaId || item?.idTipologia) {
       const tipologiaId = item.tipologiaId || item.idTipologia;
       return `Solicitud de ${tipologiaId} - ${id}`;
@@ -200,6 +237,7 @@ export class ApprovalService {
   }
 
   private extractRequestDescription(item: any): string {
+    // Intentar múltiples estrategias para extraer la descripción/comentario
     if (item?.descripcionSolicitud && typeof item.descripcionSolicitud === 'string' && item.descripcionSolicitud.trim()) {
       return item.descripcionSolicitud;
     }
@@ -225,6 +263,7 @@ export class ApprovalService {
       return item.motivo;
     }
     
+    // Buscar en otros campos posibles
     if (item?.notes && typeof item.notes === 'string' && item.notes.trim()) {
       return item.notes;
     }
@@ -238,6 +277,7 @@ export class ApprovalService {
       return item.text;
     }
     
+    // Buscar cualquier campo que contenga texto y no sea un ID o fecha
     const textFields = Object.keys(item || {}).filter(key => {
       const value = item[key];
       return typeof value === 'string' && 
@@ -281,6 +321,7 @@ export class ApprovalService {
 
     const allGestiones: any[] = [];
 
+    // 1. Mapear gestiones del campo "historial"
     if (Array.isArray(gestiones) && gestiones.length > 0) {
       const gestionesHistorial = gestiones.map((gestion, index) => {
         const usuario = findUserById(gestion.actorUsuarioId);
@@ -326,6 +367,7 @@ export class ApprovalService {
       allGestiones.push(...gestionesHistorial);
     }
 
+    // 2. Mapear gestiones de destinatarios con decisiones (evitando duplicados de cancelado/rechazado)
     if (Array.isArray(destinatarios) && destinatarios.length > 0) {
       
       const gestionesDestinatarios = destinatarios
@@ -340,9 +382,11 @@ export class ApprovalService {
           const fechaDestinatario = new Date(dest.fechaDecision);
           const tipoDestinatario = this.mapearTipoGestion(dest.decision);
           
+          // Verificar duplicados específicos para cancelado y rechazado
           const esCanceladoORechazado = tipoDestinatario === 'CANCELACION' || tipoDestinatario === 'RECHAZO';
           
           if (esCanceladoORechazado) {
+            // Para cancelado/rechazado, verificar si ya existe en el historial
             const yaExisteEnHistorial = allGestiones.some(g => {
               const mismoTipo = g.tipo === tipoDestinatario;
               const mismaFecha = Math.abs(g.fecha.getTime() - fechaDestinatario.getTime()) < 300000; // 5 minutos de diferencia
@@ -354,6 +398,7 @@ export class ApprovalService {
               return null;
             }
           } else {
+            // Para otros tipos (APROBACION, ENVIO), verificar duplicados más estrictos
             const yaExisteEnHistorial = allGestiones.some(g => {
               const mismoUsuario = g.actorUsuarioId === dest.usuarioId;
               const mismaFecha = Math.abs(g.fecha.getTime() - fechaDestinatario.getTime()) < 60000; // 1 minuto de diferencia
@@ -394,11 +439,12 @@ export class ApprovalService {
             fuente: 'destinatarios'
           };
         })
-        .filter(gestion => gestion !== null);
+        .filter(gestion => gestion !== null); // Filtrar nulos
       
       allGestiones.push(...gestionesDestinatarios);
     }
 
+    // Ordenar por fecha (más reciente primero)
     const result = allGestiones.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
     return result;
   }
@@ -408,18 +454,21 @@ export class ApprovalService {
     
     const tipoUpper = tipo.toUpperCase();
     
+    // Mapear acciones específicas del backend
     if (tipoUpper === 'CREAR' || tipoUpper === 'CREATE') return 'ENVIO';
     if (tipoUpper === 'CANCELAR' || tipoUpper === 'CANCEL') return 'CANCELACION';
     if (tipoUpper === 'APROBAR' || tipoUpper === 'APPROVE') return 'APROBACION';
     if (tipoUpper === 'RECHAZAR' || tipoUpper === 'REJECT') return 'RECHAZO';
     if (tipoUpper === 'DESCARGA' || tipoUpper === 'DESCARGAR' || tipoUpper === 'DOWNLOAD') return 'DESCARGA';
     
+    // Mapeos genéricos como fallback
     if (tipoUpper.includes('APROB') || tipoUpper === 'APPROVED') return 'APROBACION';
     if (tipoUpper.includes('RECHAZ') || tipoUpper === 'REJECTED') return 'RECHAZO';
     if (tipoUpper.includes('CANCEL') || tipoUpper === 'CANCELLED') return 'CANCELACION';
     if (tipoUpper.includes('DESCARG') || tipoUpper.includes('DOWNLOAD')) return 'DESCARGA';
     if (tipoUpper.includes('ENVI') || tipoUpper === 'SEND') return 'ENVIO';
     
+    // Por defecto, si no se reconoce, mantener como ENVIO
     return 'ENVIO';
   }
   
@@ -428,16 +477,20 @@ export class ApprovalService {
     const findUserById = (id?: number): Usuario | undefined => {
       if (!id) return undefined;
       
+      // Buscar por noUsuario (ID numérico)
       let user = users.find(u => u.noUsuario === id);
       
+      // Si no se encuentra, buscar por idUsuario (para usuarios resueltos)
       if (!user) {
         user = users.find(u => (u as any).idUsuario === id);
       }
       
+      // Si no se encuentra, buscar por usuario (string)
       if (!user) {
         user = users.find(u => u.usuario === String(id));
       }
       
+      // Si aún no se encuentra, buscar por ID en otros campos
       if (!user) {
         user = users.find(u => (u as any).id === id || (u as any).usuarioId === id);
       }
@@ -454,8 +507,10 @@ export class ApprovalService {
     const estadoBack = String(item?.estado || 'Pendiente');
     const estado = (() => {
       const up = estadoBack.toUpperCase().trim();
+      // Estados específicos primero
       if (up === 'APROB-PENDIENTE' || up === 'APROB_PENDIENTE') return 'APROB-PENDIENTE';
       if (up === 'APROB-POCESADO' || up === 'APROB_POCESADO' || up === 'APROB-PROCESADO') return 'APROB-POCESADO';
+      // Estados tradicionales
       if (up === 'APROBADO') return 'Aprobada';
       if (up === 'RECHAZADO') return 'Rechazada';
       if (up === 'CANCELADA') return 'Cancelada';
@@ -470,15 +525,21 @@ export class ApprovalService {
     
     const destinatariosRaw: any[] = item?.destinatarios || [];
     const destinatarios: DestinatarioData[] = destinatariosRaw.map((d: any, index: number) => {
+      // Mapear según la estructura real de la API: { usuarioId: 5, ordenIndex: 0, nombre: null, decision: "PENDIENTE" }
       const usuarioId = d?.usuarioId;
       let user = usuarioId ? findUserById(usuarioId) : undefined;
       
+      // Usar el ordenIndex de la API o el índice como fallback
       const orden = d?.ordenIndex !== undefined ? d.ordenIndex + 1 : (index + 1);
       const estadoAprob: any = d?.decision || d?.estado || 'PENDIENTE';
       
+      // Si no se encuentra el usuario en la lista local, intentar obtenerlo por ID
       if (!user && usuarioId) {
+        // Nota: En este punto no podemos hacer llamadas asíncronas, 
+        // pero podemos marcar que necesita ser resuelto
       }
       
+      // Incluir información adicional del usuario si está disponible
       return { 
         usuarioId: String(usuarioId),
         noUsuarioId: usuarioId,
@@ -498,6 +559,7 @@ export class ApprovalService {
       };
     });
 
+    // Mapear estados de aprobadores con metadata
     const approverStates: AprobadorState[] = destinatarios.map(dest => ({
       usuarioId: dest.usuarioId,
       estado: this.mapApproverState(dest.decision || dest.estado),
@@ -514,7 +576,7 @@ export class ApprovalService {
       id: String(id),
       nombreSolicitud: this.extractRequestName(item, id),
       detallesAdicionales: this.extractRequestDescription(item),
-      prioridad: item?.prioridad === true,
+      prioridad: item?.prioridad === true,  // Boolean del backend
       tipologia: String(item?.tipologiaId ?? item?.idTipologia ?? ''),
       enviarRecordatorio: typeof item?.enviarRecordatorio === 'number' ? item.enviarRecordatorio : 0,  // Días del backend
       documentosAnexos: Array.isArray(item?.adjuntos) && item.adjuntos.length > 0,
@@ -526,24 +588,29 @@ export class ApprovalService {
       fechaCreacion: new Date(createdAt),
       estado: estado as any,
       approverStates: destinatarios.map(d => ({ usuarioId: (d as any).usuarioId, estado: (d as any).estado || 'Pendiente' })),
+      // Agregar información del documento para la vista
       documentoUrl: item?.documentoUrl || item?.pdfUrl || item?.urlDocumento || item?.url || item?.documentUrl || item?.urlDocumentoOriginal,
       documentoFileName: item?.documentoFileName || item?.pdfFileName || item?.nombreArchivo || item?.fileName || item?.pdfOriginalName || item?.nombreDocumentoOriginal,
       historialGestiones: this.mapearHistorialGestiones(item?.historial || [], users, destinatarios),
+      // Campos adicionales de la API
       destinatariosTotal: item?.destinatariosTotal || destinatarios.length,
       destinatariosAprobados: item?.destinatariosAprobados || 0,
       pdfOriginalName: item?.pdfOriginalName || item?.documentoFileName || item?.pdfFileName,
       pdfSizeBytes: item?.pdfSizeBytes,
       adjuntos: item?.adjuntos || [],
       ordenFirma: Boolean(item?.ordenFirma),
+      // Campos adicionales para documentos aprobados
       documentoAprobado: item?.documentoAprobado || item?.documentoAprobacion,
       urlDocumentoAprobado: item?.urlDocumentoAprobado || item?.documentoAprobadoUrl,
       nombreDocumentoAprobado: item?.nombreDocumentoAprobado || item?.documentoAprobadoFileName,
+      // Campo para determinar si requiere proceso post-aprobación
       requiereProceso: Boolean(item?.requiereProceso)
     };
     
     return result;
   }
 
+  // Mutations on local cache
   addApproval(approval: Approval) {
     const currentApprovals = this.approvalsSubject.getValue();
     this.approvalsSubject.next([approval, ...currentApprovals]);
@@ -562,6 +629,7 @@ export class ApprovalService {
     const headers = this.headersForUser(usuarioId);
     return this.http.delete<any>(`${this.baseUrl}/solicitudes/${approvalId}`, { headers }).pipe(
       tap(() => {
+        // Actualizar el estado local después de eliminar exitosamente
         const currentApprovals = this.approvalsSubject.getValue();
         const filteredApprovals = currentApprovals.filter(a => a.id.toString() !== approvalId.toString());
         this.approvalsSubject.next(filteredApprovals);
@@ -572,6 +640,7 @@ export class ApprovalService {
     );
   }
 
+  // Backend integrations
   getApprovalsByCreator(userId: number, users: Usuario[], page = 0, size = 10): Observable<Approval[]> {
     const params = new HttpParams()
       .set('creadorId', String(userId))
@@ -587,6 +656,7 @@ export class ApprovalService {
       switchMap((list: any[]) => {
         const approvals = list.map((item: any) => this.mapServerToApproval(item));
         
+        // Obtener IDs únicos de creadores que necesitan resolución
         const creatorIds = [...new Set(approvals
           .filter((approval: any) => approval._creadorId)
           .map((approval: any) => approval._creadorId!))];
@@ -595,6 +665,7 @@ export class ApprovalService {
           return of(approvals);
         }
         
+        // Resolver información de usuarios creadores
         const userRequests = creatorIds.map(creatorId => 
           this.userService.obtenerUsuarioPorId(creatorId).pipe(
             catchError(() => of(null))
@@ -610,6 +681,7 @@ export class ApprovalService {
               }
             });
             
+            // Actualizar approvals con información resuelta
             return approvals.map((approval: any) => {
               if (approval._creadorId && userMap.has(approval._creadorId)) {
                 const user = userMap.get(approval._creadorId)!;
@@ -645,6 +717,7 @@ export class ApprovalService {
       switchMap((list: any[]) => {
         const approvals = list.map((item: any) => this.mapServerToApproval(item));
         
+        // Obtener IDs únicos de creadores que necesitan resolución
         const creatorIds = [...new Set(approvals
           .filter((approval: any) => approval._creadorId)
           .map((approval: any) => approval._creadorId!))];
@@ -653,6 +726,7 @@ export class ApprovalService {
           return of(approvals);
         }
         
+        // Resolver información de usuarios creadores
         const userRequests = creatorIds.map(creatorId => 
           this.userService.obtenerUsuarioPorId(creatorId).pipe(
             catchError(() => of(null))
@@ -668,6 +742,7 @@ export class ApprovalService {
               }
             });
             
+            // Actualizar approvals con información resuelta
             return approvals.map((approval: any) => {
               if (approval._creadorId && userMap.has(approval._creadorId)) {
                 const user = userMap.get(approval._creadorId)!;
@@ -688,6 +763,10 @@ export class ApprovalService {
     );
   }
 
+  /**
+   * Obtiene las solicitudes asignadas al usuario como procesador (estado APROB_PENDIENTE)
+   * Si se especifica getAll=true, obtiene todas las páginas automáticamente
+   */
   getApprovalsForProcessor(userId: number, users: Usuario[], page = 0, size = 10, getAll = false): Observable<Approval[]> {
     const params = new HttpParams()
       .set('usuarioId', String(userId))
@@ -696,6 +775,7 @@ export class ApprovalService {
     const url = `${this.baseUrl}/solicitudes/para-procesar`;
     return this.http.get<any>(url, { headers: this.headersForUser(userId), params }).pipe(
       switchMap(res => {
+        // Detectar si la respuesta es paginada
         let allItems: any[] = [];
         let totalPages = 1;
         let currentPage = 0;
@@ -713,6 +793,7 @@ export class ApprovalService {
           }
         }
         
+        // Si getAll es true y hay más páginas, obtener todas
         if (getAll && totalPages > 1 && currentPage < totalPages - 1) {
           const remainingPages: Observable<any>[] = [];
           for (let p = currentPage + 1; p < totalPages; p++) {
@@ -734,6 +815,7 @@ export class ApprovalService {
           
           return forkJoin(remainingPages).pipe(
             map((pages: any[][]) => {
+              // Combinar todas las páginas
               pages.forEach(pageItems => {
                 allItems = [...allItems, ...pageItems];
               });
@@ -747,6 +829,7 @@ export class ApprovalService {
       switchMap((list: any[]) => {
         const approvals = list.map((item: any) => this.mapServerToApproval(item));
         
+        // Obtener IDs únicos de creadores que necesitan resolución
         const creatorIds = [...new Set(approvals
           .filter((approval: any) => approval._creadorId)
           .map((approval: any) => approval._creadorId!))];
@@ -755,6 +838,7 @@ export class ApprovalService {
           return of(approvals);
         }
         
+        // Resolver información de usuarios creadores
         const userRequests = creatorIds.map(creatorId => 
           this.userService.obtenerUsuarioPorId(creatorId).pipe(
             catchError(() => of(null))
@@ -770,6 +854,7 @@ export class ApprovalService {
               }
             });
             
+            // Actualizar approvals con información resuelta
             return approvals.map((approval: any) => {
               if (approval._creadorId && userMap.has(approval._creadorId)) {
                 const user = userMap.get(approval._creadorId)!;
@@ -794,6 +879,7 @@ export class ApprovalService {
     const local = this.approvalsSubject.getValue().find(a => a.id.toString() === approvalId.toString());
     const headers = userId ? this.headersForUser(userId) : undefined;
     
+    // Check if the ID looks like a timestamp (invalid for API calls)
     const idStr = String(approvalId);
     if (idStr.startsWith('temp-') || /^\d{13}$/.test(idStr)) {
       return of(local);
@@ -801,8 +887,10 @@ export class ApprovalService {
     
     return this.http.get<any>(`${this.baseUrl}/solicitudes/${approvalId}`, { headers }).pipe(
       switchMap(item => {
+        // Usar mapToSuccessData para obtener la estructura correcta
         const initialData = this.mapToSuccessData(item, users);
         
+        // Identificar usuarios que necesitan resolución
         const usersToResolve = (initialData.destinatarios || [])
           .filter((dest: any) => dest.needsUserResolution && dest.noUsuarioId)
           .map((dest: any) => dest.noUsuarioId);
@@ -811,6 +899,7 @@ export class ApprovalService {
           return of(this.mapSuccessDataToApproval(initialData));
         }
         
+        // Obtener información de usuarios faltantes
         const userRequests = usersToResolve.map(userId => 
           this.userService.obtenerUsuarioPorId(userId).pipe(
             catchError(error => {
@@ -821,10 +910,13 @@ export class ApprovalService {
         
         return forkJoin(userRequests).pipe(
           map(resolvedUsers => {
+            // Filtrar usuarios nulos y combinar con usuarios existentes
             const validUsers = resolvedUsers.filter(user => user !== null) as Usuario[];
             
+            // Crear un mapa de usuarios para evitar duplicados
             const userMap = new Map<string, Usuario>();
             
+            // Agregar usuarios existentes
             users.forEach(user => {
               const key = user.noUsuario ? String(user.noUsuario) : user.usuario;
               if (key) {
@@ -832,9 +924,12 @@ export class ApprovalService {
               }
             });
             
+            // Agregar usuarios resueltos (sobrescribir si existen)
             validUsers.forEach(user => {
+              // Intentar múltiples estrategias para crear la clave
               let key = user.noUsuario ? String(user.noUsuario) : user.usuario;
               
+              // Si no hay clave válida, usar idUsuario para usuarios resueltos
               if (!key) {
                 key = (user as any).idUsuario ? String((user as any).idUsuario) : (user as any).id ? String((user as any).id) : `resolved-${Math.random()}`;
               }
@@ -847,6 +942,7 @@ export class ApprovalService {
             
             const allUsers = Array.from(userMap.values());
             
+            // Remapear con todos los usuarios disponibles
             const successData = this.mapToSuccessData(item, allUsers);
             return this.mapSuccessDataToApproval(successData);
           })
@@ -890,6 +986,9 @@ export class ApprovalService {
     });
   }
 
+  /**
+   * Descarga el archivo ZIP completo de una solicitud
+   */
   downloadCompletoZip(solicitudId: string | number, userId: number): Observable<Blob> {
     const headers = this.headersForUser(userId);
     return this.http.get(`${this.baseUrl}/solicitudes/${solicitudId}/descargar-todo`, { 
@@ -898,6 +997,9 @@ export class ApprovalService {
     });
   }
 
+  /**
+   * Registra la descarga del archivo principal de una solicitud
+   */
   registrarDescargaArchivoPrincipal(solicitudId: string | number, userId: number): Observable<any> {
     const headers = this.headersForUser(userId);
     
@@ -914,6 +1016,9 @@ export class ApprovalService {
     );
   }
 
+  /**
+   * Registra la descarga de adjuntos de una solicitud
+   */
   registrarDescargaAdjuntos(solicitudId: string | number, userId: number): Observable<any> {
     const headers = this.headersForUser(userId);
     
@@ -930,6 +1035,9 @@ export class ApprovalService {
     );
   }
 
+  /**
+   * Registra la descarga completa (ZIP) de una solicitud
+   */
   registrarDescargaCompleta(solicitudId: string | number, userId: number): Observable<any> {
     const headers = this.headersForUser(userId);
     
@@ -946,6 +1054,9 @@ export class ApprovalService {
     );
   }
 
+  /**
+   * Agrega procesadores para el proceso post-aprobación de una solicitud
+   */
   agregarProcesadores(
     solicitudId: string | number,
     usuarioId: number,
@@ -969,6 +1080,10 @@ export class ApprovalService {
     );
   }
 
+  /**
+   * Agrega adjuntos (archivos) a una solicitud
+   * Opcionalmente puede incluir un comentario para registrar en el proceso
+   */
   agregarAdjuntos(
     solicitudId: string | number,
     usuarioId: number,
@@ -978,12 +1093,15 @@ export class ApprovalService {
     const headers = this.headersForUser(usuarioId);
     const formData = new FormData();
     
+    // Agregar cada archivo al FormData
     archivos.forEach((archivo, index) => {
       formData.append('archivos', archivo);
     });
     
+    // Agregar usuarioId como parte del FormData
     formData.append('usuarioId', String(usuarioId));
     
+    // Agregar comentario si se proporciona
     if (comentario && comentario.trim()) {
       formData.append('comentario', comentario.trim());
     }
@@ -1004,8 +1122,10 @@ export class ApprovalService {
   getApprovalDocument(approvalId: string | number, userId: number): Observable<{ url: string, fileName: string }> {
     const headers = this.headersForUser(userId);
     
+    // Crear URL para el PDF directamente
     const pdfUrl = `${this.baseUrl}/solicitudes/${approvalId}/pdf`;
     
+    // Hacer una petición HEAD para obtener el nombre del archivo
     return this.http.head(pdfUrl, { headers, observe: 'response' }).pipe(
       map(response => {
         const contentDisposition = response.headers.get('content-disposition');
@@ -1024,6 +1144,7 @@ export class ApprovalService {
         };
       }),
       catchError(error => {
+        // Si falla el HEAD, devolver la URL con nombre por defecto
         console.warn('No se pudo obtener metadata del PDF, usando valores por defecto:', error);
         return of({
           url: pdfUrl,
@@ -1138,6 +1259,7 @@ export class ApprovalService {
       switchMap((list: any[]) => {
         const approvals = list.map((item: any) => this.mapServerToApproval(item));
         
+        // Obtener IDs únicos de creadores que necesitan resolución
         const creatorIds = [...new Set(approvals
           .filter((approval: any) => approval._creadorId)
           .map((approval: any) => approval._creadorId!))];
@@ -1146,6 +1268,7 @@ export class ApprovalService {
           return of(approvals);
         }
         
+        // Resolver información de usuarios creadores
         const userRequests = creatorIds.map(creatorId => 
           this.userService.obtenerUsuarioPorId(creatorId).pipe(
             catchError(() => of(null))
@@ -1161,6 +1284,7 @@ export class ApprovalService {
               }
             });
             
+            // Actualizar approvals con información resuelta
             return approvals.map((approval: any) => {
               if (approval._creadorId && userMap.has(approval._creadorId)) {
                 const user = userMap.get(approval._creadorId)!;
@@ -1198,6 +1322,9 @@ export class ApprovalService {
     );
   }
 
+  /**
+   * Obtiene todas las solicitudes del área del usuario (independientemente de su rol)
+   */
   getApprovalsByArea(usuarioId: number, users: Usuario[], page = 0, size = 1000): Observable<Approval[]> {
     const params = new HttpParams()
       .set('usuarioId', String(usuarioId))
@@ -1213,6 +1340,7 @@ export class ApprovalService {
       switchMap((list: any[]) => {
         const approvals = list.map((item: any) => this.mapServerToApproval(item));
         
+        // Obtener IDs únicos de creadores que necesitan resolución
         const creatorIds = [...new Set(approvals
           .filter((approval: any) => approval._creadorId)
           .map((approval: any) => approval._creadorId!))];
@@ -1221,6 +1349,7 @@ export class ApprovalService {
           return of(approvals);
         }
         
+        // Resolver información de usuarios creadores
         const userRequests = creatorIds.map(creatorId => 
           this.userService.obtenerUsuarioPorId(creatorId).pipe(
             catchError(() => of(null))
@@ -1236,6 +1365,7 @@ export class ApprovalService {
               }
             });
             
+            // Actualizar approvals con información resuelta
             return approvals.map((approval: any) => {
               if (approval._creadorId && userMap.has(approval._creadorId)) {
                 const user = userMap.get(approval._creadorId)!;
@@ -1251,6 +1381,7 @@ export class ApprovalService {
         );
       }),
       catchError(error => {
+        // Fallback al método original si el endpoint no existe
         return this.getHistorico(usuarioId, users, page, size);
       })
     );
@@ -1260,7 +1391,11 @@ export class ApprovalService {
     return this.approvals$;
   }
 
+  /**
+   * Convierte SuccessModalData a Approval para mantener compatibilidad
+   */
   private mapSuccessDataToApproval(successData: SuccessModalData): Approval {
+    // Buscar la fecha de última actualización real en el historial de gestiones
     let lastUpdateDate: string | null = null;
     
     if (successData.historialGestiones && Array.isArray(successData.historialGestiones)) {
@@ -1273,6 +1408,8 @@ export class ApprovalService {
       }
     }
     
+    // Si no se encuentra ninguna fecha en el historial, usar la fecha de creación
+    // ya que la creación es la primera gestión en el historial
     if (!lastUpdateDate) {
       lastUpdateDate = successData.fechaCreacion?.toISOString() || new Date().toISOString();
     }
@@ -1290,17 +1427,19 @@ export class ApprovalService {
         initials: this.getInitials((dest as any).nombresApellidos || ''),
         fullName: (dest as any).nombresApellidos || ''
       })),
-      priority: successData.prioridad === true,
-      fullData: successData as any
+      priority: successData.prioridad === true,  // Boolean de SuccessModalData
+      fullData: successData as any // Incluir todos los datos para el modal
     };
   }
 
   private mapEstadoToStatus(estado: string): 'PENDIENTE' | 'APROBADO' | 'RECHAZADO' | 'CANCELADA' | 'APROB-PENDIENTE' | 'APROB-POCESADO' {
     const estadoUpper = estado.toUpperCase().trim();
     
+    // Estados específicos primero
     if (estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE') return 'APROB-PENDIENTE';
     if (estadoUpper === 'APROB-POCESADO' || estadoUpper === 'APROB_POCESADO' || estadoUpper === 'APROB-PROCESADO') return 'APROB-POCESADO';
     
+    // Estados tradicionales
     if (estadoUpper.includes('APROBADO') && !estadoUpper.includes('PENDIENTE') && !estadoUpper.includes('POCESADO')) return 'APROBADO';
     if (estadoUpper.includes('RECHAZADO')) return 'RECHAZADO';
     if (estadoUpper.includes('CANCELADO') || estadoUpper.includes('CANCELADA')) return 'CANCELADA';

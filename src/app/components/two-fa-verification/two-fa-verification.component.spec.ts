@@ -36,6 +36,7 @@ describe('TwoFAVerificationComponent', () => {
     mockAuthService = TestBed.inject(AuthService) as jasmine.SpyObj<AuthService>;
     mockRouter = TestBed.inject(Router) as jasmine.SpyObj<Router>;
 
+    // Configurar valores por defecto para los mocks
     mockAuthService.isTwoFARequired.and.returnValue(true);
     mockAuthService.getTwoFAUser.and.returnValue(of('test.user'));
   });
@@ -96,15 +97,19 @@ describe('TwoFAVerificationComponent', () => {
   it('should validate form fields', () => {
     const codigoControl = component.verificationForm.get('codigo');
 
+    // Test required validation
     codigoControl?.setValue('');
     expect(codigoControl?.hasError('required')).toBeTruthy();
 
+    // Test minlength validation
     codigoControl?.setValue('123');
     expect(codigoControl?.hasError('minlength')).toBeTruthy();
 
+    // Test maxlength validation
     codigoControl?.setValue('1234567');
     expect(codigoControl?.hasError('maxlength')).toBeTruthy();
 
+    // Test valid value
     codigoControl?.setValue('123456');
     expect(codigoControl?.valid).toBeTruthy();
   });

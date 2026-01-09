@@ -36,14 +36,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* asegura centrado vertical perfecto */
   min-height: 100vh;
 }
 
 .modal-dialog {
   position: relative;
   width: auto;
+  /* sin márgenes superiores para quedar justo al centro */
   margin: 0 auto;
   pointer-events: none;
+  /* La imagen muestra un modal más angosto */
   max-width: 640px;
   width: 100%;
 }
@@ -78,6 +81,7 @@
   align-items: center;
   justify-content: flex-start;
   padding: 0.75rem 1rem;
+  /* En la imagen el encabezado es blanco y sin borde */
   border-bottom: none;
   background-color: #fff;
   border-radius: 0.5rem 0.5rem 0 0;
@@ -95,8 +99,8 @@
 .btn-close {
   background: none;
   border: none;
-  font-size: 1.5rem;
-  color: #6c757d;
+  font-size: 1.5rem; /* tamaño solicitado */
+  color: #6c757d; /* gris */
   cursor: pointer;
   padding: 0;
   width: 2rem;
@@ -113,7 +117,7 @@
 
 .btn-close:hover {
   background-color: transparent;
-  color: #495057;
+  color: #495057; /* gris más oscuro al hover */
 }
 
 /* Body del modal */
@@ -156,7 +160,7 @@
   height: 36px;
   padding: 0 0.9rem;
   border: 1px solid #cfcfcf;
-  border-radius: 9999px;
+  border-radius: 9999px; /* Inputs redondeados como chips */
   font-size: 0.95rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   background-color: #fff;
@@ -232,14 +236,14 @@
   padding: 0.55rem 1.5rem;
   font-size: 1rem;
   line-height: 1.5;
-  border-radius: 9999px;
+  border-radius: 9999px; /* Botones pastilla */
   transition: all 0.15s ease-in-out;
   min-width: 120px;
 }
 
 .btn-cancel {
   color: #46655a;
-  background-color: #c7cbcc;
+  background-color: #c7cbcc; /* Gris consistente con user-form-modal */
   border-color: #c7cbcc;
 }
 
@@ -251,7 +255,7 @@
 
 .btn-save {
   color: #fff;
-  background-color: #4aa07b;
+  background-color: #4aa07b; /* Verde medio del botón Guardar */
   border-color: #4aa07b;
 }
 
