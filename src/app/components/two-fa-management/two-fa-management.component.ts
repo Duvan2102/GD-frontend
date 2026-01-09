@@ -26,6 +26,7 @@ export class TwoFAManagementComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // Obtener usuario actual
     this.authService.getCurrentUser()
       .pipe(takeUntil(this.destroy$))
       .subscribe(user => {

@@ -311,12 +311,17 @@
   gap: 15px;
 }
 
+/* Estilos para el avatar del usuario */
 .user-avatar {
+  /* Transiciones similares a los íconos de aprobaciones */
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  /* Borde y sombra como en las tablas de aprobaciones */
   border: 2px solid #fff;
+  /* Tono azul tomado de la tabla (#0a2963) */
   background-color: #0a2963 !important;
   box-shadow: 0 1px 3px rgba(10, 41, 99, 0.8);
   font-weight: 700;
+  /* Aumenta ligeramente el tamaño del círculo principal */
   width: 48px !important;
   height: 48px !important;
 }
@@ -326,6 +331,7 @@
   box-shadow: 0 2px 8px rgba(10, 41, 99, 0.4);
 }
 
+/* Botón de salida ligeramente más grande en el header */
 header .btn-outline-danger.btn-sm {
   padding: 0.35rem 0.65rem !important;
   font-size: 1rem !important;

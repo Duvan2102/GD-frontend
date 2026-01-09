@@ -3,6 +3,7 @@
   display: none;
   opacity: 0;
   visibility: hidden;
+  /* Este componente ahora solo redirige, no debe ser visible */
 }
 
 .two-fa-state-card {

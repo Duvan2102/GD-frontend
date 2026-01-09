@@ -59,10 +59,12 @@ export const apiInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next): 
 
   let headers = req.headers;
 
+  // Agregar Authorization header
   if (token && requiresAuth && !(isTwoFAValidation && hasTempTokenInBody)) {
     headers = headers.set('Authorization', `Bearer ${token}`);
   }
 
+  // Agregar X-User-Id header
   if (requiresAuth && user?.idUsuario) {
     headers = headers.set('X-User-Id', String(user.idUsuario));
   }
