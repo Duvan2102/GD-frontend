@@ -204,7 +204,7 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   private detectProcessorMode(data: SuccessModalData | null, userId: number): boolean {
     if (!data) return false;
     
-    // Verificar si el estado es APROB_PENDIENTE
+    if (!data.requiereProceso) return false;
     const estado = data.estado;
     const estadoUpper = estado ? String(estado).toUpperCase().trim() : '';
     const isAprobPendiente = estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE';

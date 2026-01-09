@@ -300,6 +300,14 @@ export class CreateRequest implements OnInit, OnDestroy {
     this.documentViewData = null;
   }
 
+  handleSendFromDocumentView(): void {
+    if (this.wasRequestCreatedSuccessfully) {
+      this.isDetailModalVisible = false;
+      this.successModalData = null;
+      this.wasRequestCreatedSuccessfully = false;
+    }
+  }
+
   handleCancelRequest(event: { solicitudId: string | number, comentario?: string }): void {
     const uid = this.currentUser?.idUsuario;
     if (!uid) return;
