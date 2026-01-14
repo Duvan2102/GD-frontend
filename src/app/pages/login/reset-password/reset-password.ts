@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { PasswordResetService } from '../../../services/password-reset.service';
@@ -33,13 +33,60 @@ export class ResetPassword {
       confirmPassword: ['', [Validators.required]]
     }, { validators: this.passwordMatchValidator });
 
-    // Obtener token de la URL
     this.route.queryParams.subscribe(params => {
       this.token = params['token'] || '';
       if (this.token) {
         this.validateToken();
       }
     });
+  }
+
+  passwordStrengthValidator(control: AbstractControl): ValidationErrors | null {
+    if (!control.value) {
+      return null;
+    }
+
+    const password = control.value;
+    const errors: ValidationErrors = {};
+
+    if (password.length < 10) {
+      errors['minLength'] = true;
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      errors['noUppercase'] = true;
+    }
+
+    if (!/[a-z]/.test(password)) {
+      errors['noLowercase'] = true;
+    }
+
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      errors['noSpecialChar'] = true;
+    }
+
+    if (this.userInfo) {
+      const lowerPassword = password.toLowerCase();
+      const usuario = (this.userInfo.usuario || '').toLowerCase();
+      const nombres = (this.userInfo.nombres || '').toLowerCase();
+      const apellidos = (this.userInfo.apellidos || '').toLowerCase();
+      const email = (this.userInfo.correoEmpresarial || '').toLowerCase().split('@')[0];
+
+      if (usuario && lowerPassword.includes(usuario)) {
+        errors['containsPersonalData'] = true;
+      }
+      if (nombres && lowerPassword.includes(nombres)) {
+        errors['containsPersonalData'] = true;
+      }
+      if (apellidos && lowerPassword.includes(apellidos)) {
+        errors['containsPersonalData'] = true;
+      }
+      if (email && lowerPassword.includes(email)) {
+        errors['containsPersonalData'] = true;
+      }
+    }
+
+    return Object.keys(errors).length > 0 ? errors : null;
   }
 
   passwordMatchValidator(form: FormGroup) {

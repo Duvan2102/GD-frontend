@@ -58,8 +58,9 @@ export class LoginComponent implements OnInit {
       this.errorMessage = '';
 
       const { usuario, password } = this.loginForm.value;
+      const usuarioLowercase = usuario.toLowerCase();
 
-      this.authService.loginWith2FA(usuario, password).subscribe({
+      this.authService.loginWith2FA(usuarioLowercase, password).subscribe({
         next: (response) => {
           if (response.success && response.requires2FA) {
             this.router.navigate(['/two-fa-state']);
@@ -96,6 +97,12 @@ export class LoginComponent implements OnInit {
       }
     }
     return '';
+  }
+
+  onUsuarioInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value.toLowerCase();
+    this.loginForm.patchValue({ usuario: value }, { emitEvent: false });
   }
 
 

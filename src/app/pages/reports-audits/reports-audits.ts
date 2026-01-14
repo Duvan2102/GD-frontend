@@ -598,10 +598,6 @@ export class ReportsAudits implements OnInit, OnDestroy {
   }
 
   private hasFiltersApplied(): boolean {
-    // Considerar que hay filtros aplicados si:
-    // 1. Hay fechas seleccionadas
-    // 2. Hay búsqueda
-    // 3. Cualquier filtro de selección ha sido modificado (incluso si es "TODOS")
     return !!(
       this.advancedFilters.fechaDesde ||
       this.advancedFilters.fechaHasta ||

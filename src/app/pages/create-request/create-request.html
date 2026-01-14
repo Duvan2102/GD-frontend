@@ -65,7 +65,8 @@
   [documentData]="documentViewData"
   [hideManagementButtons]="true"
   [hideSendButton]="hideSendButtonInDocumentView"
-  (close)="closeDocumentView()">
+  (close)="closeDocumentView()"
+  (send)="handleSendFromDocumentView()">
 </app-document-view>
 
 <!-- Loading overlay for detail fetch -->

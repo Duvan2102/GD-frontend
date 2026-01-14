@@ -27,7 +27,7 @@ export interface Approval {
   creatorFullName: string;
   position: string;
   lastUpdate: string;
-  status: 'PENDIENTE' | 'APROBADO' | 'RECHAZADO' | 'CANCELADA' | 'APROB-PENDIENTE';
+  status: 'PENDIENTE' | 'APROBADO' | 'RECHAZADO' | 'CANCELADA' | 'APROB-PENDIENTE' | 'APROB-POCESADO';
   approvers: { initials: string; fullName: string }[];
   priority: boolean;
   fullData?: any;
@@ -184,7 +184,7 @@ export class ApprovalProcess implements OnInit, OnDestroy {
   private detectProcessorMode(data: SuccessModalData | null, userId: number | undefined): boolean {
     if (!data || !userId) return false;
     
-    // Verificar si el estado es APROB_PENDIENTE
+    if (!data.requiereProceso) return false;
     const estado = data.estado;
     const estadoUpper = estado ? String(estado).toUpperCase().trim() : '';
     const isAprobPendiente = estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE';

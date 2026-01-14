@@ -67,6 +67,19 @@ export class ProfileModal implements OnChanges {
     this.errorMessage = '';
 
     const cleanedData = this.cleanUserData(this.editedUser);
+    
+    if (!cleanedData.cargo || !cleanedData.cargo.idCargo) {
+      this.showAlert.emit({
+        type: 'warning',
+        title: 'Error de validación',
+        message: 'El cargo es requerido y no puede estar vacío.'
+      });
+      this.isLoading = false;
+      return;
+    }
+    
+    const rolConvertido = this.convertRolToUsuarioFormat(cleanedData.rol);
+    
     const usuarioToUpdate: Usuario = {
       idUsuario: cleanedData.idUsuario,
       identificacion: cleanedData.identificacion,
@@ -82,11 +95,19 @@ export class ProfileModal implements OnChanges {
         idEstado: 4,
         descripcion: 'PENDIENTE'
       },
-      cargo: undefined,
-      rol: {
-        idRol: 2,
-        descripcion: 'FUNCIONARIO'
-      },
+      cargo: {
+        idCargo: cleanedData.cargo.idCargo,
+        descripcion: cleanedData.cargo.descripcion || '',
+        area: {
+          idArea: 0,
+          descripcion: cleanedData.cargo.area || '',
+          departamento: {
+            idDepartamento: 0,
+            descripcion: cleanedData.cargo.departamento || ''
+          }
+        }
+      } as Usuario['cargo'],
+      rol: rolConvertido,
       dobleAutenticacion: 'GOOGLE_AUTH'
     };
 
@@ -95,23 +116,19 @@ export class ProfileModal implements OnChanges {
         this.isLoading = false;
         
         if (response && (response.success === true || (response as any).idUsuario)) {
-          // Emitir alerta externa de éxito
           this.showAlert.emit({
             type: 'success',
             title: '¡Éxito!',
             message: 'Perfil actualizado correctamente'
           });
           
-          // Emitir los datos limpios actualizados
           const cleanedData = this.cleanUserData(this.editedUser!);
           this.save.emit(cleanedData);
           
-          // Cerrar el modal después de un breve delay
           setTimeout(() => {
             this.onClose();
           }, 500);
         } else {
-          // Emitir alerta externa de error
           this.showAlert.emit({
             type: 'danger',
             title: 'Error',
@@ -122,7 +139,6 @@ export class ProfileModal implements OnChanges {
       error: (error) => {
         this.isLoading = false;
         
-        // Emitir alerta externa de error
         this.showAlert.emit({
           type: 'danger',
           title: 'Error',
@@ -160,6 +176,43 @@ export class ProfileModal implements OnChanges {
     };
   }
 
+  private convertRolToUsuarioFormat(rol: number[] | string): number[] | { idRol: number; descripcion: string } {
+    if (Array.isArray(rol)) {
+      const rolesArray = rol.filter((r: any) => typeof r === 'number');
+      
+      if (rolesArray.includes(1) && rolesArray.includes(3)) {
+        return { idRol: 1, descripcion: 'ADMINISTRADOR' };
+      } else if (rolesArray.includes(2)) {
+        return { idRol: 3, descripcion: 'AUDITOR' };
+      } else {
+        return { idRol: 2, descripcion: 'FUNCIONARIO' };
+      }
+    }
+    
+    if (typeof rol === 'string') {
+      const rolMap: { [key: string]: { idRol: number; descripcion: string } } = {
+        'ADMINISTRADOR': { idRol: 1, descripcion: 'ADMINISTRADOR' },
+        'FUNCIONARIO': { idRol: 2, descripcion: 'FUNCIONARIO' },
+        'AUDITOR': { idRol: 3, descripcion: 'AUDITOR' }
+      };
+      
+      const rolUpper = rol.toUpperCase().trim();
+      if (rolMap[rolUpper]) {
+        return rolMap[rolUpper];
+      }
+      
+      if (rolUpper.includes('ADMIN') || rolUpper.includes('ADMINISTRADOR')) {
+        return { idRol: 1, descripcion: 'ADMINISTRADOR' };
+      } else if (rolUpper.includes('AUDITOR')) {
+        return { idRol: 3, descripcion: 'AUDITOR' };
+      } else {
+        return { idRol: 2, descripcion: 'FUNCIONARIO' };
+      }
+    }
+    
+    return { idRol: 2, descripcion: 'FUNCIONARIO' };
+  }
+
   private isFormValid(): boolean {
     return this.validateForm().isValid;
   }
@@ -169,14 +222,16 @@ export class ProfileModal implements OnChanges {
       return { isValid: false, errorMessage: 'No hay datos de usuario para validar.' };
     }
     
+    if (!this.editedUser.cargo || !this.editedUser.cargo.idCargo) {
+      return { isValid: false, errorMessage: 'El cargo es requerido y no puede estar vacío.' };
+    }
+    
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     
-    // Validar correo personal
     if (this.editedUser.correoPersonal && this.editedUser.correoPersonal.trim() !== '' && !emailRegex.test(this.editedUser.correoPersonal)) {
       return { isValid: false, errorMessage: 'El formato del correo personal es inválido. Por favor, ingrese un correo válido.' };
     }
     
-    // Validar teléfono móvil (telefono1)
     if (this.editedUser.telefono1 && this.editedUser.telefono1.trim() !== '') {
       const cleanPhone = this.editedUser.telefono1.replace(/\D/g, '');
       
@@ -188,18 +243,15 @@ export class ProfileModal implements OnChanges {
         return { isValid: false, errorMessage: 'El teléfono móvil debe tener exactamente 10 dígitos.' };
       }
       
-      // Validar que no todos los dígitos sean iguales
       if (/^(\d)\1{9}$/.test(cleanPhone)) {
         return { isValid: false, errorMessage: 'El teléfono móvil no puede contener todos los dígitos iguales.' };
       }
       
-      // Validar que no haya más de 3 dígitos consecutivos iguales
       if (/(\d)\1{5,}/.test(cleanPhone)) {
         return { isValid: false, errorMessage: 'El teléfono móvil no puede tener más de 5 dígitos consecutivos iguales.' };
       }
     }
     
-    // Validar teléfono (telefono2)
     if (this.editedUser.telefono2 && this.editedUser.telefono2.trim() !== '') {
       const cleanPhone = this.editedUser.telefono2.replace(/\D/g, '');
       
@@ -211,12 +263,10 @@ export class ProfileModal implements OnChanges {
         return { isValid: false, errorMessage: 'El teléfono debe tener exactamente 10 dígitos.' };
       }
       
-      // Validar que no todos los dígitos sean iguales
       if (/^(\d)\1{9}$/.test(cleanPhone)) {
         return { isValid: false, errorMessage: 'El teléfono no puede contener todos los dígitos iguales.' };
       }
       
-      // Validar que no haya más de 3 dígitos consecutivos iguales
       if (/(\d)\1{5,}/.test(cleanPhone)) {
         return { isValid: false, errorMessage: 'El teléfono no puede tener más de 5 dígitos consecutivos iguales.' };
       }

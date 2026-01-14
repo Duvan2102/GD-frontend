@@ -294,7 +294,8 @@ export class Administration implements OnInit {
 
     const updatePayload: Partial<Typology> = {
         descripcion: typology.descripcion,
-        cargo: typology.cargo ? { idCargo: typology.cargo.idCargo } as Position : undefined
+        cargo: typology.cargo ? { idCargo: typology.cargo.idCargo } as Position : undefined,
+        requiereProceso: typology.requiereProceso
     };
     this.typologyService.update(typology.idTipologia, updatePayload).subscribe({
       next: () => {
