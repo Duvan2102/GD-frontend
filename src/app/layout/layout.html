@@ -52,8 +52,15 @@
       <router-outlet></router-outlet>
     </main>
   </div>
-  <footer class="bg-light shadow-sm text-end px-3 py-2">
-    © 2025 PROAsistemas S.A.
+  <footer class="bg-light shadow-sm d-flex justify-content-between align-items-center px-3 py-2">
+    <div class="d-flex align-items-center">
+      <button class="btn btn-link p-0 me-2" (click)="openAboutModal()" title="Acerca de" style="text-decoration: none; color: #6c757d;">
+        <i class="bi bi-info-circle" style="font-size: 1.2rem;"></i>
+      </button>
+    </div>
+    <div class="text-end">
+      © 2025 PROAsistemas S.A.
+    </div>
   </footer>
 </div>
 
@@ -65,3 +72,21 @@
   (save)="onSaveProfile($event)"
   (showAlert)="showExternalAlert($event.type, $event.title, $event.message)">
 </app-profile-modal>
+
+<div class="modal fade" [class.show]="isAboutModalVisible" [style.display]="isAboutModalVisible ? 'block' : 'none'" tabindex="-1" role="dialog" *ngIf="isAboutModalVisible">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Acerca de</h5>
+        <button type="button" class="btn-close" (click)="closeAboutModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-center">Propiedad del producto PROASISTEMAS</p>
+        <p class="text-center"><strong>Autores:</strong> Duvan Urrego y Luis Perez</p>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button type="button" class="btn btn-secondary" (click)="closeAboutModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -798,6 +798,35 @@ export class ReportsAudits implements OnInit, OnDestroy {
     this.displayedItems.forEach(item => item.selected = checked);
   }
 
+  toggleAllFilteredItems(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.filteredItems.forEach(item => item.selected = checked);
+    this.displayedItems.forEach(item => {
+      const filteredItem = this.filteredItems.find(fi => fi.id === item.id);
+      if (filteredItem) {
+        item.selected = checked;
+      }
+    });
+  }
+
+  areAllFilteredItemsSelected(): boolean {
+    if (this.filteredItems.length === 0) return false;
+    return this.filteredItems.every(item => item.selected === true);
+  }
+
+  areSomeFilteredItemsSelected(): boolean {
+    if (this.filteredItems.length === 0) return false;
+    const selectedCount = this.filteredItems.filter(item => item.selected === true).length;
+    return selectedCount > 0 && selectedCount < this.filteredItems.length;
+  }
+
+  onItemSelectionChange(item: ReportItem): void {
+    const filteredItem = this.filteredItems.find(fi => fi.id === item.id);
+    if (filteredItem) {
+      filteredItem.selected = item.selected;
+    }
+  }
+
   onManage(id: string): void {
     this.showDetailsModal(id);
   }

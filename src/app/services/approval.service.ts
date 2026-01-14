@@ -1165,6 +1165,7 @@ export class ApprovalService {
     enviarRecordatorio?: number;
     pdfPrincipal: File;
     adjuntos?: File[];
+    requiereProceso?: boolean;
   }): Observable<Approval | null> {
     const form = new FormData();
     form.append('idSolicitante', String(payload.idSolicitante));
@@ -1177,6 +1178,9 @@ export class ApprovalService {
     if (payload.comentarioInicial) form.append('comentarionicial', payload.comentarioInicial);
     if (typeof payload.prioridad === 'boolean') form.append('prioridad', String(payload.prioridad));
     if (typeof payload.enviarRecordatorio === 'number') form.append('enviarRecordatorio', String(payload.enviarRecordatorio));
+    if (payload.requiereProceso === true) {
+      form.append('estadoId', '9'); // ID 9: APROBADO PROCESO
+    }
     form.append('pdfPrincipal', payload.pdfPrincipal);
     (payload.adjuntos || []).forEach(a => form.append('adjuntos', a));
 
@@ -1184,13 +1188,23 @@ export class ApprovalService {
       map(item => this.mapServerToApproval(item)),
       tap(appr => this.addApproval(appr)),
       catchError((error) => {
+        let errorMessage = 'Error al crear la solicitud. Por favor, intenta nuevamente.';
+        
         if (error.status === 413) {
-          alert('Error: Los archivos son demasiado grandes. El tamaño total no debe exceder 50MB. Por favor, reduce el tamaño de los archivos e intenta nuevamente.');
+          errorMessage = 'Error: Los archivos son demasiado grandes. El servidor está rechazando la solicitud. Por favor, reduce el tamaño de los archivos e intenta nuevamente. Si el problema persiste, contacta al administrador del sistema.';
         } else if (error.status === 0) {
-          alert('Error de conexión. Por favor, verifica tu conexión a internet e intenta nuevamente.');
-        } else {
-          alert('Error al crear la solicitud. Por favor, intenta nuevamente.');
+          // Error de CORS o conexión
+          errorMessage = 'Error de conexión o CORS. Por favor, verifica tu conexión a internet e intenta nuevamente. Si el problema persiste, contacta al administrador del sistema.';
+        } else if (error.status === 401 || error.status === 403) {
+          errorMessage = 'No tienes permisos para realizar esta operación. Por favor, verifica tu sesión.';
+        } else if (error.status >= 500) {
+          errorMessage = 'Error del servidor. Por favor, intenta más tarde o contacta al administrador del sistema.';
         }
+        
+        setTimeout(() => {
+          alert(errorMessage);
+        }, 0);
+        
         return of(null);
       })
     );
@@ -1439,8 +1453,10 @@ export class ApprovalService {
     if (estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE') return 'APROB-PENDIENTE';
     if (estadoUpper === 'APROB-POCESADO' || estadoUpper === 'APROB_POCESADO' || estadoUpper === 'APROB-PROCESADO') return 'APROB-POCESADO';
     
+    if (estadoUpper === 'APROBADO PROCESO' || estadoUpper === 'APROBADO_PROCESO') return 'APROB-PENDIENTE';
+    
     // Estados tradicionales
-    if (estadoUpper.includes('APROBADO') && !estadoUpper.includes('PENDIENTE') && !estadoUpper.includes('POCESADO')) return 'APROBADO';
+    if (estadoUpper.includes('APROBADO') && !estadoUpper.includes('PENDIENTE') && !estadoUpper.includes('POCESADO') && !estadoUpper.includes('PROCESO')) return 'APROBADO';
     if (estadoUpper.includes('RECHAZADO')) return 'RECHAZADO';
     if (estadoUpper.includes('CANCELADO') || estadoUpper.includes('CANCELADA')) return 'CANCELADA';
     if (estadoUpper.includes('PENDIENTE')) return 'PENDIENTE';

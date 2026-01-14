@@ -162,6 +162,9 @@ export class CreateRequest implements OnInit, OnDestroy {
     const pdf = solicitudData.documentoAprobacion as File;
     const adjuntos = solicitudData.anexos;
 
+    const tipologia = this.tipologias.find(t => t.idTipologia === idTipologia);
+    const requiereProceso = tipologia?.requiereProceso === true;
+
     this.approvalService.createSolicitud({
       idSolicitante,
       idTipologia,
@@ -172,21 +175,40 @@ export class CreateRequest implements OnInit, OnDestroy {
       prioridad: solicitudData.prioridad,
       enviarRecordatorio: solicitudData.enviarRecordatorio,
       pdfPrincipal: pdf,
-      adjuntos: adjuntos
+      adjuntos: adjuntos,
+      requiereProceso: requiereProceso
     }).subscribe({
       next: (appr) => {
-        this.isCreatingRequest = false; // Ocultar overlay de carga
-        if (appr) {
-          this.wasRequestCreatedSuccessfully = true; // Marcar que se creó exitosamente
-          // Preparar datos para la success-modal - ya tenemos usuarios cargados
-          this.successModalData = this.approvalService.mapToSuccessData(appr.fullData, this.allUsers);
-          this.isDetailModalVisible = true;
-        }
+        // Usar setTimeout para evitar problemas con change detection
+        setTimeout(() => {
+          this.isCreatingRequest = false; // Ocultar overlay de carga
+          if (appr) {
+            this.wasRequestCreatedSuccessfully = true;
+            this.successModalData = this.approvalService.mapToSuccessData(appr.fullData, this.allUsers);
+            this.isDetailModalVisible = true;
+            
+            this.reloadApprovals();
+            
+            // Cerrar automáticamente el modal después de 3 segundos
+            setTimeout(() => {
+              if (this.isDetailModalVisible && this.wasRequestCreatedSuccessfully) {
+                this.closeDetailModal();
+              }
+            }, 3000);
+          } else {
+          }
+        }, 0);
       },
       error: (error) => {
-        this.isCreatingRequest = false; // Ocultar overlay de carga
-        console.error('Error al crear la solicitud:', error);
-        alert('Error al crear la solicitud. Por favor, inténtelo de nuevo.');
+        setTimeout(() => {
+          this.isCreatingRequest = false; // Ocultar overlay de carga
+          console.error('Error al crear la solicitud:', error);
+          
+          // Solo mostrar alert si el error no fue manejado por el servicio
+          if (error.status !== 413 && error.status !== 0) {
+            alert('Error al crear la solicitud. Por favor, inténtelo de nuevo.');
+          }
+        }, 0);
       }
     });
   }
@@ -357,7 +379,8 @@ export class CreateRequest implements OnInit, OnDestroy {
       this.itemsPerPage,
       this.currentPage,
       this.tipologias,
-      this.allUsers
+      this.allUsers,
+      true // excludeProcessStates: true para mostrar solo estados básicos (PENDIENTE, APROBADO, RECHAZADO, CANCELADA)
     );
     this.displayedRequests = displayedRequests;
     this.totalFiltered = totalFiltered;

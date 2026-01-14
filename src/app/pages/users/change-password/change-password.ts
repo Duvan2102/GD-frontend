@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { UserService } from '../../../services/user.service';
 import { Usuario } from '../../../interfaces/common.interfaces';
+import { PasswordValidator } from '../../../utils/password-validator.util';
 
 @Component({
   selector: 'app-change-password',
@@ -90,8 +91,18 @@ export class ChangePassword implements OnChanges {
       this.changePasswordError = 'Las contraseñas no coinciden.';
       return;
     }
-    if (this.nuevaPassword.length < 6) {
-      this.changePasswordError = 'La nueva contraseña debe tener al menos 6 caracteres.';
+
+    // Validar contraseña con los requisitos
+    const personalData = this.user ? {
+      nombres: this.user.nombres,
+      apellidos: this.user.apellidos,
+      usuario: this.user.usuario,
+      email: this.user.correoEmpresarial
+    } : undefined;
+
+    const validation = PasswordValidator.validate(this.nuevaPassword, personalData);
+    if (!validation.isValid) {
+      this.changePasswordError = PasswordValidator.getErrorMessages(validation.errors);
       return;
     }
 
@@ -109,6 +120,25 @@ export class ChangePassword implements OnChanges {
     } else {
       this.changePasswordError = 'Usuario no válido';
     }
+  }
+
+  isPasswordRequirementMet(requirement: string): boolean {
+    if (!this.nuevaPassword) return false;
+    
+    const personalData = this.user ? {
+      nombres: this.user.nombres,
+      apellidos: this.user.apellidos,
+      usuario: this.user.usuario,
+      email: this.user.correoEmpresarial
+    } : undefined;
+    
+    const result = PasswordValidator.validate(this.nuevaPassword, personalData);
+    
+    if (requirement === 'No debe contener datos personales') {
+      return !result.errors.some(error => error.includes('No debe contener datos personales'));
+    }
+    
+    return !result.errors.some(error => error === requirement);
   }
 
   togglePasswordVisibility() {

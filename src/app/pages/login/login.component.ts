@@ -114,7 +114,6 @@ export class LoginComponent implements OnInit {
   handleUserRegistered(event: { idUsuario: number }): void {
     this.closeRegisterModal();
     
-    alert(`¡Usuario registrado exitosamente! ID: ${event.idUsuario}\n\nEl usuario ha sido registrado y está pendiente de activación por un administrador.`);
   }
 
   private handleLoginError(error: any): void {

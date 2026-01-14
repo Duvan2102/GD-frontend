@@ -115,8 +115,8 @@ export class DocumentView implements OnChanges {
     this.zoom = 100;
     this.isPdfReady = false;
 
-    // Force change detection to update UI
-    this.cdr.detectChanges();
+    // Usar markForCheck en lugar de detectChanges para evitar infinite loops
+    this.cdr.markForCheck();
 
     // Wait for the modal to be fully rendered and DOM ready
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -124,7 +124,8 @@ export class DocumentView implements OnChanges {
     if (!this.documentData) {
       this.isLoading = false;
       this.error = 'No se proporcionaron datos del documento.';
-      this.cdr.detectChanges();
+      // Usar setTimeout para evitar problemas con change detection
+      setTimeout(() => this.cdr.markForCheck(), 0);
       return;
     }
 
@@ -132,7 +133,8 @@ export class DocumentView implements OnChanges {
     if (this.documentData.metadata?.error) {
       this.isLoading = false;
       this.error = this.documentData.metadata.error;
-      this.cdr.detectChanges();
+      // Usar setTimeout para evitar problemas con change detection
+      setTimeout(() => this.cdr.markForCheck(), 0);
       return;
     }
 
@@ -156,14 +158,16 @@ export class DocumentView implements OnChanges {
       // Wait for PDF viewer container to be ready before final render
       if (this.pdfSrc) {
         await new Promise(resolve => setTimeout(resolve, 300));
-        this.cdr.detectChanges();
+        // Usar setTimeout para evitar problemas con change detection
+        setTimeout(() => this.cdr.markForCheck(), 0);
       }
     } catch (e) {
       console.error('Error al cargar el documento:', e);
       this.error = 'Error al cargar el documento. Por favor, verifique que el archivo no esté corrupto.';
     } finally {
       this.isLoading = false;
-      this.cdr.detectChanges();
+      // Usar setTimeout para evitar problemas con change detection
+      setTimeout(() => this.cdr.markForCheck(), 0);
     }
   }
 
@@ -192,7 +196,8 @@ export class DocumentView implements OnChanges {
     this.totalPages = 1;
     this.zoom = 100;
     this.isPdfReady = false;
-    this.cdr.detectChanges();
+    // Usar setTimeout para evitar problemas con change detection
+    setTimeout(() => this.cdr.markForCheck(), 0);
     this.close.emit(); 
   }
   onEdit() { this.edit.emit(); }

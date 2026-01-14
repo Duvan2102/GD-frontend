@@ -11,7 +11,8 @@ export function applyViewLogic(
   itemsPerPage: number,
   currentPage: number,
   typologies: Typology[],
-  users: Usuario[]
+  users: Usuario[],
+  excludeProcessStates: boolean = false
 ): { displayedRequests: any[], totalFiltered: number } {
   const getTypologyDescription = (typeId: string): string => {
     const typology = typologies.find(t => t.idTipologia.toString() === typeId);
@@ -26,10 +27,21 @@ export function applyViewLogic(
   let result = [...approvalsList];
 
   if (showOnlyManaged) {
-    result = result.filter(req => ['APROBADO', 'RECHAZADO', 'CANCELADA', 'APROB-POCESADO'].includes(req.status));
+    if (excludeProcessStates) {
+      // Solo mostrar estados básicos: APROBADO, RECHAZADO, CANCELADA (excluir APROB-POCESADO)
+      result = result.filter(req => ['APROBADO', 'RECHAZADO', 'CANCELADA'].includes(req.status));
+    } else {
+      // Incluir también APROB-POCESADO para otras vistas
+      result = result.filter(req => ['APROBADO', 'RECHAZADO', 'CANCELADA', 'APROB-POCESADO'].includes(req.status));
+    }
   } else {
-    // Incluir tanto PENDIENTE (aprobadores) como APROB-PENDIENTE (procesadores)
-    result = result.filter(req => req.status === 'PENDIENTE' || req.status === 'APROB-PENDIENTE');
+    if (excludeProcessStates) {
+      // Solo mostrar PENDIENTE (excluir APROB-PENDIENTE que es para procesadores)
+      result = result.filter(req => req.status === 'PENDIENTE');
+    } else {
+      // Incluir tanto PENDIENTE (aprobadores) como APROB-PENDIENTE (procesadores)
+      result = result.filter(req => req.status === 'PENDIENTE' || req.status === 'APROB-PENDIENTE');
+    }
   }
 
   if (searchTerm) {
@@ -145,13 +157,38 @@ export function applyApprovalDetailsViewLogic(
   });
 
   const start = (currentPage - 1) * itemsPerPage;
-  const displayedRequests = result.slice(start, start + itemsPerPage).map(req => ({
-    ...req,
-    type: getTypologyDescription(req.type),
-    // Preservamos objetos para poder usar nombre completo en tooltip
-    approvers: req.approvers.map(a => ({ initials: a.initials, fullName: a.fullName })),
-    creatorUser: req.creatorFullName
-  }));
+  const displayedRequests = result.slice(start, start + itemsPerPage).map(req => {
+    const estadoOriginal = req.fullData?.estado || '';
+    const estadoOriginalUpper = estadoOriginal.toUpperCase().trim();
+    const tipologia = typologies.find(t => t.idTipologia.toString() === req.type);
+    const requiereProceso = tipologia?.requiereProceso === true;
+    
+    const procesadores = req.fullData?.procesadores || 
+                        req.fullData?.procesadoresAsignados || 
+                        req.fullData?.procesadoresPostAprobacion || [];
+    const hayProcesadores = Array.isArray(procesadores) && procesadores.length > 0;
+    
+    let statusToShow = req.status;
+    
+    if (estadoOriginalUpper === 'APROBADO PROCESO' && requiereProceso) {
+      if (hayProcesadores && req.status === 'APROBADO') {
+        statusToShow = 'APROB-POCESADO';
+      } else {
+        statusToShow = 'APROB-PENDIENTE';
+      }
+    } else if (estadoOriginalUpper === 'APROBADO' && requiereProceso && hayProcesadores) {
+      statusToShow = 'APROB-POCESADO';
+    }
+    
+    return {
+      ...req,
+      status: statusToShow,
+      type: getTypologyDescription(req.type),
+      // Preservamos objetos para poder usar nombre completo en tooltip
+      approvers: req.approvers.map(a => ({ initials: a.initials, fullName: a.fullName })),
+      creatorUser: req.creatorFullName
+    };
+  });
 
   return { displayedRequests, totalFiltered };
 }
