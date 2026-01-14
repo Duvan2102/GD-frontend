@@ -22,6 +22,7 @@ export class Layout implements OnInit, OnDestroy {
   currentUser: UsuarioData | null = null;
   private userSubscription?: Subscription;
   isProfileModalVisible = false;
+  isAboutModalVisible = false;
 
   // Sistema de alertas externas
   externalAlerts: Array<{
@@ -105,5 +106,14 @@ export class Layout implements OnInit, OnDestroy {
 
   closeExternalAlert(index: number): void {
     this.externalAlerts.splice(index, 1);
+  }
+
+
+  openAboutModal(): void {
+    this.isAboutModalVisible = true;
+  }
+
+  closeAboutModal(): void {
+    this.isAboutModalVisible = false;
   }
 }
