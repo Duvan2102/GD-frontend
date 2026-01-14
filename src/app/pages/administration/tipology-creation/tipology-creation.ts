@@ -85,7 +85,7 @@ export class Tipology implements OnChanges {
       
       if (this.mode === 'update' && this.typologyToEdit) {
         this.descripcion = this.typologyToEdit.descripcion;
-        this.requiereProceso = this.typologyToEdit.requiereProceso || false;
+        this.requiereProceso = Boolean(this.typologyToEdit.requiereProceso);
         if (this.typologyToEdit.cargo) {
           const { cargo } = this.typologyToEdit;
           const { area } = cargo;

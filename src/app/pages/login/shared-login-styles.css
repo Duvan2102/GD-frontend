@@ -456,3 +456,62 @@ footer {
     outline: none;
     box-shadow: 0 0 0 2px rgba(108, 131, 130, 0.3);
 }
+
+/* --- Estilos para Requisitos de Contraseña --- */
+.password-requirements {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.requirements-title {
+    margin: 0 0 10px 0;
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.requirements-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.requirements-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 5px 0;
+    color: #666;
+    transition: color 0.2s ease;
+}
+
+.requirements-list li:last-child {
+    margin-bottom: 0;
+}
+
+.requirements-list li i {
+    font-size: 14px;
+    width: 16px;
+    flex-shrink: 0;
+}
+
+.requirements-list li.valid {
+    color: #28a745;
+}
+
+.requirements-list li.valid i {
+    color: #28a745;
+}
+
+.requirements-list li.invalid {
+    color: #dc3545;
+}
+
+.requirements-list li.invalid i {
+    color: #dc3545;
+}
