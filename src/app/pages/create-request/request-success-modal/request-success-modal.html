@@ -248,7 +248,7 @@
                 <span class="section-subtitle">Estado:</span>
                 <span class="badge rounded-pill" [ngClass]="{
                   'text-bg-success': data.estado === 'Aprobada',
-                  'text-bg-info': data.estado === 'APROB-PENDIENTE',
+                  'text-bg-info': data.estado === 'APROB-PENDIENTE' || data.estado === 'APROBADO PROCESO',
                   'text-bg-primary': data.estado === 'APROB-POCESADO',
                   'text-bg-warning': data.estado === 'Pendiente',
                   'text-bg-danger': data.estado === 'Rechazada',

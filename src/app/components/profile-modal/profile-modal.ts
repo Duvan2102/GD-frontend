@@ -66,94 +66,108 @@ export class ProfileModal implements OnChanges {
     this.isLoading = true;
     this.errorMessage = '';
 
-    const cleanedData = this.cleanUserData(this.editedUser);
-    
-    let cargoToUpdate: Usuario['cargo'] = undefined;
-    if (cleanedData.cargo && cleanedData.cargo.idCargo) {
-      cargoToUpdate = {
-        idCargo: cleanedData.cargo.idCargo,
-        descripcion: cleanedData.cargo.descripcion || '',
-        area: {
-          idArea: 0, // El backend usará el idCargo para identificar el cargo completo
-          descripcion: typeof cleanedData.cargo.area === 'string' ? cleanedData.cargo.area : '',
-          departamento: {
-            idDepartamento: 0,
-            descripcion: cleanedData.cargo.departamento || ''
-          }
-        }
-      };
-    } else {
-      this.showAlert.emit({
-        type: 'danger',
-        title: 'Error',
-        message: 'El usuario debe tener un cargo asignado.'
-      });
-      this.isLoading = false;
-      return;
-    }
-    
-    const usuarioToUpdate: Usuario = {
-      idUsuario: cleanedData.idUsuario,
-      identificacion: cleanedData.identificacion,
-      nombres: cleanedData.nombres,
-      apellidos: cleanedData.apellidos,
-      usuario: cleanedData.usuario,
-      correoEmpresarial: cleanedData.correoEmpresarial,
-      correoPersonal: cleanedData.correoPersonal || '',
-      telefono1: cleanedData.telefono1 || '',
-      telefono2: cleanedData.telefono2 || '',
-      direccion: cleanedData.direccion || '',
-      estado: {
-        idEstado: 4,
-        descripcion: 'PENDIENTE'
-      },
-      cargo: cargoToUpdate,
-      rol: {
-        idRol: 2,
-        descripcion: 'FUNCIONARIO'
-      },
-      dobleAutenticacion: 'GOOGLE_AUTH'
-    };
-
-    this.userService.actualizarUsuario(usuarioToUpdate).subscribe({
-      next: (response) => {
-        this.isLoading = false;
+    // Obtener el usuario completo desde el backend para preservar estado y rol
+    this.userService.obtenerUsuarioPorId(this.editedUser.idUsuario).subscribe({
+      next: (usuarioCompleto: Usuario) => {
+        const cleanedData = this.cleanUserData(this.editedUser!);
         
-        if (response && (response.success === true || (response as any).idUsuario)) {
-          // Emitir alerta externa de éxito
-          this.showAlert.emit({
-            type: 'success',
-            title: '¡Éxito!',
-            message: 'Perfil actualizado correctamente'
-          });
-          
-          // Emitir los datos limpios actualizados
-          const cleanedData = this.cleanUserData(this.editedUser!);
-          this.save.emit(cleanedData);
-          
-          // Cerrar el modal después de un breve delay
-          setTimeout(() => {
-            this.onClose();
-          }, 500);
+        let cargoToUpdate: Usuario['cargo'] = undefined;
+        if (cleanedData.cargo && cleanedData.cargo.idCargo) {
+          cargoToUpdate = {
+            idCargo: cleanedData.cargo.idCargo,
+            descripcion: cleanedData.cargo.descripcion || '',
+            area: {
+              idArea: 0, // El backend usará el idCargo para identificar el cargo completo
+              descripcion: typeof cleanedData.cargo.area === 'string' ? cleanedData.cargo.area : '',
+              departamento: {
+                idDepartamento: 0,
+                descripcion: cleanedData.cargo.departamento || ''
+              }
+            }
+          };
         } else {
-          // Emitir alerta externa de error
           this.showAlert.emit({
             type: 'danger',
             title: 'Error',
-            message: response?.message || 'Error al actualizar el perfil.'
+            message: 'El usuario debe tener un cargo asignado.'
           });
+          this.isLoading = false;
+          return;
         }
+        
+        // Usar el estado y rol del usuario original desde el backend
+        const estadoOriginal = usuarioCompleto.estado || { idEstado: 5, descripcion: 'ACTIVO' };
+        const rolOriginal = usuarioCompleto.rol || [0];
+        
+        const usuarioToUpdate: Usuario = {
+          idUsuario: cleanedData.idUsuario,
+          identificacion: cleanedData.identificacion,
+          nombres: cleanedData.nombres,
+          apellidos: cleanedData.apellidos,
+          usuario: cleanedData.usuario,
+          correoEmpresarial: cleanedData.correoEmpresarial,
+          correoPersonal: cleanedData.correoPersonal || '',
+          telefono1: cleanedData.telefono1 || '',
+          telefono2: cleanedData.telefono2 || '',
+          direccion: cleanedData.direccion || '',
+          estado: estadoOriginal,
+          cargo: cargoToUpdate,
+          rol: rolOriginal,
+          dobleAutenticacion: usuarioCompleto.dobleAutenticacion || 'GOOGLE_AUTH'
+        };
+
+        this.userService.actualizarUsuario(usuarioToUpdate).subscribe({
+          next: (response: any) => {
+            this.isLoading = false;
+            
+            if (response && (response.success === true || (response as any).idUsuario)) {
+              // Emitir alerta externa de éxito
+              this.showAlert.emit({
+                type: 'success',
+                title: '¡Éxito!',
+                message: 'Perfil actualizado correctamente'
+              });
+              
+              // Emitir los datos limpios actualizados
+              const cleanedData = this.cleanUserData(this.editedUser!);
+              this.save.emit(cleanedData);
+              
+              // Cerrar el modal después de un breve delay
+              setTimeout(() => {
+                this.onClose();
+              }, 500);
+            } else {
+              // Emitir alerta externa de error
+              this.showAlert.emit({
+                type: 'danger',
+                title: 'Error',
+                message: response?.message || 'Error al actualizar el perfil.'
+              });
+            }
+          },
+          error: (error: any) => {
+            this.isLoading = false;
+            
+            // Emitir alerta externa de error
+            this.showAlert.emit({
+              type: 'danger',
+              title: 'Error',
+              message: 'Error al actualizar el perfil. Inténtelo de nuevo.'
+            });
+            console.error('Error actualizando usuario:', error);
+          }
+        });
       },
-      error: (error) => {
+      error: (error: any) => {
         this.isLoading = false;
         
         // Emitir alerta externa de error
         this.showAlert.emit({
           type: 'danger',
           title: 'Error',
-          message: 'Error al actualizar el perfil. Inténtelo de nuevo.'
+          message: 'Error al obtener los datos del usuario. Inténtelo de nuevo.'
         });
-        console.error('Error actualizando usuario:', error);
+        console.error('Error obteniendo usuario completo:', error);
       }
     });
   }

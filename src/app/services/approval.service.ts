@@ -505,11 +505,15 @@ export class ApprovalService {
     const id = item?.id ?? item?.numeroRadicado ?? '';
     const createdAt = item?.createdAt || item?.fechaCreacion || new Date().toISOString();
     const estadoBack = String(item?.estado || 'Pendiente');
+    // Preservar el estado original del backend
+    const estadoOriginalBackend = estadoBack;
     const estado = (() => {
       const up = estadoBack.toUpperCase().trim();
       // Estados específicos primero
       if (up === 'APROB-PENDIENTE' || up === 'APROB_PENDIENTE') return 'APROB-PENDIENTE';
       if (up === 'APROB-POCESADO' || up === 'APROB_POCESADO' || up === 'APROB-PROCESADO') return 'APROB-POCESADO';
+      // Manejar APROBADO PROCESO del backend
+      if (up === 'APROBADO PROCESO' || up === 'APROBADO_PROCESO') return 'APROBADO PROCESO';
       // Estados tradicionales
       if (up === 'APROBADO') return 'Aprobada';
       if (up === 'RECHAZADO') return 'Rechazada';
@@ -604,7 +608,9 @@ export class ApprovalService {
       urlDocumentoAprobado: item?.urlDocumentoAprobado || item?.documentoAprobadoUrl,
       nombreDocumentoAprobado: item?.nombreDocumentoAprobado || item?.documentoAprobadoFileName,
       // Campo para determinar si requiere proceso post-aprobación
-      requiereProceso: Boolean(item?.requiereProceso)
+      requiereProceso: Boolean(item?.requiereProceso),
+      // Preservar el estado original del backend para verificaciones
+      estadoOriginalBackend: estadoOriginalBackend
     };
     
     return result;

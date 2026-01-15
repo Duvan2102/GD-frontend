@@ -553,8 +553,18 @@ export class RequestSuccessModal implements OnChanges {
     if (!estado) return 'Pendiente';
     
     const estadoUpper = String(estado).toUpperCase().trim();
+    // Verificar primero el estado original del backend si está disponible
+    const estadoOriginalBackend = (this.data as any)?.estadoOriginalBackend;
+    const estadoOriginalUpper = estadoOriginalBackend ? String(estadoOriginalBackend).toUpperCase().trim() : '';
+    
+    // Si el estado original del backend es "APROBADO PROCESO", mostrarlo así
+    if (estadoOriginalUpper === 'APROBADO PROCESO' || estadoOriginalUpper === 'APROBADO_PROCESO') {
+      return 'Aprobado - Proceso';
+    }
+    
     if (estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE') return 'Aprobado - Pendiente';
     if (estadoUpper === 'APROB-POCESADO' || estadoUpper === 'APROB_POCESADO' || estadoUpper === 'APROB-PROCESADO') return 'Aprobado - Procesado';
+    if (estadoUpper === 'APROBADO PROCESO' || estadoUpper === 'APROBADO_PROCESO') return 'Aprobado - Proceso';
     if (estadoUpper === 'APROBADO' || estado === 'Aprobada') return 'Aprobada';
     if (estadoUpper === 'RECHAZADO' || estado === 'Rechazada') return 'Rechazada';
     if (estadoUpper === 'CANCELADA' || estado === 'Cancelada') return 'Cancelada';

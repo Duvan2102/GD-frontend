@@ -240,10 +240,17 @@ export class ApprovalDetails implements OnInit, OnDestroy {
     // Verificar que requiereProceso sea true
     if (data.requiereProceso !== true) return false;
     
-    // Verificar que el estado sea "APROBADO PROCESO"
+    // Verificar el estado original del backend primero, luego el estado normalizado
+    const estadoOriginalBackend = (data as any).estadoOriginalBackend;
     const estado = data.estado;
     const estadoUpper = estado ? String(estado).toUpperCase().trim() : '';
-    if (estadoUpper !== 'APROBADO PROCESO') return false;
+    const estadoOriginalUpper = estadoOriginalBackend ? String(estadoOriginalBackend).toUpperCase().trim() : '';
+    
+    // Verificar que el estado sea "APROBADO PROCESO" (original del backend o normalizado)
+    if (estadoOriginalUpper !== 'APROBADO PROCESO' && estadoOriginalUpper !== 'APROBADO_PROCESO' && 
+        estadoUpper !== 'APROBADO PROCESO' && estadoUpper !== 'APROBADO_PROCESO') {
+      return false;
+    }
     
     // Verificar si ya hay procesadores asignados en diferentes ubicaciones
     const fullData = (data as any).fullData || data;
