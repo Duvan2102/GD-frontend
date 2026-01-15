@@ -43,6 +43,7 @@
   [isApprovalFlow]="true"
   [hideManageButton]="true"
   [enableProcessUpdate]="isProcessorMode"
+  [hideAssignProcessors]="!canAssignProcessors"
   (close)="closeDetailModal()"
   (viewApprovedDocument)="handleViewApprovedDocument($event)"
   (processUpdate)="handleAssignProcess($event)">

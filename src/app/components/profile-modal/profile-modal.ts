@@ -67,6 +67,31 @@ export class ProfileModal implements OnChanges {
     this.errorMessage = '';
 
     const cleanedData = this.cleanUserData(this.editedUser);
+    
+    let cargoToUpdate: Usuario['cargo'] = undefined;
+    if (cleanedData.cargo && cleanedData.cargo.idCargo) {
+      cargoToUpdate = {
+        idCargo: cleanedData.cargo.idCargo,
+        descripcion: cleanedData.cargo.descripcion || '',
+        area: {
+          idArea: 0, // El backend usará el idCargo para identificar el cargo completo
+          descripcion: typeof cleanedData.cargo.area === 'string' ? cleanedData.cargo.area : '',
+          departamento: {
+            idDepartamento: 0,
+            descripcion: cleanedData.cargo.departamento || ''
+          }
+        }
+      };
+    } else {
+      this.showAlert.emit({
+        type: 'danger',
+        title: 'Error',
+        message: 'El usuario debe tener un cargo asignado.'
+      });
+      this.isLoading = false;
+      return;
+    }
+    
     const usuarioToUpdate: Usuario = {
       idUsuario: cleanedData.idUsuario,
       identificacion: cleanedData.identificacion,
@@ -82,7 +107,7 @@ export class ProfileModal implements OnChanges {
         idEstado: 4,
         descripcion: 'PENDIENTE'
       },
-      cargo: undefined,
+      cargo: cargoToUpdate,
       rol: {
         idRol: 2,
         descripcion: 'FUNCIONARIO'

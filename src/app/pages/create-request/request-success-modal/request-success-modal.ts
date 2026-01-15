@@ -540,12 +540,13 @@ export class RequestSuccessModal implements OnChanges {
   }
 
   isAprobPendiente(): boolean {
-    // Verificar si el estado es APROB-PENDIENTE
     const estado = this.data?.estado;
     if (!estado) return false;
     
     const estadoUpper = String(estado).toUpperCase().trim();
-    return estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE';
+    return estadoUpper === 'APROB-PENDIENTE' || 
+           estadoUpper === 'APROB_PENDIENTE' || 
+           estadoUpper === 'APROBADO PROCESO';
   }
 
   getEstadoDisplayName(estado?: string): string {

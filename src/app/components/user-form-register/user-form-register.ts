@@ -34,6 +34,7 @@ export class UserFormRegister implements OnInit, OnDestroy {
   modalSuccessMessage = '';
   modalSuccessSecondaryMessage = '';
   modalSuccessBtn = 'Aceptar';
+  private registeredUserId?: number;
 
   modalErrorVisible = false;
   modalErrorTitulo = 'Error';
@@ -218,7 +219,7 @@ export class UserFormRegister implements OnInit, OnDestroy {
         this.modalSuccessBtn = 'Aceptar';
         this.modalSuccessVisible = true;
         
-        this.registered.emit({ idUsuario: res.idUsuario });
+        this.registeredUserId = res.idUsuario;
         
         this.cdr.markForCheck();
       },
@@ -301,6 +302,12 @@ export class UserFormRegister implements OnInit, OnDestroy {
   cerrarModalSuccess(): void {
     this.modalSuccessVisible = false;
     this.successMessage = '';
+    
+    if (this.registeredUserId !== undefined) {
+      this.registered.emit({ idUsuario: this.registeredUserId });
+      this.registeredUserId = undefined;
+    }
+    
     this.closeModal();
   }
 
