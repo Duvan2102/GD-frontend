@@ -613,24 +613,35 @@ export class ReportsAudits implements OnInit, OnDestroy {
     );
   }
 
+  private normalizeDateToMidnight(date: Date | string): Date {
+    const d = new Date(date);
+    // Crear una nueva fecha con solo año, mes y día en la zona horaria local
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  private normalizeDateToEndOfDay(date: Date | string): Date {
+    const d = new Date(date);
+    // Crear una nueva fecha con año, mes y día, y establecer hora al final del día
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+  }
+
   private applyAdvancedFilters(items: ReportItem[]): ReportItem[] {
     let result = [...items];
 
     // Filtro por fecha desde
     if (this.advancedFilters.fechaDesde) {
-      const fechaDesde = new Date(this.advancedFilters.fechaDesde);
+      const fechaDesde = this.normalizeDateToMidnight(this.advancedFilters.fechaDesde);
       result = result.filter(item => {
-        const itemDate = new Date(item.fechaCreacion);
+        const itemDate = this.normalizeDateToMidnight(item.fechaCreacion);
         return itemDate >= fechaDesde;
       });
     }
 
     // Filtro por fecha hasta
     if (this.advancedFilters.fechaHasta) {
-      const fechaHasta = new Date(this.advancedFilters.fechaHasta);
-      fechaHasta.setHours(23, 59, 59, 999); // Incluir todo el día
+      const fechaHasta = this.normalizeDateToEndOfDay(this.advancedFilters.fechaHasta);
       result = result.filter(item => {
-        const itemDate = new Date(item.fechaCreacion);
+        const itemDate = this.normalizeDateToMidnight(item.fechaCreacion);
         return itemDate <= fechaHasta;
       });
     }

@@ -3,7 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { Layout} from './layout/layout';
 import { Approvals } from "./pages/approvals/approvals";
 import { SuccessModalComponent } from './components/success-modal/success-modal.component';
-import { SuccessModalService, SuccessModalData } from './services/success-modal.service';
+import { SuccessModalService, SuccessModalData, AlertType } from './services/success-modal.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -24,12 +24,15 @@ export class App implements OnInit, OnDestroy {
 
   constructor(private successModalService: SuccessModalService) {}
 
+  successModalType: AlertType = 'success';
+
   ngOnInit() {
     this.successModalSubscription = this.successModalService.successModal$.subscribe(
       (data: SuccessModalData | null) => {
         if (data) {
           this.successModalTitle = data.title;
           this.successModalMessage = data.message;
+          this.successModalType = data.type || 'success';
           this.isSuccessModalVisible = true;
         } else {
           this.isSuccessModalVisible = false;
