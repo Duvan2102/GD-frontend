@@ -40,7 +40,7 @@ export interface DestinatarioData {
   fechaDecision?: string;
   comentario?: string;
 }
-export type EstadoSolicitud = 'Cancelada' | 'Aprobada' | 'Rechazada' | 'Pendiente' | 'Enviada' | 'APROB-PENDIENTE' | 'APROB-POCESADO';
+export type EstadoSolicitud = 'Cancelada' | 'Aprobada' | 'Rechazada' | 'Pendiente' | 'Enviada' | 'APROB-PENDIENTE' | 'APROB-POCESADO' | 'APROBADO PROCESO';
 export interface GestionHistorial {
   id: string;
   tipo: 'ENVIO' | 'APROBACION' | 'RECHAZO' | 'CANCELACION' | 'COMENTARIO';
@@ -513,7 +513,7 @@ export class RequestSuccessModal implements OnChanges {
 
   canCancelRequest(): boolean {
     const estado = this.data?.estado;
-    return estado !== 'Cancelada' && estado !== 'Aprobada' && estado !== 'Rechazada';
+    return estado !== 'Cancelada' && estado !== 'Aprobada' && estado !== 'Rechazada' && estado !== 'APROBADO PROCESO';
   }
 
   formatDate(date?: Date | null): string {
