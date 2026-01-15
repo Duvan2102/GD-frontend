@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { PasswordResetService } from '../../../services/password-reset.service';
+import { PasswordValidator } from '../../../utils/password-validator.util';
 
 @Component({
   selector: 'app-reset-password',
@@ -28,7 +29,7 @@ export class ResetPassword {
     private route: ActivatedRoute
   ) {
     this.resetForm = this.fb.group({
-      newPassword: ['', [Validators.required, Validators.minLength(6)]],
+      newPassword: ['', [Validators.required, PasswordValidator.validator()]],
       confirmPassword: ['', [Validators.required]]
     }, { validators: this.passwordMatchValidator });
 
@@ -57,10 +58,36 @@ export class ResetPassword {
     const field = this.resetForm.get(fieldName);
     if (field && field.errors && field.touched) {
       if (field.errors['required']) return 'Este campo es requerido';
-      if (field.errors['minlength']) return 'La contraseña debe tener al menos 6 caracteres';
+      if (field.errors['passwordValidation']) {
+        const errors = field.errors['passwordValidation'].errors;
+        return PasswordValidator.getErrorMessages(errors);
+      }
       if (field.errors['passwordMismatch']) return 'Las contraseñas no coinciden';
     }
     return '';
+  }
+
+
+  isPasswordRequirementMet(requirement: string): boolean {
+    const password = this.resetForm.get('newPassword')?.value || '';
+    if (!password) return false;
+    
+    const personalData = this.userInfo ? {
+      nombres: this.userInfo.nombres,
+      apellidos: this.userInfo.apellidos,
+      usuario: this.userInfo.usuario,
+      email: this.userInfo.correoEmpresarial
+    } : undefined;
+    
+    const result = PasswordValidator.validate(password, personalData);
+    
+    // Para "No debe contener datos personales", verificar si hay algún error relacionado
+    if (requirement === 'No debe contener datos personales') {
+      return !result.errors.some(error => error.includes('No debe contener datos personales'));
+    }
+    
+    // Para otros requisitos, verificar coincidencia exacta
+    return !result.errors.some(error => error === requirement);
   }
 
   async validateToken() {
@@ -102,14 +129,29 @@ export class ResetPassword {
 
   async onResetPassword() {
     if (this.resetForm.valid && this.tokenValid) {
+      // Validar contraseña antes de enviar
+      const newPassword = this.resetForm.value.newPassword;
+      const personalData = this.userInfo ? {
+        nombres: this.userInfo.nombres,
+        apellidos: this.userInfo.apellidos,
+        usuario: this.userInfo.usuario,
+        email: this.userInfo.correoEmpresarial
+      } : undefined;
+      
+      const validation = PasswordValidator.validate(newPassword, personalData);
+      if (!validation.isValid) {
+        this.errorMessage = PasswordValidator.getErrorMessages(validation.errors);
+        this.resetForm.get('newPassword')?.setErrors({ passwordValidation: { errors: validation.errors } });
+        this.resetForm.markAllAsTouched();
+        return;
+      }
+
       this.isLoading = true;
       this.errorMessage = '';
       this.successMessage = '';
       this.showSuccessMessage = false;
 
       try {
-        const newPassword = this.resetForm.value.newPassword;
-
         const response = await this.passwordResetService.resetPassword(this.token, newPassword).toPromise();
 
         this.successMessage = response?.message || 'Contraseña restablecida exitosamente';

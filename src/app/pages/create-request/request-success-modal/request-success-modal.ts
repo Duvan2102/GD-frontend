@@ -40,7 +40,7 @@ export interface DestinatarioData {
   fechaDecision?: string;
   comentario?: string;
 }
-export type EstadoSolicitud = 'Cancelada' | 'Aprobada' | 'Rechazada' | 'Pendiente' | 'Enviada' | 'APROB-PENDIENTE' | 'APROB-POCESADO';
+export type EstadoSolicitud = 'Cancelada' | 'Aprobada' | 'Rechazada' | 'Pendiente' | 'Enviada' | 'APROB-PENDIENTE' | 'APROB-POCESADO' | 'APROBADO PROCESO';
 export interface GestionHistorial {
   id: string;
   tipo: 'ENVIO' | 'APROBACION' | 'RECHAZO' | 'CANCELACION' | 'COMENTARIO';
@@ -513,7 +513,7 @@ export class RequestSuccessModal implements OnChanges {
 
   canCancelRequest(): boolean {
     const estado = this.data?.estado;
-    return estado !== 'Cancelada' && estado !== 'Aprobada' && estado !== 'Rechazada';
+    return estado !== 'Cancelada' && estado !== 'Aprobada' && estado !== 'Rechazada' && estado !== 'APROBADO PROCESO';
   }
 
   formatDate(date?: Date | null): string {
@@ -540,20 +540,31 @@ export class RequestSuccessModal implements OnChanges {
   }
 
   isAprobPendiente(): boolean {
-    // Verificar si el estado es APROB-PENDIENTE
     const estado = this.data?.estado;
     if (!estado) return false;
     
     const estadoUpper = String(estado).toUpperCase().trim();
-    return estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE';
+    return estadoUpper === 'APROB-PENDIENTE' || 
+           estadoUpper === 'APROB_PENDIENTE' || 
+           estadoUpper === 'APROBADO PROCESO';
   }
 
   getEstadoDisplayName(estado?: string): string {
     if (!estado) return 'Pendiente';
     
     const estadoUpper = String(estado).toUpperCase().trim();
+    // Verificar primero el estado original del backend si está disponible
+    const estadoOriginalBackend = (this.data as any)?.estadoOriginalBackend;
+    const estadoOriginalUpper = estadoOriginalBackend ? String(estadoOriginalBackend).toUpperCase().trim() : '';
+    
+    // Si el estado original del backend es "APROBADO PROCESO", mostrarlo así
+    if (estadoOriginalUpper === 'APROBADO PROCESO' || estadoOriginalUpper === 'APROBADO_PROCESO') {
+      return 'Aprobado - Proceso';
+    }
+    
     if (estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE') return 'Aprobado - Pendiente';
     if (estadoUpper === 'APROB-POCESADO' || estadoUpper === 'APROB_POCESADO' || estadoUpper === 'APROB-PROCESADO') return 'Aprobado - Procesado';
+    if (estadoUpper === 'APROBADO PROCESO' || estadoUpper === 'APROBADO_PROCESO') return 'Aprobado - Proceso';
     if (estadoUpper === 'APROBADO' || estado === 'Aprobada') return 'Aprobada';
     if (estadoUpper === 'RECHAZADO' || estado === 'Rechazada') return 'Rechazada';
     if (estadoUpper === 'CANCELADA' || estado === 'Cancelada') return 'Cancelada';

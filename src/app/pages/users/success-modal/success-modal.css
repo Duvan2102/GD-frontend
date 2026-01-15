@@ -36,6 +36,10 @@
   z-index: 1065;
 }
 
+.modal.fade.show {
+  z-index: 1066 !important;
+}
+
 .modal-content-custom {
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
@@ -57,13 +61,13 @@
 .modal-title-custom {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #333;
+  color: #46655a;
   line-height: 1.4;
 }
 
 .mensaje-secundario {
   font-size: 1rem;
-  color: #666;
+  color: #46655a;
   line-height: 1.5;
   margin: 0 auto;
   max-width: 90%;

@@ -65,6 +65,7 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   successModalData: SuccessModalData | null = null;
   isLoadingDetails = false;
   isProcessorMode = false; // Indica si el usuario actual es procesador
+  canAssignProcessors = false; // Indica si se puede asignar procesadores
 
   constructor(
     private approvalService: ApprovalService,
@@ -192,6 +193,8 @@ export class ApprovalDetails implements OnInit, OnDestroy {
           } else {
             this.isProcessorMode = false;
           }
+          // Determinar si se puede asignar procesadores
+          this.canAssignProcessors = this.canAssignProcessorsToRequest(requestDetails.fullData);
           this.isDetailModalVisible = true;
         }
         this.isLoadingDetails = false;
@@ -204,10 +207,11 @@ export class ApprovalDetails implements OnInit, OnDestroy {
   private detectProcessorMode(data: SuccessModalData | null, userId: number): boolean {
     if (!data) return false;
     
-    // Verificar si el estado es APROB_PENDIENTE
     const estado = data.estado;
     const estadoUpper = estado ? String(estado).toUpperCase().trim() : '';
-    const isAprobPendiente = estadoUpper === 'APROB-PENDIENTE' || estadoUpper === 'APROB_PENDIENTE';
+    const isAprobPendiente = estadoUpper === 'APROB-PENDIENTE' || 
+                            estadoUpper === 'APROB_PENDIENTE' || 
+                            estadoUpper === 'APROBADO PROCESO';
     
     if (!isAprobPendiente) return false;
     
@@ -228,6 +232,51 @@ export class ApprovalDetails implements OnInit, OnDestroy {
       const procIdNum = typeof procId === 'number' ? procId : parseInt(String(procId), 10);
       return !isNaN(procIdNum) && procIdNum === userId;
     });
+  }
+
+  private canAssignProcessorsToRequest(data: SuccessModalData | null): boolean {
+    if (!data) return false;
+    
+    // Verificar que requiereProceso sea true
+    if (data.requiereProceso !== true) return false;
+    
+    // Verificar el estado original del backend primero, luego el estado normalizado
+    const estadoOriginalBackend = (data as any).estadoOriginalBackend;
+    const estado = data.estado;
+    const estadoUpper = estado ? String(estado).toUpperCase().trim() : '';
+    const estadoOriginalUpper = estadoOriginalBackend ? String(estadoOriginalBackend).toUpperCase().trim() : '';
+    
+    // Verificar que el estado sea "APROBADO PROCESO" (original del backend o normalizado)
+    if (estadoOriginalUpper !== 'APROBADO PROCESO' && estadoOriginalUpper !== 'APROBADO_PROCESO' && 
+        estadoUpper !== 'APROBADO PROCESO' && estadoUpper !== 'APROBADO_PROCESO') {
+      return false;
+    }
+    
+    // Verificar si ya hay procesadores asignados en diferentes ubicaciones
+    const fullData = (data as any).fullData || data;
+    
+    // Verificar en procesadores directos
+    const procesadores = fullData.procesadores || 
+                        fullData.procesadoresAsignados || 
+                        fullData.procesadoresPostAprobacion ||
+                        [];
+    
+    if (Array.isArray(procesadores) && procesadores.length > 0) {
+      return false;
+    }
+    
+    // Verificar en destinatarios con esProcesador: true
+    const destinatarios = data.destinatarios || [];
+    const procesadoresEnDestinatarios = destinatarios.filter((dest: any) => 
+      dest.esProcesador === true || dest.esProcesador === 'true'
+    );
+    
+    // Si ya hay procesadores en los destinatarios, no se puede asignar más (modo lectura)
+    if (procesadoresEnDestinatarios.length > 0) {
+      return false;
+    }
+    
+    return true;
   }
 
   closeDetailModal(): void {
