@@ -82,6 +82,7 @@
           <span *ngIf="item.estado" class="badge rounded-pill" [ngClass]="{
              'text-bg-success': item.estado === 'APROBADO',
              'text-bg-warning': item.estado === 'PENDIENTE',
+             'text-bg-primary': item.estado === 'APROBADO PROCESO',
              'text-bg-danger': item.estado === 'RECHAZADO',
              'text-bg-secondary': item.estado === 'CANCELADA'
            }">{{ item.estado }}</span>

@@ -252,7 +252,7 @@ export class ReportsAudits implements OnInit, OnDestroy {
           filters.fechas.fechaDesde = this.advancedFilters.fechaDesde;
         }
         if (this.advancedFilters.fechaHasta) {
-          filters.fechas.fechaHasta = this.advancedFilters.fechaHasta;
+          filters.fechas.fechaHasta = this.addOneDayToDateString(this.advancedFilters.fechaHasta);
         }
       }
       
@@ -615,14 +615,28 @@ export class ReportsAudits implements OnInit, OnDestroy {
 
   private normalizeDateToMidnight(date: Date | string): Date {
     const d = new Date(date);
-    // Crear una nueva fecha con solo año, mes y día en la zona horaria local
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
   }
 
   private normalizeDateToEndOfDay(date: Date | string): Date {
     const d = new Date(date);
-    // Crear una nueva fecha con año, mes y día, y establecer hora al final del día
     return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+  }
+
+  private addOneDayToDateString(dateString: string): string {
+    if (!dateString) return dateString;
+    const date = new Date(dateString);
+    date.setDate(date.getDate() + 1);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private addOneDayToDate(date: Date): Date {
+    const newDate = new Date(date);
+    newDate.setDate(newDate.getDate() + 1);
+    return newDate;
   }
 
   private applyAdvancedFilters(items: ReportItem[]): ReportItem[] {
@@ -639,10 +653,17 @@ export class ReportsAudits implements OnInit, OnDestroy {
 
     // Filtro por fecha hasta
     if (this.advancedFilters.fechaHasta) {
-      const fechaHasta = this.normalizeDateToEndOfDay(this.advancedFilters.fechaHasta);
+      const fechaHastaOriginal = this.normalizeDateToEndOfDay(this.advancedFilters.fechaHasta);
+      const fechaHastaCon24Horas = new Date(fechaHastaOriginal.getTime() + 24 * 60 * 60 * 1000);
+      
       result = result.filter(item => {
         const itemDate = this.normalizeDateToMidnight(item.fechaCreacion);
-        return itemDate <= fechaHasta;
+        return itemDate.getTime() <= fechaHastaCon24Horas.getTime();
+      });
+      
+      result = result.filter(item => {
+        const itemDate = this.normalizeDateToMidnight(item.fechaCreacion);
+        return itemDate.getTime();
       });
     }
 

@@ -336,10 +336,9 @@ export class CreateForm implements OnInit, OnChanges {
   onDocumentoAprobacionChange(event: any): void {
     const file = event.target.files[0];
     if (file && file.type === 'application/pdf') {
-      // Validar tamaño del archivo (máximo 25MB)
-      const maxSize = 25 * 1024 * 1024; // 25MB en bytes
+      const maxSize = 100 * 1024 * 1024;
       if (file.size > maxSize) {
-        alert('El archivo es demasiado grande. El tamaño máximo permitido es 25MB.');
+        alert('El archivo es demasiado grande. El tamaño máximo permitido es 100MB.');
         event.target.value = '';
         return;
       }
@@ -352,13 +351,14 @@ export class CreateForm implements OnInit, OnChanges {
 
   onAnexosChange(event: any): void {
     const files = event.target.files;
-    const maxSize = 25 * 1024 * 1024; // 25MB en bytes
+    const maxTotalAnexosSize = 150 * 1024 * 1024; // 150MB total para todos los anexos
+    const currentAnexosSize = this.anexos.reduce((sum, file) => sum + file.size, 0);
     
     for (let file of files) {
       if (this.isValidFileType(file)) {
-        // Validar tamaño del archivo
-        if (file.size > maxSize) {
-          alert(`El archivo "${file.name}" es demasiado grande. El tamaño máximo permitido es 25MB.`);
+        const newTotalSize = currentAnexosSize + file.size;
+        if (newTotalSize > maxTotalAnexosSize) {
+          alert(`El archivo "${file.name}" excedería el límite total de anexos (150MB). Tamaño actual de anexos: ${Math.round(currentAnexosSize / 1024 / 1024)}MB, tamaño del archivo: ${Math.round(file.size / 1024 / 1024)}MB.`);
           continue;
         }
         this.anexos.push(file);
@@ -491,21 +491,30 @@ export class CreateForm implements OnInit, OnChanges {
       alert('Por favor completa todos los campos obligatorios, incluyendo al menos un destinatario válido.');
       return;
     }
-
-    // Validar tamaño total de archivos
-    const maxTotalSize = 50 * 1024 * 1024; // 50MB total
-    let totalSize = 0;
+    
+    const maxPdfSize = 100 * 1024 * 1024; // 100MB para PDF principal
+    const maxAnexosSize = 150 * 1024 * 1024; // 150MB total para anexos
+    const maxTotalSize = 200 * 1024 * 1024; // 200MB total de la solicitud
     
     if (this.documentoAprobacion) {
-      totalSize += this.documentoAprobacion.size;
+      if (this.documentoAprobacion.size > maxPdfSize) {
+        alert(`El documento de aprobación (${Math.round(this.documentoAprobacion.size / 1024 / 1024)}MB) excede el límite permitido de 100MB.`);
+        return;
+      }
     }
     
+    let anexosSize = 0;
     if (this.anexos && this.anexos.length > 0) {
-      totalSize += this.anexos.reduce((sum, file) => sum + file.size, 0);
+      anexosSize = this.anexos.reduce((sum, file) => sum + file.size, 0);
+      if (anexosSize > maxAnexosSize) {
+        alert(`El tamaño total de los anexos (${Math.round(anexosSize / 1024 / 1024)}MB) excede el límite permitido de 150MB.`);
+        return;
+      }
     }
     
+    const totalSize = (this.documentoAprobacion ? this.documentoAprobacion.size : 0) + anexosSize;
     if (totalSize > maxTotalSize) {
-      alert(`El tamaño total de los archivos (${Math.round(totalSize / 1024 / 1024)}MB) excede el límite permitido de 50MB.`);
+      alert(`El tamaño total de los archivos (${Math.round(totalSize / 1024 / 1024)}MB) excede el límite permitido de 200MB.`);
       return;
     }
 

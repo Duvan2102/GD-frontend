@@ -14,7 +14,6 @@ import { AlertType } from '../../services/success-modal.service';
         <div class="modal-content">
           <div class="modal-body text-center">
             <div class="alert-icon" [ngClass]="getIconClass()">
-              <i [ngClass]="getIconClass()"></i>
             </div>
             <h5 class="modal-title">{{ title || 'Proceso completado con éxito' }}</h5>
             <p class="modal-message">{{ message || 'La operación se ha realizado correctamente.' }}</p>
